@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fresh or Spoiled? Brand Rater | Milky Minds Creative</title>
+  <meta name="description" content="Upload your brand assets and get a fast, honest rating across logo, color, typography, and consistency." />
+  <style>
+    :root {
+      --milky-blue: #1E66A5;
+      --galaxy-navy: #0E1E3C;
+      --milky-white: #F9FAFB;
+      --starlight-yellow: #FFD85C;
+      --page-bg: #ECECF4;
+      --card: #FFFFFF;
+      --line: rgba(14, 30, 60, 0.18);
+      --muted: rgba(14, 30, 60, 0.72);
+      --shadow: 0 3px 10px rgba(14, 30, 60, 0.13);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --container: 1180px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--galaxy-navy);
+      background: var(--page-bg);
+      min-height: 100vh;
+    }
+
+    a { color: inherit; }
+
+    .site-nav {
+      min-height: 60px;
+      background: var(--milky-blue);
+      color: var(--milky-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 26px;
+    }
+
+    .nav-inner {
+      width: min(100%, var(--container));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      color: var(--milky-white);
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 98px;
+      height: auto;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 7px 18px;
+      border-radius: 999px;
+      background: var(--milky-white);
+      color: #111111;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(14, 30, 60, 0.13);
+    }
+
+    main {
+      width: min(100%, var(--container));
+      margin: 0 auto;
+      padding: 64px 26px 36px;
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1.07fr 0.93fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      min-height: 650px;
+      padding: clamp(32px, 4vw, 38px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-title {
+      margin: 0 0 22px;
+      font-size: clamp(46px, 5.7vw, 66px);
+      line-height: 1.08;
+      letter-spacing: -0.055em;
+      color: #000;
+      font-weight: 800;
+      max-width: 610px;
+    }
+
+    .hero-copy {
+      margin: 0 0 32px;
+      color: #000;
+      font-size: clamp(21px, 2.05vw, 27px);
+      line-height: 1.16;
+      letter-spacing: -0.025em;
+      max-width: 560px;
+    }
+
+    .benefits {
+      display: grid;
+      gap: 18px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: #000;
+      font-size: clamp(18px, 1.7vw, 22px);
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+
+    .benefits li::before {
+      content: "•";
+      margin-right: 7px;
+    }
+
+    .form-card {
+      padding: clamp(24px, 3vw, 32px) clamp(24px, 3.2vw, 36px) 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 650px;
+    }
+
+    .form-title {
+      margin: 0 0 10px;
+      font-size: clamp(29px, 3.2vw, 34px);
+      line-height: 1.1;
+      letter-spacing: -0.055em;
+      color: #000;
+      font-weight: 800;
+    }
+
+    .form-intro {
+      max-width: 410px;
+      margin: 0 0 20px;
+      font-size: 17px;
+      line-height: 1.1;
+      color: #000;
+      letter-spacing: -0.02em;
+    }
+
+    .field-label {
+      display: block;
+      margin: 0 0 9px;
+      font-size: 16px;
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      color: #000;
+      font-weight: 500;
+    }
+
+    .upload-zone {
+      position: relative;
+      min-height: 194px;
+      border: 3px dashed var(--milky-blue);
+      border-radius: 19px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      margin-bottom: 26px;
+      cursor: pointer;
+      transition: background 180ms ease, transform 180ms ease, border-color 180ms ease;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      background: rgba(30, 102, 165, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .upload-input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #111;
+      color: var(--milky-white);
+    }
+
+    .upload-icon svg { width: 28px; height: 28px; }
+
+    .upload-label {
+      margin: 0 0 6px;
+      color: #000;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .upload-hint {
+      color: #000;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
+
+    .previews {
+      display: none;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: -12px 0 20px;
+    }
+
+    .previews.has-files { display: flex; }
+
+    .preview-item {
+      width: 78px;
+      height: 78px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      overflow: hidden;
+      position: relative;
+      background: var(--milky-white);
+    }
+
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .preview-remove {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      border: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(14, 30, 60, 0.86);
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 108px;
+      resize: vertical;
+      border: 1.5px solid rgba(0, 0, 0, 0.38);
+      border-radius: 13px;
+      background: #F1F1F8;
+      color: var(--galaxy-navy);
+      font: inherit;
+      padding: 12px 15px;
+      font-size: 16px;
+      line-height: 1.12;
+      margin-bottom: 30px;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--milky-blue);
+      box-shadow: 0 0 0 4px rgba(30, 102, 165, 0.12);
+    }
+
+    textarea::placeholder { color: rgba(0, 0, 0, 0.48); }
+
+    .cta-area {
+      display: grid;
+      place-items: center;
+      gap: 20px;
+      margin-top: auto;
+    }
+
+    .primary-btn {
+      border: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 61px;
+      border-radius: 999px;
+      padding: 12px 38px;
+      background: var(--milky-blue);
+      color: white;
+      font: inherit;
+      font-size: clamp(25px, 2.6vw, 31px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+      text-decoration: none;
+      min-width: 296px;
+    }
+
+    .primary-btn:hover { background: #18598F; transform: translateY(-1px); }
+    .primary-btn:active { transform: translateY(0); }
+    .primary-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .privacy-note {
+      margin: 0;
+      text-align: center;
+      max-width: 300px;
+      color: #000;
+      font-size: 16px;
+      line-height: 1.02;
+      letter-spacing: -0.02em;
+    }
+
+    .how-section {
+      padding: 28px 0 0;
+    }
+
+    .section-title {
+      margin: 0 0 16px 22px;
+      font-size: clamp(40px, 4vw, 48px);
+      line-height: 1;
+      color: #000;
+      letter-spacing: -0.06em;
+      font-weight: 800;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .step-card {
+      position: relative;
+      min-height: 167px;
+      padding: 56px 22px 20px;
+      border-radius: 18px;
+    }
+
+    .step-number {
+      position: absolute;
+      top: 22px;
+      left: 20px;
+      width: 33px;
+      height: 33px;
+      border-radius: 50%;
+      background: var(--milky-blue);
+      color: var(--milky-white);
+      display: grid;
+      place-items: center;
+      font-size: 25px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+    }
+
+    .step-card h3 {
+      margin: 0 0 2px;
+      color: #000;
+      font-size: clamp(27px, 2.7vw, 33px);
+      line-height: 1;
+      letter-spacing: -0.06em;
+      font-weight: 800;
+    }
+
+    .step-card p {
+      margin: 0;
+      color: #000;
+      font-size: 16px;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+      max-width: 330px;
+    }
+
+    .site-footer {
+      margin-top: 36px;
+      background: var(--milky-blue);
+      color: var(--milky-white);
+      padding: 30px 26px 68px;
+    }
+
+    .footer-inner {
+      width: min(100%, var(--container));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-links a {
+      color: var(--milky-white);
+      text-underline-offset: 4px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      main { padding-top: 40px; }
+      .top-grid { grid-template-columns: 1fr; }
+      .hero-card, .form-card { min-height: auto; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .step-card { min-height: 138px; }
+    }
+
+    @media (max-width: 640px) {
+      .site-nav { padding-inline: 16px; }
+      .brand-logo { width: 84px; }
+      .back-link { font-size: 14px; padding-inline: 14px; }
+      main { padding: 28px 16px 24px; }
+      .top-grid { gap: 18px; }
+      .hero-card, .form-card { padding: 28px 22px; border-radius: 18px; }
+      .hero-title { font-size: 44px; }
+      .hero-copy { font-size: 21px; }
+      .benefits { font-size: 18px; }
+      .upload-zone { min-height: 170px; }
+      .primary-btn { min-width: 100%; font-size: 26px; }
+      .section-title { margin-left: 0; font-size: 40px; }
+      .footer-inner { align-items: flex-start; flex-direction: column; font-size: 18px; }
+      .site-footer { padding-bottom: 42px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="site-nav" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a class="brand-mark" href="https://milkymindscreative.com" aria-label="Milky Minds Creative home">
+        <img class="brand-logo" src="Logo-white.svg" alt="Milky Minds" />
+      </a>
+      <a class="back-link" href="https://milkymindscreative.com">Back to site →</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="top-grid" aria-labelledby="page-title">
+      <article class="card hero-card">
+        <h1 id="page-title" class="hero-title">Is your brand fresh or spoiled?</h1>
+        <p class="hero-copy">Upload your brand assets and get a fast, honest rating across logo, color, typography, and consistency. Think of it as a quick gut check before you redesign, refresh, or keep moving forward.</p>
+        <ul class="benefits" aria-label="Benefits">
+          <li>Know exactly where your brand stands (0–100 score)</li>
+          <li>See what’s working across logo, color, type, and consistency</li>
+          <li>Get clear next steps with 3–5 actionable fixes</li>
+        </ul>
+      </article>
+
+      <section class="card form-card" aria-labelledby="upload-title">
+        <h2 id="upload-title" class="form-title">Upload your visuals</h2>
+        <p class="form-intro">Use a logo, palette, social post, website screenshot, packaging, or any key visual</p>
+
+        <form id="brand-rater-form" action="/results.html" method="get">
+          <label class="field-label" for="file-input">Brand assets, up to 5 images</label>
+          <div class="upload-zone" id="drop-zone">
+            <input class="upload-input" id="file-input" name="assets" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-describedby="upload-help" />
+            <div>
+              <div class="upload-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 8 5-5 5 5"></path>
+                  <path d="M5 15v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"></path>
+                </svg>
+              </div>
+              <p class="upload-label">Drop files here or click to browse</p>
+              <p class="upload-hint" id="upload-help">PNG, JPG, or WEBP images work best</p>
+            </div>
+          </div>
+
+          <div class="previews" id="previews" aria-live="polite"></div>
+
+          <label class="field-label" for="context">Brand context, optional</label>
+          <textarea id="context" name="context" placeholder="Example: We are a San Diego brand consultancy helping small businesses look more credible, clear, and memorable"></textarea>
+
+          <div class="cta-area">
+            <button class="primary-btn" id="score-btn" type="submit">Get your score</button>
+            <p class="privacy-note">Your files are not stored or shared. Used only to generate your score.</p>
+          </div>
+        </form>
+      </section>
+    </section>
+
+    <section class="how-section" aria-labelledby="how-title">
+      <h2 id="how-title" class="section-title">How it works</h2>
+      <div class="steps-grid">
+        <article class="card step-card">
+          <span class="step-number" aria-hidden="true">1</span>
+          <h3>Upload assets</h3>
+          <p>Add the visual pieces that represent your brand today, even if they feel unfinished.</p>
+        </article>
+        <article class="card step-card">
+          <span class="step-number" aria-hidden="true">2</span>
+          <h3>Get scored</h3>
+          <p>Your brand is reviewed across the pieces that shape first impressions and trust.</p>
+        </article>
+        <article class="card step-card">
+          <span class="step-number" aria-hidden="true">3</span>
+          <h3>Fix what matters</h3>
+          <p>Walk away with practical next steps instead of vague feedback or design jargon.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>© Milky Minds Creative</div>
+      <div class="footer-links">
+        <a href="/privacy.html">Privacy</a>
+        <span>•</span>
+        <a href="/terms.html">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const previews = document.getElementById('previews');
+    const form = document.getElementById('brand-rater-form');
+    let uploadedFiles = [];
+
+    function syncFiles(files) {
+      const next = [...files].filter(file => file.type.startsWith('image/')).slice(0, 5);
+      uploadedFiles = next;
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      previews.innerHTML = '';
+      previews.classList.toggle('has-files', uploadedFiles.length > 0);
+
+      uploadedFiles.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = event => {
+          const item = document.createElement('div');
+          item.className = 'preview-item';
+          item.innerHTML = `
+            <img src="${event.target.result}" alt="Uploaded brand asset preview ${index + 1}">
+            <button type="button" class="preview-remove" aria-label="Remove image ${index + 1}">×</button>
+          `;
+          item.querySelector('button').addEventListener('click', () => {
+            uploadedFiles.splice(index, 1);
+            fileInput.value = '';
+            renderPreviews();
+          });
+          previews.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    fileInput.addEventListener('change', () => syncFiles(fileInput.files));
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropZone.classList.add('drag-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropZone.classList.remove('drag-over');
+      });
+    });
+
+    dropZone.addEventListener('drop', event => {
+      syncFiles(event.dataTransfer.files);
+    });
+
+    form.addEventListener('submit', event => {
+      if (uploadedFiles.length === 0) {
+        event.preventDefault();
+        dropZone.focus?.();
+        alert('Please upload at least one brand asset to get your score.');
+        return;
+      }
+
+      // This is the handoff point for your Netlify Function later.
+      // For the MVP front-end build, the form routes to /results.html.
+    });
+  </script>
+</body>
+</html>
