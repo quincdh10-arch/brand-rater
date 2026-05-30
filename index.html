@@ -558,74 +558,137 @@
     </div>
   </footer>
 
-  <script>
-    const fileInput = document.getElementById('file-input');
-    const dropZone = document.getElementById('drop-zone');
-    const previews = document.getElementById('previews');
-    const form = document.getElementById('brand-rater-form');
-    let uploadedFiles = [];
+ <script>
+  const fileInput = document.getElementById('file-input');
+  const dropZone = document.getElementById('drop-zone');
+  const previews = document.getElementById('previews');
+  const form = document.getElementById('brand-rater-form');
+  const submitButton = form.querySelector('button[type="submit"]');
+  const contextInput = document.getElementById('context');
 
-    function syncFiles(files) {
-      const next = [...files].filter(file => file.type.startsWith('image/')).slice(0, 5);
-      uploadedFiles = next;
-      renderPreviews();
+  let uploadedFiles = [];
+
+  function syncFiles(files) {
+    const next = [...files]
+      .filter(file => file.type.startsWith('image/'))
+      .slice(0, 5);
+
+    uploadedFiles = next;
+    renderPreviews();
+  }
+
+  function renderPreviews() {
+    previews.innerHTML = '';
+    previews.classList.toggle('has-files', uploadedFiles.length > 0);
+
+    uploadedFiles.forEach((file, index) => {
+      const reader = new FileReader();
+
+      reader.onload = event => {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.innerHTML = `
+          <img src="${event.target.result}" alt="Uploaded brand asset preview ${index + 1}">
+          <button type="button" class="preview-remove" aria-label="Remove image ${index + 1}">×</button>
+        `;
+
+        item.querySelector('button').addEventListener('click', () => {
+          uploadedFiles.splice(index, 1);
+          fileInput.value = '';
+          renderPreviews();
+        });
+
+        previews.appendChild(item);
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        resolve({
+          name: file.name,
+          type: file.type,
+          dataUrl: reader.result
+        });
+      };
+
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  fileInput.addEventListener('change', () => syncFiles(fileInput.files));
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, event => {
+      event.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, event => {
+      event.preventDefault();
+      dropZone.classList.remove('drag-over');
+    });
+  });
+
+  dropZone.addEventListener('drop', event => {
+    syncFiles(event.dataTransfer.files);
+  });
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    if (uploadedFiles.length === 0) {
+      dropZone.focus?.();
+      alert('Please upload at least one brand asset to get your score.');
+      return;
     }
 
-    function renderPreviews() {
-      previews.innerHTML = '';
-      previews.classList.toggle('has-files', uploadedFiles.length > 0);
+    try {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Scoring your brand...';
 
-      uploadedFiles.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = event => {
-          const item = document.createElement('div');
-          item.className = 'preview-item';
-          item.innerHTML = `
-            <img src="${event.target.result}" alt="Uploaded brand asset preview ${index + 1}">
-            <button type="button" class="preview-remove" aria-label="Remove image ${index + 1}">×</button>
-          `;
-          item.querySelector('button').addEventListener('click', () => {
-            uploadedFiles.splice(index, 1);
-            fileInput.value = '';
-            renderPreviews();
-          });
-          previews.appendChild(item);
-        };
-        reader.readAsDataURL(file);
+      const images = await Promise.all(uploadedFiles.map(fileToDataUrl));
+
+      const response = await fetch('/.netlify/functions/analyze-brand', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          images,
+          context: contextInput ? contextInput.value.trim() : ''
+        })
       });
-    }
 
-    fileInput.addEventListener('change', () => syncFiles(fileInput.files));
+      const result = await response.json();
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, event => {
-        event.preventDefault();
-        dropZone.classList.add('drag-over');
-      });
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, event => {
-        event.preventDefault();
-        dropZone.classList.remove('drag-over');
-      });
-    });
-
-    dropZone.addEventListener('drop', event => {
-      syncFiles(event.dataTransfer.files);
-    });
-
-    form.addEventListener('submit', event => {
-      if (uploadedFiles.length === 0) {
-        event.preventDefault();
-        dropZone.focus?.();
-        alert('Please upload at least one brand asset to get your score.');
-        return;
+      if (!response.ok) {
+        throw new Error(result.error || 'Something went wrong.');
       }
 
-      // This is the handoff point for your Netlify Function later.
-      // For the MVP front-end build, the form routes to /results.html.
-    });
-  </script>
+      sessionStorage.setItem('brandRaterResult', JSON.stringify(result));
+
+      document.body.innerHTML = `
+        <main style="font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto;">
+          <h1>Brand Rater Result</h1>
+          <p>This is the raw test result from OpenAI. Next, we’ll design this into the results page.</p>
+          <pre style="background: #F9FAFB; border: 1px solid #ddd; border-radius: 12px; padding: 20px; white-space: pre-wrap;">${JSON.stringify(result, null, 2)}</pre>
+        </main>
+      `;
+    } catch (error) {
+      alert(error.message || 'Something went wrong. Please try again.');
+      submitButton.disabled = false;
+      submitButton.textContent = 'Get your score';
+    }
+  });
+</script>
 </body>
 </html>
