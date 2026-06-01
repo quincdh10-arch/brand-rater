@@ -87,7 +87,12 @@ ${context ? `Brand context: ${context}` : ""}
       }),
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+
+console.log("OPENAI RAW RESPONSE:");
+console.log(raw);
+
+const data = JSON.parse(raw);
 
     if (!response.ok) {
       return {
