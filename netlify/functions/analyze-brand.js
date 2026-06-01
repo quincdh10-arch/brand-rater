@@ -12,6 +12,15 @@ exports.handler = async function (event) {
   try {
     const { images, context } = JSON.parse(event.body || "{}");
 
+    if (!process.env.OPENAI_API_KEY) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "OPENAI_API_KEY is missing from Netlify.",
+        }),
+      };
+    }
+
     if (!images || !Array.isArray(images) || images.length === 0) {
       return {
         statusCode: 400,
@@ -25,25 +34,10 @@ exports.handler = async function (event) {
       detail: "low",
     }));
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: [
-          {
-            role: "user",
-            content: [
-              ...imageInputs,
-              {
-                type: "input_text",
-                text: `
+    const prompt = `
 Analyze these brand visuals like a brand strategist.
 
-Return ONLY valid JSON. No markdown.
+Return ONLY valid JSON. No markdown. No intro text.
 
 Use this exact structure:
 {
@@ -79,7 +73,24 @@ Important:
 - Make the user want the full breakdown.
 - Be honest, direct, and brand-focused.
 ${context ? `Brand context: ${context}` : ""}
-                `,
+`;
+
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        input: [
+          {
+            role: "user",
+            content: [
+              ...imageInputs,
+              {
+                type: "input_text",
+                text: prompt,
               },
             ],
           },
@@ -89,24 +100,71 @@ ${context ? `Brand context: ${context}` : ""}
 
     const raw = await response.text();
 
-console.log("OPENAI RAW RESPONSE:");
-console.log(raw);
+    console.log("OPENAI RAW RESPONSE:");
+    console.log(raw);
 
-const data = JSON.parse(raw);
+    let data;
+
+    try {
+      data = JSON.parse(raw);
+    } catch (error) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "OpenAI returned a non-JSON response.",
+          details: raw,
+        }),
+      };
+    }
 
     if (!response.ok) {
       return {
         statusCode: response.status,
-        body: JSON.stringify({ error: data.error?.message || "OpenAI API error" }),
+        body: JSON.stringify({
+          error: data.error?.message || "OpenAI API error",
+        }),
       };
     }
 
-    const text = data.output_text || "";
-    const cleaned = text.replace(/```json|```/g, "").trim();
+    let outputText = data.output_text;
+
+    if (!outputText && Array.isArray(data.output)) {
+      outputText = data.output
+        .flatMap((item) => item.content || [])
+        .map((content) => content.text || "")
+        .join("")
+        .trim();
+    }
+
+    if (!outputText) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "OpenAI returned no usable text.",
+          details: data,
+        }),
+      };
+    }
+
+    const cleaned = outputText.replace(/```json|```/g, "").trim();
+
+    let result;
+
+    try {
+      result = JSON.parse(cleaned);
+    } catch (error) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "The model response was not valid JSON.",
+          details: cleaned,
+        }),
+      };
+    }
 
     return {
       statusCode: 200,
-      body: cleaned,
+      body: JSON.stringify(result),
     };
   } catch (error) {
     return {
