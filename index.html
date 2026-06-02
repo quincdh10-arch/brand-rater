@@ -774,7 +774,7 @@
     </div>
   </footer>
 
-  <form name="brand-rater-leads" method="POST" data-netlify="true" hidden>
+  <form name="brand-rater-leads" method="POST" action="/" data-netlify="true" netlify style="display: none;">
     <input type="hidden" name="form-name" value="brand-rater-leads" />
     <input type="text" name="name" />
     <input type="email" name="email" />
@@ -1000,11 +1000,11 @@
       try {
         const response = await fetch('/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
           body: payload.toString()
         });
 
-        if (!response.ok) throw new Error('Lead capture failed.');
+        if (!response.ok) throw new Error(`Lead capture failed with status ${response.status}.`);
 
         window.location.href = UNLOCK_REDIRECT_URL;
       } catch (error) {
