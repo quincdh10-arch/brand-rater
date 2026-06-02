@@ -1,3 +1,75 @@
+const rateLimitStore = new Map();
+
+function getClientIp(event) {
+  return (
+    event.headers["x-nf-client-connection-ip"] ||
+    event.headers["client-ip"] ||
+    event.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000; // 1 hour
+  const maxRequests = 3;
+
+  const record = rateLimitStore.get(ip) || { count: 0, resetAt: now + windowMs };
+
+  if (now > record.resetAt) {
+    rateLimitStore.set(ip, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (record.count >= maxRequests) {
+    return false;
+  }
+
+  record.count += 1;
+  rateLimitStore.set(ip, record);
+  return true;
+}
+
+function isImageTooLarge(dataUrl) {
+  const base64 = dataUrl.split(",")[1] || "";
+  const sizeInBytes = (base64.length * 3) / 4;
+  const maxSize = 5 * 1024 * 1024;
+  return sizeInBytes > maxSize;
+}
+
+async function verifyTurnstile(token, ip) {
+  if (!process.env.TURNSTILE_SECRET_KEY) {
+    return {
+      success: false,
+      message: "TURNSTILE_SECRET_KEY is missing from Netlify.",
+    };
+  }
+
+  if (!token) {
+    return {
+      success: false,
+      message: "Turnstile verification is missing.",
+    };
+  }
+
+  const formData = new URLSearchParams();
+  formData.append("secret", process.env.TURNSTILE_SECRET_KEY);
+  formData.append("response", token);
+  formData.append("remoteip", ip);
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  return {
+    success: data.success === true,
+    message: data["error-codes"]?.join(", ") || "Turnstile verification failed.",
+  };
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
     return {
@@ -10,7 +82,29 @@ exports.handler = async function (event) {
   }
 
   try {
-    const { images, context } = JSON.parse(event.body || "{}");
+    const ip = getClientIp(event);
+
+    if (!checkRateLimit(ip)) {
+      return {
+        statusCode: 429,
+        body: JSON.stringify({
+          error: "Too many brand rating attempts. Please try again later.",
+        }),
+      };
+    }
+
+    const { images, context, turnstileToken } = JSON.parse(event.body || "{}");
+
+    const turnstile = await verifyTurnstile(turnstileToken, ip);
+
+    if (!turnstile.success) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({
+          error: turnstile.message,
+        }),
+      };
+    }
 
     if (!process.env.OPENAI_API_KEY) {
       return {
@@ -28,7 +122,25 @@ exports.handler = async function (event) {
       };
     }
 
-    const imageInputs = images.slice(0, 5).map((img) => ({
+    if (images.length > 5) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Please upload no more than 5 images." }),
+      };
+    }
+
+    const oversizedImage = images.find((img) => isImageTooLarge(img.dataUrl || ""));
+
+    if (oversizedImage) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: "One or more images are larger than 5 MB. Please upload smaller files.",
+        }),
+      };
+    }
+
+    const imageInputs = images.map((img) => ({
       type: "input_image",
       image_url: img.dataUrl,
       detail: "low",
@@ -99,9 +211,6 @@ ${context ? `Brand context: ${context}` : ""}
     });
 
     const raw = await response.text();
-
-    console.log("OPENAI RAW RESPONSE:");
-    console.log(raw);
 
     let data;
 
