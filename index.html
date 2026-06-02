@@ -32,6 +32,7 @@
     .site-nav {
       min-height: 60px;
       background: var(--milky-blue);
+      color: var(--milky-white);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -43,21 +44,29 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 20px;
     }
 
-    .brand-logo { width: 98px; height: auto; display: block; }
+    .brand-logo {
+      display: block;
+      width: 98px;
+      height: auto;
+    }
 
     .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-height: 36px;
       padding: 7px 18px;
       border-radius: 999px;
       background: var(--milky-white);
-      color: #111;
+      color: #111111;
       text-decoration: none;
       font-size: 16px;
       font-weight: 500;
-      display: inline-flex;
-      align-items: center;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(14, 30, 60, 0.13);
     }
 
     main {
@@ -70,6 +79,7 @@
       display: grid;
       grid-template-columns: 1.07fr 0.93fr;
       gap: 28px;
+      align-items: stretch;
     }
 
     .card {
@@ -82,6 +92,8 @@
     .hero-card {
       min-height: 650px;
       padding: clamp(32px, 4vw, 38px);
+      display: flex;
+      flex-direction: column;
     }
 
     .hero-title {
@@ -99,6 +111,7 @@
       color: #000;
       font-size: clamp(21px, 2.05vw, 27px);
       line-height: 1.16;
+      letter-spacing: -0.025em;
       max-width: 560px;
     }
 
@@ -111,9 +124,13 @@
       color: #000;
       font-size: clamp(18px, 1.7vw, 22px);
       line-height: 1.2;
+      letter-spacing: -0.03em;
     }
 
-    .benefits li::before { content: "•"; margin-right: 7px; }
+    .benefits li::before {
+      content: "•";
+      margin-right: 7px;
+    }
 
     .form-card {
       padding: clamp(24px, 3vw, 32px) clamp(24px, 3.2vw, 36px) 20px;
@@ -126,6 +143,7 @@
       margin: 0 0 10px;
       font-size: clamp(29px, 3.2vw, 34px);
       line-height: 1.1;
+      letter-spacing: -0.055em;
       color: #000;
       font-weight: 800;
     }
@@ -136,13 +154,16 @@
       font-size: 17px;
       line-height: 1.1;
       color: #000;
+      letter-spacing: -0.02em;
     }
 
     .field-label {
       display: block;
       margin: 0 0 9px;
       font-size: 16px;
+      line-height: 1.1;
       text-transform: uppercase;
+      letter-spacing: -0.01em;
       color: #000;
       font-weight: 500;
     }
@@ -158,10 +179,13 @@
       padding: 24px;
       margin-bottom: 26px;
       cursor: pointer;
+      transition: background 180ms ease, transform 180ms ease, border-color 180ms ease;
     }
 
-    .upload-zone:hover,
-    .upload-zone.drag-over { background: rgba(30, 102, 165, 0.06); }
+    .upload-zone:hover, .upload-zone.drag-over {
+      background: rgba(30, 102, 165, 0.06);
+      transform: translateY(-1px);
+    }
 
     .upload-input {
       position: absolute;
@@ -190,9 +214,14 @@
       color: #000;
       font-size: 17px;
       font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
-    .upload-hint { color: #000; font-size: 17px; }
+    .upload-hint {
+      color: #000;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
 
     .previews {
       display: none;
@@ -232,12 +261,12 @@
       color: white;
       cursor: pointer;
       font-weight: 700;
+      line-height: 1;
     }
 
-    textarea {
+    textarea,
+    .lead-input {
       width: 100%;
-      min-height: 108px;
-      resize: vertical;
       border: 1.5px solid rgba(0, 0, 0, 0.38);
       border-radius: 13px;
       background: #F1F1F8;
@@ -245,14 +274,23 @@
       font: inherit;
       padding: 12px 15px;
       font-size: 16px;
-      margin-bottom: 30px;
       outline: none;
     }
 
-    textarea:focus {
+    textarea {
+      min-height: 108px;
+      resize: vertical;
+      margin-bottom: 30px;
+    }
+
+    textarea:focus,
+    .lead-input:focus {
       border-color: var(--milky-blue);
       box-shadow: 0 0 0 4px rgba(30, 102, 165, 0.12);
     }
+
+    textarea::placeholder,
+    .lead-input::placeholder { color: rgba(0, 0, 0, 0.48); }
 
     .cta-area {
       display: grid;
@@ -261,25 +299,41 @@
       margin-top: auto;
     }
 
-    .primary-btn {
+    .primary-btn,
+    .secondary-btn {
       border: 0;
-      min-height: 61px;
-      border-radius: 999px;
-      padding: 12px 38px;
-      background: var(--milky-blue);
-      color: white;
-      font: inherit;
-      font-size: clamp(25px, 2.6vw, 31px);
-      cursor: pointer;
-      min-width: 296px;
-      text-decoration: none;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      min-height: 61px;
+      border-radius: 999px;
+      padding: 12px 38px;
+      font: inherit;
+      font-size: clamp(25px, 2.6vw, 31px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+      text-decoration: none;
+      min-width: 296px;
     }
 
-    .primary-btn:hover { background: #18598F; }
-    .primary-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .primary-btn {
+      background: var(--milky-blue);
+      color: white;
+    }
+
+    .secondary-btn {
+      background: transparent;
+      border: 1.5px solid var(--line);
+      color: var(--galaxy-navy);
+      font-size: 18px;
+      min-width: 180px;
+    }
+
+    .primary-btn:hover { background: #18598F; transform: translateY(-1px); }
+    .primary-btn:active { transform: translateY(0); }
+    .primary-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
     .privacy-note {
       margin: 0;
@@ -288,6 +342,7 @@
       color: #000;
       font-size: 16px;
       line-height: 1.02;
+      letter-spacing: -0.02em;
     }
 
     .how-section { padding: 28px 0 0; }
@@ -295,7 +350,9 @@
     .section-title {
       margin: 0 0 16px 22px;
       font-size: clamp(40px, 4vw, 48px);
+      line-height: 1;
       color: #000;
+      letter-spacing: -0.06em;
       font-weight: 800;
     }
 
@@ -324,13 +381,17 @@
       display: grid;
       place-items: center;
       font-size: 25px;
+      line-height: 1;
       font-weight: 800;
+      letter-spacing: -0.05em;
     }
 
     .step-card h3 {
       margin: 0 0 2px;
       color: #000;
       font-size: clamp(27px, 2.7vw, 33px);
+      line-height: 1;
+      letter-spacing: -0.06em;
       font-weight: 800;
     }
 
@@ -339,6 +400,7 @@
       color: #000;
       font-size: 16px;
       line-height: 1.05;
+      letter-spacing: -0.025em;
       max-width: 330px;
     }
 
@@ -357,6 +419,7 @@
       justify-content: space-between;
       gap: 20px;
       font-size: 22px;
+      letter-spacing: -0.04em;
     }
 
     .footer-links {
@@ -413,9 +476,7 @@
       margin-bottom: 28px;
     }
 
-    .category-card {
-      padding: 26px;
-    }
+    .category-card { padding: 26px; }
 
     .category-card h3 {
       margin: 0 0 10px;
@@ -540,21 +601,86 @@
       margin-top: 20px;
     }
 
+    .lead-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(14, 30, 60, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+    }
+
+    .lead-modal-backdrop.is-open { display: flex; }
+
+    .lead-modal {
+      width: min(100%, 560px);
+      background: white;
+      border-radius: 22px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(14, 30, 60, 0.35);
+    }
+
+    .lead-modal h2 {
+      margin: 0 0 10px;
+      font-size: 36px;
+      line-height: 1.05;
+      color: #000;
+      font-weight: 800;
+    }
+
+    .lead-modal p {
+      margin: 0 0 22px;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .lead-form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .lead-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .lead-note {
+      font-size: 13px !important;
+      margin: 12px 0 0 !important;
+      color: rgba(14, 30, 60, 0.72);
+    }
+
     @media (max-width: 980px) {
       main { padding-top: 40px; }
       .top-grid { grid-template-columns: 1fr; }
       .hero-card, .form-card { min-height: auto; }
       .steps-grid, .results-grid { grid-template-columns: 1fr; }
+      .step-card { min-height: 138px; }
       .issue-row { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 640px) {
+      .site-nav { padding-inline: 16px; }
       .brand-logo { width: 84px; }
+      .back-link { font-size: 14px; padding-inline: 14px; }
       main { padding: 28px 16px 24px; }
-      .hero-card, .form-card, .results-score, .issues-card, .unlock-card { padding: 28px 22px; }
+      .top-grid { gap: 18px; }
+      .hero-card, .form-card, .results-score, .issues-card, .unlock-card { padding: 28px 22px; border-radius: 18px; }
       .hero-title { font-size: 44px; }
+      .hero-copy { font-size: 21px; }
+      .benefits { font-size: 18px; }
+      .upload-zone { min-height: 170px; }
       .primary-btn { min-width: 100%; font-size: 26px; }
-      .footer-inner { flex-direction: column; align-items: flex-start; font-size: 18px; }
+      .section-title { margin-left: 0; font-size: 40px; }
+      .footer-inner { align-items: flex-start; flex-direction: column; font-size: 18px; }
+      .site-footer { padding-bottom: 42px; }
+      .lead-actions { flex-direction: column-reverse; align-items: stretch; }
+      .secondary-btn { width: 100%; }
     }
   </style>
 </head>
@@ -581,8 +707,8 @@
         </ul>
       </article>
 
-      <section class="card form-card">
-        <h2 class="form-title">Upload your visuals</h2>
+      <section class="card form-card" aria-labelledby="upload-title">
+        <h2 id="upload-title" class="form-title">Upload your visuals</h2>
         <p class="form-intro">Use a logo, palette, social post, website screenshot, packaging, or any key visual</p>
 
         <form id="brand-rater-form">
@@ -591,7 +717,7 @@
             <input class="upload-input" id="file-input" name="assets" type="file" accept="image/png,image/jpeg,image/webp" multiple />
             <div>
               <div class="upload-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 3v12"></path>
                   <path d="m7 8 5-5 5 5"></path>
                   <path d="M5 15v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"></path>
@@ -608,28 +734,28 @@
           <textarea id="context" name="context" placeholder="Example: We are a San Diego brand consultancy helping small businesses look more credible, clear, and memorable"></textarea>
 
           <div class="cta-area">
-            <button class="primary-btn" type="submit">Get your score</button>
+            <button class="primary-btn" id="score-btn" type="submit">Get your score</button>
             <p class="privacy-note">Your files are not stored or shared. Used only to generate your score.</p>
           </div>
         </form>
       </section>
     </section>
 
-    <section class="how-section">
-      <h2 class="section-title">How it works</h2>
+    <section class="how-section" aria-labelledby="how-title">
+      <h2 id="how-title" class="section-title">How it works</h2>
       <div class="steps-grid">
         <article class="card step-card">
-          <span class="step-number">1</span>
+          <span class="step-number" aria-hidden="true">1</span>
           <h3>Upload assets</h3>
           <p>Add the visual pieces that represent your brand today, even if they feel unfinished.</p>
         </article>
         <article class="card step-card">
-          <span class="step-number">2</span>
+          <span class="step-number" aria-hidden="true">2</span>
           <h3>Get scored</h3>
           <p>Your brand is reviewed across the pieces that shape first impressions and trust.</p>
         </article>
         <article class="card step-card">
-          <span class="step-number">3</span>
+          <span class="step-number" aria-hidden="true">3</span>
           <h3>Fix what matters</h3>
           <p>Walk away with practical next steps instead of vague feedback or design jargon.</p>
         </article>
@@ -648,7 +774,23 @@
     </div>
   </footer>
 
+  <form name="brand-rater-leads" method="POST" data-netlify="true" hidden>
+    <input type="hidden" name="form-name" value="brand-rater-leads" />
+    <input type="text" name="name" />
+    <input type="email" name="email" />
+    <input type="text" name="company" />
+    <input type="text" name="website" />
+    <input type="text" name="overall_score" />
+    <input type="text" name="verdict" />
+    <textarea name="brand_context"></textarea>
+    <textarea name="category_scores"></textarea>
+    <textarea name="visible_issues"></textarea>
+    <textarea name="full_result_json"></textarea>
+  </form>
+
   <script>
+    const UNLOCK_REDIRECT_URL = 'https://cal.com/quincy-hildreth/30min';
+
     const fileInput = document.getElementById('file-input');
     const dropZone = document.getElementById('drop-zone');
     const previews = document.getElementById('previews');
@@ -657,6 +799,16 @@
     const contextInput = document.getElementById('context');
 
     let uploadedFiles = [];
+    let latestResult = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
     function syncFiles(files) {
       uploadedFiles = [...files].filter(file => file.type.startsWith('image/')).slice(0, 5);
@@ -703,6 +855,7 @@
     }
 
     function renderResultsPage(result) {
+      latestResult = result;
       const categories = result.categories || [];
       const issues = result.visibleIssues || [];
 
@@ -719,20 +872,20 @@
         <main>
           <section class="card results-score">
             <p class="results-eyebrow">Overall Brand Score</p>
-            <h1 class="results-number">${result.overallScore}</h1>
-            <h2 class="results-verdict">${result.verdict}</h2>
-            <p class="results-summary">${result.summary}</p>
+            <h1 class="results-number">${escapeHtml(result.overallScore)}</h1>
+            <h2 class="results-verdict">${escapeHtml(result.verdict)}</h2>
+            <p class="results-summary">${escapeHtml(result.summary)}</p>
           </section>
 
           <section class="results-grid">
             ${categories.map(cat => `
               <article class="card category-card">
-                <h3>${cat.name}</h3>
-                <p class="category-score">${cat.score}</p>
+                <h3>${escapeHtml(cat.name)}</h3>
+                <p class="category-score">${escapeHtml(cat.score)}</p>
                 <div class="bar-track">
-                  <div class="bar-fill" style="width:${cat.score}%"></div>
+                  <div class="bar-fill" style="width:${Math.max(0, Math.min(100, Number(cat.score) || 0))}%"></div>
                 </div>
-                <p class="category-note">${cat.note}</p>
+                <p class="category-note">${escapeHtml(cat.note)}</p>
               </article>
             `).join('')}
           </section>
@@ -743,15 +896,15 @@
             ${issues.map(issue => `
               <div class="issue-row">
                 <div>
-                  <p class="issue-meta">${issue.category} · ${issue.severity}</p>
-                  <p class="issue-problem">${issue.problem}</p>
+                  <p class="issue-meta">${escapeHtml(issue.category)} · ${escapeHtml(issue.severity)}</p>
+                  <p class="issue-problem">${escapeHtml(issue.problem)}</p>
                 </div>
-                <p class="issue-impact"><strong>Impact:</strong> ${issue.impact}</p>
+                <p class="issue-impact"><strong>Impact:</strong> ${escapeHtml(issue.impact)}</p>
               </div>
             `).join('')}
 
             <div class="locked-box">
-              <h3>${result.lockedIssueCount || 3} more issues identified</h3>
+              <h3>${escapeHtml(result.lockedIssueCount || 3)} more issues identified</h3>
               <p>Unlock the full breakdown to see what else is holding your brand back.</p>
             </div>
           </section>
@@ -759,7 +912,7 @@
           <section class="card unlock-card">
             <h2>Unlock your full brand breakdown</h2>
             <p>Get the complete analysis, hidden issues, and clearer next steps.</p>
-            <a class="primary-btn" href="https://www.milkymindscreative.com/free-brand-consultation">Unlock full report</a>
+            <button class="primary-btn" id="unlock-report-btn" type="button">Unlock full report</button>
           </section>
 
           <div class="restart-wrap">
@@ -777,7 +930,88 @@
             </div>
           </div>
         </footer>
+
+        <div class="lead-modal-backdrop" id="lead-modal" aria-hidden="true">
+          <div class="lead-modal" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
+            <h2 id="lead-modal-title">Unlock your full breakdown</h2>
+            <p>Share a few details and I’ll save your Brand Rater results so we can review the strongest opportunities for your brand.</p>
+
+            <form id="lead-capture-form" class="lead-form-grid">
+              <input class="lead-input" type="text" name="name" placeholder="Your name" required>
+              <input class="lead-input" type="email" name="email" placeholder="Email address" required>
+              <input class="lead-input" type="text" name="company" placeholder="Company / brand name">
+              <input class="lead-input" type="url" name="website" placeholder="Website URL">
+
+              <div class="lead-actions">
+                <button class="secondary-btn" id="close-lead-modal" type="button">Cancel</button>
+                <button class="primary-btn" id="lead-submit-btn" type="submit">Continue</button>
+              </div>
+              <p class="lead-note">Your submission is saved privately through Milky Minds Creative. Your uploaded files are not stored here.</p>
+            </form>
+          </div>
+        </div>
       `;
+
+      document.getElementById('unlock-report-btn').addEventListener('click', openLeadModal);
+      document.getElementById('close-lead-modal').addEventListener('click', closeLeadModal);
+      document.getElementById('lead-modal').addEventListener('click', event => {
+        if (event.target.id === 'lead-modal') closeLeadModal();
+      });
+      document.getElementById('lead-capture-form').addEventListener('submit', submitLeadForm);
+    }
+
+    function openLeadModal() {
+      const modal = document.getElementById('lead-modal');
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeLeadModal() {
+      const modal = document.getElementById('lead-modal');
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async function submitLeadForm(event) {
+      event.preventDefault();
+
+      const leadForm = event.currentTarget;
+      const leadButton = document.getElementById('lead-submit-btn');
+      const leadData = new FormData(leadForm);
+      const categories = latestResult?.categories || [];
+      const issues = latestResult?.visibleIssues || [];
+
+      leadButton.disabled = true;
+      leadButton.textContent = 'Saving...';
+
+      const payload = new URLSearchParams();
+      payload.append('form-name', 'brand-rater-leads');
+      payload.append('name', leadData.get('name') || '');
+      payload.append('email', leadData.get('email') || '');
+      payload.append('company', leadData.get('company') || '');
+      payload.append('website', leadData.get('website') || '');
+      payload.append('overall_score', latestResult?.overallScore ?? '');
+      payload.append('verdict', latestResult?.verdict ?? '');
+      payload.append('brand_context', sessionStorage.getItem('brandRaterContext') || '');
+      payload.append('category_scores', JSON.stringify(categories));
+      payload.append('visible_issues', JSON.stringify(issues));
+      payload.append('full_result_json', JSON.stringify(latestResult || {}));
+
+      try {
+        const response = await fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: payload.toString()
+        });
+
+        if (!response.ok) throw new Error('Lead capture failed.');
+
+        window.location.href = UNLOCK_REDIRECT_URL;
+      } catch (error) {
+        alert('Your result was generated, but the lead form did not save. Please try again.');
+        leadButton.disabled = false;
+        leadButton.textContent = 'Continue';
+      }
     }
 
     fileInput.addEventListener('change', () => syncFiles(fileInput.files));
@@ -813,13 +1047,15 @@
         submitButton.textContent = 'Scoring your brand...';
 
         const images = await Promise.all(uploadedFiles.map(fileToDataUrl));
+        const brandContext = contextInput.value.trim();
+        sessionStorage.setItem('brandRaterContext', brandContext);
 
         const response = await fetch('/.netlify/functions/analyze-brand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             images,
-            context: contextInput.value.trim()
+            context: brandContext
           })
         });
 
