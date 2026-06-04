@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fresh or Spoiled? Brand Rater | Milky Minds Creative</title>
   <meta name="description" content="Upload your brand assets and get a fast, honest rating across logo, color, typography, and consistency." />
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     :root {
       --milky-blue: #1E66A5;
@@ -454,7 +455,6 @@
       font-weight: 800;
     }
 
-
     .score-circle {
       width: 190px;
       height: 190px;
@@ -599,7 +599,6 @@
       font-size: 18px;
     }
 
-
     .locked-insights {
       display: grid;
       gap: 14px;
@@ -700,6 +699,19 @@
       color: rgba(14, 30, 60, 0.72);
     }
 
+    .turnstile-wrap {
+      display: flex;
+      justify-content: center;
+      margin: -10px 0 22px;
+    }
+
+    .bot-field {
+      display: none !important;
+      visibility: hidden;
+      position: absolute;
+      left: -9999px;
+    }
+
     @media (max-width: 980px) {
       main { padding-top: 40px; }
       .top-grid { grid-template-columns: 1fr; }
@@ -748,7 +760,7 @@
         <ul class="benefits">
           <li>Know exactly where your brand stands (0–100 score)</li>
           <li>See what’s working across logo, color, type, and consistency</li>
-          <li>Get clear next steps with 3–5 actionable fixes</li>
+          <li>Get a brand score and uncover your biggest opportunities</li>
         </ul>
       </article>
 
@@ -777,6 +789,16 @@
 
           <label class="field-label" for="context">Brand context, optional</label>
           <textarea id="context" name="context" placeholder="Example: We are a San Diego brand consultancy helping small businesses look more credible, clear, and memorable"></textarea>
+
+          <div class="turnstile-wrap">
+            <div
+              class="cf-turnstile"
+              data-sitekey="0x4AAAAAADd4hprTP58g9DXP"
+              data-callback="onTurnstileSuccess"
+              data-expired-callback="onTurnstileExpired"
+              data-error-callback="onTurnstileExpired"
+            ></div>
+          </div>
 
           <div class="cta-area">
             <button class="primary-btn" id="score-btn" type="submit">Get your score</button>
@@ -819,8 +841,9 @@
     </div>
   </footer>
 
-  <form name="brand-rater-leads" method="POST" action="/" data-netlify="true" netlify style="display: none;">
+  <form name="brand-rater-leads" method="POST" action="/" data-netlify="true" netlify netlify-honeypot="bot-field" style="display: none;">
     <input type="hidden" name="form-name" value="brand-rater-leads" />
+    <input type="text" name="bot-field" />
     <input type="text" name="name" />
     <input type="email" name="email" />
     <input type="text" name="company" />
@@ -845,6 +868,16 @@
 
     let uploadedFiles = [];
     let latestResult = null;
+    let turnstileToken = '';
+    const LAST_SUBMISSION_KEY = 'brand_rater_last_submission';
+
+    window.onTurnstileSuccess = function(token) {
+      turnstileToken = token;
+    };
+
+    window.onTurnstileExpired = function() {
+      turnstileToken = '';
+    };
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -856,7 +889,20 @@
     }
 
     function syncFiles(files) {
-      uploadedFiles = [...files].filter(file => file.type.startsWith('image/')).slice(0, 5);
+      const validFiles = [];
+
+      for (const file of [...files]) {
+        if (!file.type.startsWith('image/')) continue;
+
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`${file.name} exceeds the 5 MB limit. Please upload a smaller image.`);
+          continue;
+        }
+
+        validFiles.push(file);
+      }
+
+      uploadedFiles = validFiles.slice(0, 5);
       renderPreviews();
     }
 
@@ -968,9 +1014,9 @@
           </section>
 
           <section class="card unlock-card">
-            <h2>Unlock your full brand breakdown</h2>
-            <p>Get the complete analysis, hidden issues, and clearer next steps.</p>
-            <button class="primary-btn" id="unlock-report-btn" type="button">Unlock full report</button>
+            <h2>Send your brand results</h2>
+            <p>Save your score, category breakdown, and key opportunities so you can review them later.</p>
+            <button class="primary-btn" id="unlock-report-btn" type="button">Send me my results</button>
           </section>
 
           <div class="restart-wrap">
@@ -991,14 +1037,15 @@
 
         <div class="lead-modal-backdrop" id="lead-modal" aria-hidden="true">
           <div class="lead-modal" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
-            <h2 id="lead-modal-title">Send yourself the results</h2>
-            <p>Share a few details and I’ll save your Brand Rater results so you can review the strongest opportunities for your brand.</p>
+            <h2 id="lead-modal-title">Unlock your full breakdown</h2>
+            <p>Share a few details and I’ll save your Brand Rater results so we can review the strongest opportunities for your brand.</p>
 
             <form id="lead-capture-form" class="lead-form-grid">
               <input class="lead-input" type="text" name="name" placeholder="Your name" required>
               <input class="lead-input" type="email" name="email" placeholder="Email address" required>
               <input class="lead-input" type="text" name="company" placeholder="Company / brand name">
               <input class="lead-input" type="url" name="website" placeholder="Website URL">
+              <input class="bot-field" type="text" name="bot-field" tabindex="-1" autocomplete="off">
 
               <div class="lead-actions">
                 <button class="secondary-btn" id="close-lead-modal" type="button">Cancel</button>
@@ -1036,6 +1083,11 @@
       const leadForm = event.currentTarget;
       const leadButton = document.getElementById('lead-submit-btn');
       const leadData = new FormData(leadForm);
+
+      if (leadData.get('bot-field')) {
+        return;
+      }
+
       const categories = latestResult?.categories || [];
       const issues = latestResult?.visibleIssues || [];
 
@@ -1044,6 +1096,7 @@
 
       const payload = new URLSearchParams();
       payload.append('form-name', 'brand-rater-leads');
+      payload.append('bot-field', leadData.get('bot-field') || '');
       payload.append('name', leadData.get('name') || '');
       payload.append('email', leadData.get('email') || '');
       payload.append('company', leadData.get('company') || '');
@@ -1095,6 +1148,18 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
 
+      const lastSubmission = Number(localStorage.getItem(LAST_SUBMISSION_KEY)) || 0;
+
+      if (Date.now() - lastSubmission < 60000) {
+        alert('Please wait one minute before running another analysis.');
+        return;
+      }
+
+      if (!turnstileToken) {
+        alert('Please complete the verification before getting your score.');
+        return;
+      }
+
       if (uploadedFiles.length === 0) {
         alert('Please upload at least one brand asset to get your score.');
         return;
@@ -1113,7 +1178,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             images,
-            context: brandContext
+            context: brandContext,
+            turnstileToken
           })
         });
 
@@ -1125,6 +1191,7 @@
 
         sessionStorage.setItem('brandRaterResult', JSON.stringify(result));
         renderResultsPage(result);
+        localStorage.setItem(LAST_SUBMISSION_KEY, Date.now());
 
       } catch (error) {
         alert(error.message || 'Something went wrong. Please try again.');
