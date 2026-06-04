@@ -1183,11 +1183,18 @@
           })
         });
 
-        const result = await response.json();
+const rawResult = await response.text();
 
-        if (!response.ok) {
-          throw new Error(result.error || 'Something went wrong.');
-        }
+let result;
+try {
+  result = JSON.parse(rawResult);
+} catch (error) {
+  throw new Error(rawResult || 'The server returned an invalid response.');
+}
+
+if (!response.ok) {
+  throw new Error(result.error || 'Something went wrong.');
+}
 
         sessionStorage.setItem('brandRaterResult', JSON.stringify(result));
         renderResultsPage(result);
