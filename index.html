@@ -900,18 +900,14 @@
         if (!file.type.startsWith('image/')) continue;
 
         if (file.size > MAX_FILE_SIZE) {
-          alert(`"${file.name}" is too large.
-
-Each image must be under 5 MB.`);
+          PLACEHOLDER
           continue;
         }
 
         totalSize += file.size;
 
         if (totalSize > MAX_TOTAL_SIZE) {
-          alert('The total upload size is too large.
-
-Please upload fewer images or compress them before trying again.');
+          alert('The total upload size is too large.\n\nPlease upload fewer images or compress them before trying again.');
           break;
         }
 
