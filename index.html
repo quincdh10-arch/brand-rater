@@ -455,33 +455,6 @@
       font-weight: 800;
     }
 
-    .score-circle {
-      width: 190px;
-      height: 190px;
-      border-radius: 50%;
-      background: var(--milky-blue);
-      color: white;
-      display: grid;
-      place-items: center;
-      margin: 0 auto 22px;
-      box-shadow: 0 10px 28px rgba(14, 30, 60, 0.18);
-    }
-
-    .score-circle span {
-      display: block;
-      font-size: 64px;
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -0.06em;
-    }
-
-    .score-circle small {
-      display: block;
-      font-size: 18px;
-      font-weight: 700;
-      opacity: 0.9;
-    }
-
     .results-verdict {
       font-size: clamp(28px, 4vw, 42px);
       line-height: 1.05;
@@ -597,22 +570,6 @@
     .locked-box p {
       margin: 0;
       font-size: 18px;
-    }
-
-    .locked-insights {
-      display: grid;
-      gap: 14px;
-      margin-top: 22px;
-    }
-
-    .locked-insight {
-      padding: 18px 20px;
-      border-radius: 16px;
-      background: white;
-      border: 1px solid var(--line);
-      font-weight: 800;
-      color: var(--galaxy-navy);
-      text-align: left;
     }
 
     .unlock-card {
@@ -760,7 +717,7 @@
         <ul class="benefits">
           <li>Know exactly where your brand stands (0–100 score)</li>
           <li>See what’s working across logo, color, type, and consistency</li>
-          <li>Get a brand score and uncover your biggest opportunities</li>
+          <li>Get a fast brand score and uncover your biggest opportunities</li>
         </ul>
       </article>
 
@@ -781,7 +738,7 @@
                 </svg>
               </div>
               <p class="upload-label">Drop files here or click to browse</p>
-              <p class="upload-hint">PNG, JPG, or WEBP images work best</p>
+              <p class="upload-hint">PNG, JPG, or WEBP images under 5 MB each (12 MB total)</p>
             </div>
           </div>
 
@@ -869,6 +826,9 @@
     let uploadedFiles = [];
     let latestResult = null;
     let turnstileToken = '';
+
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB per image
+    const MAX_TOTAL_SIZE = 12 * 1024 * 1024; // 12 MB total upload
     const LAST_SUBMISSION_KEY = 'brand_rater_last_submission';
 
     window.onTurnstileSuccess = function(token) {
@@ -890,13 +850,21 @@
 
     function syncFiles(files) {
       const validFiles = [];
+      let totalSize = 0;
 
       for (const file of [...files]) {
         if (!file.type.startsWith('image/')) continue;
 
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`${file.name} exceeds the 5 MB limit. Please upload a smaller image.`);
+        if (file.size > MAX_FILE_SIZE) {
+          alert(`"${file.name}" is too large.\n\nEach image must be under 5 MB.`);
           continue;
+        }
+
+        totalSize += file.size;
+
+        if (totalSize > MAX_TOTAL_SIZE) {
+          alert('The total upload size is too large.\n\nPlease upload fewer images or compress them before trying again.');
+          break;
         }
 
         validFiles.push(file);
@@ -963,15 +931,8 @@
         <main>
           <section class="card results-score">
             <p class="results-eyebrow">Overall Brand Score</p>
-
-            <div class="score-circle">
-              <div>
-                <span>${escapeHtml(result.overallScore)}</span>
-                <small>/ 100</small>
-              </div>
-            </div>
-
-            <h1 class="results-verdict">${escapeHtml(result.verdict)}</h1>
+            <h1 class="results-number">${escapeHtml(result.overallScore)}</h1>
+            <h2 class="results-verdict">${escapeHtml(result.verdict)}</h2>
             <p class="results-summary">${escapeHtml(result.summary)}</p>
           </section>
 
@@ -1002,20 +963,14 @@
             `).join('')}
 
             <div class="locked-box">
-              <h3>${escapeHtml(result.lockedIssueCount || 3)} hidden insights found</h3>
-              <p>Send yourself the results to keep your score and review the biggest opportunities.</p>
-
-              <div class="locked-insights">
-                <div class="locked-insight">🔒 Hidden Issue #1</div>
-                <div class="locked-insight">🔒 Hidden Issue #2</div>
-                <div class="locked-insight">🔒 Hidden Issue #3</div>
-              </div>
+              <h3>${escapeHtml(result.lockedIssueCount || 3)} more issues identified</h3>
+              <p>Unlock the full breakdown to see what else is holding your brand back.</p>
             </div>
           </section>
 
           <section class="card unlock-card">
-            <h2>Send your brand results</h2>
-            <p>Save your score, category breakdown, and key opportunities so you can review them later.</p>
+            <h2>Unlock your full brand breakdown</h2>
+            <p>Get the complete analysis, hidden issues, and clearer next steps.</p>
             <button class="primary-btn" id="unlock-report-btn" type="button">Send me my results</button>
           </section>
 
@@ -1183,25 +1138,30 @@
           })
         });
 
-const rawResult = await response.text();
+        const result = await response.json();
 
-let result;
-try {
-  result = JSON.parse(rawResult);
-} catch (error) {
-  throw new Error(rawResult || 'The server returned an invalid response.');
-}
-
-if (!response.ok) {
-  throw new Error(result.error || 'Something went wrong.');
-}
+        if (!response.ok) {
+          throw new Error(result.error || 'Something went wrong.');
+        }
 
         sessionStorage.setItem('brandRaterResult', JSON.stringify(result));
         renderResultsPage(result);
         localStorage.setItem(LAST_SUBMISSION_KEY, Date.now());
 
       } catch (error) {
-        alert(error.message || 'Something went wrong. Please try again.');
+        const message = error.message || '';
+
+        if (
+          message.includes('Internal Error') ||
+          message.includes('413') ||
+          message.toLowerCase().includes('payload') ||
+          message.toLowerCase().includes('request entity too large')
+        ) {
+          alert('Your images are too large for processing.\n\nPlease upload smaller images or fewer files and try again.');
+        } else {
+          alert(message || 'Something went wrong. Please try again.');
+        }
+
         submitButton.disabled = false;
         submitButton.textContent = 'Get your score';
       }
