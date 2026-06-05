@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fresh or Spoiled? Brand Rater | Milky Minds Creative</title>
   <meta name="description" content="Upload your brand assets and get a fast, honest rating across logo, color, typography, and consistency." />
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     :root {
       --milky-blue: #1E66A5;
@@ -656,19 +655,6 @@
       color: rgba(14, 30, 60, 0.72);
     }
 
-    .turnstile-wrap {
-      display: flex;
-      justify-content: center;
-      margin: -10px 0 22px;
-    }
-
-    .bot-field {
-      display: none !important;
-      visibility: hidden;
-      position: absolute;
-      left: -9999px;
-    }
-
     @media (max-width: 980px) {
       main { padding-top: 40px; }
       .top-grid { grid-template-columns: 1fr; }
@@ -717,7 +703,7 @@
         <ul class="benefits">
           <li>Know exactly where your brand stands (0–100 score)</li>
           <li>See what’s working across logo, color, type, and consistency</li>
-          <li>Get a fast brand score and uncover your biggest opportunities</li>
+          <li>Get clear next steps with 3–5 actionable fixes</li>
         </ul>
       </article>
 
@@ -738,7 +724,7 @@
                 </svg>
               </div>
               <p class="upload-label">Drop files here or click to browse</p>
-              <p class="upload-hint">PNG, JPG, or WEBP images under 5 MB each (8 MB total)</p>
+              <p class="upload-hint">PNG, JPG, or WEBP images work best</p>
             </div>
           </div>
 
@@ -746,16 +732,6 @@
 
           <label class="field-label" for="context">Brand context, optional</label>
           <textarea id="context" name="context" placeholder="Example: We are a San Diego brand consultancy helping small businesses look more credible, clear, and memorable"></textarea>
-
-          <div class="turnstile-wrap">
-            <div
-              class="cf-turnstile"
-              data-sitekey="0x4AAAAAADd4hprTP58g9DXP"
-              data-callback="onTurnstileSuccess"
-              data-expired-callback="onTurnstileExpired"
-              data-error-callback="onTurnstileExpired"
-            ></div>
-          </div>
 
           <div class="cta-area">
             <button class="primary-btn" id="score-btn" type="submit">Get your score</button>
@@ -798,9 +774,8 @@
     </div>
   </footer>
 
-  <form name="brand-rater-leads" method="POST" action="/" data-netlify="true" netlify netlify-honeypot="bot-field" style="display: none;">
+  <form name="brand-rater-leads" method="POST" action="/" data-netlify="true" netlify style="display: none;">
     <input type="hidden" name="form-name" value="brand-rater-leads" />
-    <input type="text" name="bot-field" />
     <input type="text" name="name" />
     <input type="email" name="email" />
     <input type="text" name="company" />
@@ -825,19 +800,6 @@
 
     let uploadedFiles = [];
     let latestResult = null;
-    let turnstileToken = '';
-
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB per image
-    const MAX_TOTAL_SIZE = 8 * 1024 * 1024; // 8 MB total upload
-    const LAST_SUBMISSION_KEY = 'brand_rater_last_submission';
-
-    window.onTurnstileSuccess = function(token) {
-      turnstileToken = token;
-    };
-
-    window.onTurnstileExpired = function() {
-      turnstileToken = '';
-    };
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -849,28 +811,7 @@
     }
 
     function syncFiles(files) {
-      const validFiles = [];
-      let totalSize = 0;
-
-      for (const file of [...files]) {
-        if (!file.type.startsWith('image/')) continue;
-
-        if (file.size > MAX_FILE_SIZE) {
-          alert(`"${file.name}" is too large.\n\nEach image must be under 5 MB.`);
-          continue;
-        }
-
-        totalSize += file.size;
-
-        if (totalSize > MAX_TOTAL_SIZE) {
-          alert('The total upload size is too large.\n\nPlease upload fewer images or compress them before trying again.');
-          break;
-        }
-
-        validFiles.push(file);
-      }
-
-      uploadedFiles = validFiles.slice(0, 5);
+      uploadedFiles = [...files].filter(file => file.type.startsWith('image/')).slice(0, 5);
       renderPreviews();
     }
 
@@ -971,7 +912,7 @@
           <section class="card unlock-card">
             <h2>Unlock your full brand breakdown</h2>
             <p>Get the complete analysis, hidden issues, and clearer next steps.</p>
-            <button class="primary-btn" id="unlock-report-btn" type="button">Send me my results</button>
+            <button class="primary-btn" id="unlock-report-btn" type="button">Unlock full report</button>
           </section>
 
           <div class="restart-wrap">
@@ -1000,7 +941,6 @@
               <input class="lead-input" type="email" name="email" placeholder="Email address" required>
               <input class="lead-input" type="text" name="company" placeholder="Company / brand name">
               <input class="lead-input" type="url" name="website" placeholder="Website URL">
-              <input class="bot-field" type="text" name="bot-field" tabindex="-1" autocomplete="off">
 
               <div class="lead-actions">
                 <button class="secondary-btn" id="close-lead-modal" type="button">Cancel</button>
@@ -1038,11 +978,6 @@
       const leadForm = event.currentTarget;
       const leadButton = document.getElementById('lead-submit-btn');
       const leadData = new FormData(leadForm);
-
-      if (leadData.get('bot-field')) {
-        return;
-      }
-
       const categories = latestResult?.categories || [];
       const issues = latestResult?.visibleIssues || [];
 
@@ -1051,7 +986,6 @@
 
       const payload = new URLSearchParams();
       payload.append('form-name', 'brand-rater-leads');
-      payload.append('bot-field', leadData.get('bot-field') || '');
       payload.append('name', leadData.get('name') || '');
       payload.append('email', leadData.get('email') || '');
       payload.append('company', leadData.get('company') || '');
@@ -1103,18 +1037,6 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
 
-      const lastSubmission = Number(localStorage.getItem(LAST_SUBMISSION_KEY)) || 0;
-
-      if (Date.now() - lastSubmission < 60000) {
-        alert('Please wait one minute before running another analysis.');
-        return;
-      }
-
-      if (!turnstileToken) {
-        alert('Please complete the verification before getting your score.');
-        return;
-      }
-
       if (uploadedFiles.length === 0) {
         alert('Please upload at least one brand asset to get your score.');
         return;
@@ -1133,12 +1055,18 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             images,
-            context: brandContext,
-            turnstileToken
+            context: brandContext
           })
         });
 
-        const result = await response.json();
+        const rawResult = await response.text();
+
+        let result;
+        try {
+          result = JSON.parse(rawResult);
+        } catch (error) {
+          throw new Error(rawResult || 'The server returned an invalid response.');
+        }
 
         if (!response.ok) {
           throw new Error(result.error || 'Something went wrong.');
@@ -1146,24 +1074,9 @@
 
         sessionStorage.setItem('brandRaterResult', JSON.stringify(result));
         renderResultsPage(result);
-        localStorage.setItem(LAST_SUBMISSION_KEY, Date.now());
 
       } catch (error) {
-        const message = error.message || '';
-
-        if (
-          message.includes('Unexpected end of JSON input') ||
-          message.includes('Internal Error') ||
-          message.includes('413') ||
-          message.includes('invalid response')
-          message.toLowerCase().includes('payload') ||
-          message.toLowerCase().includes('request entity too large')
-        ) {
-          alert('Your images are too large for processing.\n\nPlease upload smaller images or fewer files and try again.');
-        } else {
-          alert(message || 'Something went wrong. Please try again.');
-        }
-
+        alert(error.message || 'Something went wrong. Please try again.');
         submitButton.disabled = false;
         submitButton.textContent = 'Get your score';
       }
