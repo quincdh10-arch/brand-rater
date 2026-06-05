@@ -713,6 +713,10 @@
       left: -9999px;
     }
 
+    /* Results page view */
+    #results-view { display: none; }
+    #intake-view { display: block; }
+
     @media (max-width: 980px) {
       main { padding-top: 40px; }
       .top-grid { grid-template-columns: 1fr; }
@@ -753,83 +757,93 @@
     </div>
   </nav>
 
-  <main>
-    <section class="top-grid" aria-labelledby="page-title">
-      <article class="card hero-card">
-        <h1 id="page-title" class="hero-title">Is your brand fresh or spoiled?</h1>
-        <p class="hero-copy">Upload your brand assets and get a fast, honest rating across logo, color, typography, and consistency. Think of it as a quick gut check before you redesign, refresh, or keep moving forward.</p>
-        <ul class="benefits">
-          <li>Know exactly where your brand stands (0–100 score)</li>
-          <li>See what’s working across logo, color, type, and consistency</li>
-          <li>Get a fast brand score and uncover your biggest opportunities</li>
-        </ul>
-      </article>
+  <!-- INTAKE VIEW -->
+  <div id="intake-view">
+    <main>
+      <section class="top-grid" aria-labelledby="page-title">
+        <article class="card hero-card">
+          <h1 id="page-title" class="hero-title">Is your brand fresh or spoiled?</h1>
+          <p class="hero-copy">Upload your brand assets and get a fast, honest rating across logo, color, typography, and consistency. Think of it as a quick gut check before you redesign, refresh, or keep moving forward.</p>
+          <ul class="benefits">
+            <li>Know exactly where your brand stands (0–100 score)</li>
+            <li>See what's working across logo, color, type, and consistency</li>
+            <li>Get a fast brand score and uncover your biggest opportunities</li>
+          </ul>
+        </article>
 
-      <section class="card form-card" aria-labelledby="upload-title">
-        <h2 id="upload-title" class="form-title">Upload your visuals</h2>
-        <p class="form-intro">Use a logo, palette, social post, website screenshot, packaging, or any key visual</p>
+        <section class="card form-card" aria-labelledby="upload-title">
+          <h2 id="upload-title" class="form-title">Upload your visuals</h2>
+          <p class="form-intro">Use a logo, palette, social post, website screenshot, packaging, or any key visual</p>
 
-        <form id="brand-rater-form">
-          <label class="field-label" for="file-input">Brand assets, up to 5 images</label>
-          <div class="upload-zone" id="drop-zone">
-            <input class="upload-input" id="file-input" name="assets" type="file" accept="image/png,image/jpeg,image/webp" multiple />
-            <div>
-              <div class="upload-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 3v12"></path>
-                  <path d="m7 8 5-5 5 5"></path>
-                  <path d="M5 15v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"></path>
-                </svg>
+          <form id="brand-rater-form">
+            <label class="field-label" for="file-input">Brand assets, up to 5 images</label>
+            <div class="upload-zone" id="drop-zone">
+              <input class="upload-input" id="file-input" name="assets" type="file" accept="image/png,image/jpeg,image/webp" multiple />
+              <div>
+                <div class="upload-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v12"></path>
+                    <path d="m7 8 5-5 5 5"></path>
+                    <path d="M5 15v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"></path>
+                  </svg>
+                </div>
+                <p class="upload-label">Drop files here or click to browse</p>
+                <p class="upload-hint">PNG, JPG, or WEBP images under 5 MB each (8 MB total)</p>
               </div>
-              <p class="upload-label">Drop files here or click to browse</p>
-              <p class="upload-hint">PNG, JPG, or WEBP images under 5 MB each (8 MB total)</p>
             </div>
-          </div>
 
-          <div class="previews" id="previews" aria-live="polite"></div>
+            <div class="previews" id="previews" aria-live="polite"></div>
 
-          <label class="field-label" for="context">Brand context, optional</label>
-          <textarea id="context" name="context" placeholder="Example: We are a San Diego brand consultancy helping small businesses look more credible, clear, and memorable"></textarea>
+            <label class="field-label" for="context">Brand context, optional</label>
+            <textarea id="context" name="context" placeholder="Example: We are a San Diego brand consultancy helping small businesses look more credible, clear, and memorable"></textarea>
 
-          <div class="turnstile-wrap">
-            <div
-              class="cf-turnstile"
-              data-sitekey="0x4AAAAAADd4hprTP58g9DXP"
-              data-callback="onTurnstileSuccess"
-              data-expired-callback="onTurnstileExpired"
-              data-error-callback="onTurnstileExpired"
-            ></div>
-          </div>
+            <div class="turnstile-wrap">
+              <div
+                class="cf-turnstile"
+                data-sitekey="0x4AAAAAADd4hprTP58g9DXP"
+                data-callback="onTurnstileSuccess"
+                data-expired-callback="onTurnstileExpired"
+                data-error-callback="onTurnstileExpired"
+              ></div>
+            </div>
 
-          <div class="cta-area">
-            <button class="primary-btn" id="score-btn" type="submit">Get your score</button>
-            <p class="privacy-note">Your files are not stored or shared. Used only to generate your score.</p>
-          </div>
-        </form>
+            <div class="cta-area">
+              <button class="primary-btn" id="score-btn" type="submit">Get your score</button>
+              <p class="privacy-note">Your files are not stored or shared. Used only to generate your score.</p>
+            </div>
+          </form>
+        </section>
       </section>
-    </section>
 
-    <section class="how-section" aria-labelledby="how-title">
-      <h2 id="how-title" class="section-title">How it works</h2>
-      <div class="steps-grid">
-        <article class="card step-card">
-          <span class="step-number" aria-hidden="true">1</span>
-          <h3>Upload assets</h3>
-          <p>Add the visual pieces that represent your brand today, even if they feel unfinished.</p>
-        </article>
-        <article class="card step-card">
-          <span class="step-number" aria-hidden="true">2</span>
-          <h3>Get scored</h3>
-          <p>Your brand is reviewed across the pieces that shape first impressions and trust.</p>
-        </article>
-        <article class="card step-card">
-          <span class="step-number" aria-hidden="true">3</span>
-          <h3>Fix what matters</h3>
-          <p>Walk away with practical next steps instead of vague feedback or design jargon.</p>
-        </article>
-      </div>
-    </section>
-  </main>
+      <section class="how-section" aria-labelledby="how-title">
+        <h2 id="how-title" class="section-title">How it works</h2>
+        <div class="steps-grid">
+          <article class="card step-card">
+            <span class="step-number" aria-hidden="true">1</span>
+            <h3>Upload assets</h3>
+            <p>Add the visual pieces that represent your brand today, even if they feel unfinished.</p>
+          </article>
+          <article class="card step-card">
+            <span class="step-number" aria-hidden="true">2</span>
+            <h3>Get scored</h3>
+            <p>Your brand is reviewed across the pieces that shape first impressions and trust.</p>
+          </article>
+          <article class="card step-card">
+            <span class="step-number" aria-hidden="true">3</span>
+            <h3>Fix what matters</h3>
+            <p>Walk away with practical next steps instead of vague feedback or design jargon.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- RESULTS VIEW -->
+  <div id="results-view" aria-live="polite">
+    <main id="results-main">
+      <!-- Populated by renderResultsPage() -->
+    </main>
+  </div>
 
   <footer class="site-footer">
     <div class="footer-inner">
@@ -841,6 +855,28 @@
       </div>
     </div>
   </footer>
+
+  <!-- Lead capture modal (lives outside both views so it persists) -->
+  <div class="lead-modal-backdrop" id="lead-modal" aria-hidden="true">
+    <div class="lead-modal" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
+      <h2 id="lead-modal-title">Unlock your full breakdown</h2>
+      <p>Share a few details and I'll save your Brand Rater results so we can review the strongest opportunities for your brand.</p>
+
+      <form id="lead-capture-form" class="lead-form-grid">
+        <input class="lead-input" type="text" name="name" placeholder="Your name" required>
+        <input class="lead-input" type="email" name="email" placeholder="Email address" required>
+        <input class="lead-input" type="text" name="company" placeholder="Company / brand name">
+        <input class="lead-input" type="url" name="website" placeholder="Website URL">
+        <input class="bot-field" type="text" name="bot-field" tabindex="-1" autocomplete="off">
+
+        <div class="lead-actions">
+          <button class="secondary-btn" id="close-lead-modal" type="button">Cancel</button>
+          <button class="primary-btn" id="lead-submit-btn" type="submit">Continue</button>
+        </div>
+        <p class="lead-note">Your submission is saved privately through Milky Minds Creative. Your uploaded files are not stored here.</p>
+      </form>
+    </div>
+  </div>
 
   <form name="brand-rater-leads" method="POST" action="/" data-netlify="true" netlify netlify-honeypot="bot-field" style="display: none;">
     <input type="hidden" name="form-name" value="brand-rater-leads" />
@@ -895,12 +931,13 @@
     function syncFiles(files) {
       const validFiles = [];
       let totalSize = 0;
+      const skippedNames = [];
 
       for (const file of [...files]) {
         if (!file.type.startsWith('image/')) continue;
 
         if (file.size > MAX_FILE_SIZE) {
-          PLACEHOLDER
+          skippedNames.push(file.name);
           continue;
         }
 
@@ -908,10 +945,17 @@
 
         if (totalSize > MAX_TOTAL_SIZE) {
           alert('The total upload size is too large.\n\nPlease upload fewer images or compress them before trying again.');
+          fileInput.value = '';
           break;
         }
 
         validFiles.push(file);
+      }
+
+      if (skippedNames.length > 0) {
+        alert(
+          `The following image${skippedNames.length > 1 ? 's exceed' : ' exceeds'} the 5 MB per-file limit and ${skippedNames.length > 1 ? 'were' : 'was'} not added:\n\n${skippedNames.join('\n')}\n\nPlease compress or resize before uploading.`
+        );
       }
 
       uploadedFiles = validFiles.slice(0, 5);
@@ -962,114 +1006,94 @@
       const categories = result.categories || [];
       const issues = result.visibleIssues || [];
 
-      document.body.innerHTML = `
-        <nav class="site-nav">
-          <div class="nav-inner">
-            <a href="https://milkymindscreative.com">
-              <img class="brand-logo" src="Logo.svg" alt="Milky Minds" />
-            </a>
-            <a class="back-link" href="https://milkymindscreative.com">Back to site →</a>
+      const intakeView = document.getElementById('intake-view');
+      const resultsView = document.getElementById('results-view');
+      const resultsMain = document.getElementById('results-main');
+
+      document.title = `Brand Score: ${result.overallScore}/100 | Milky Minds Creative`;
+
+      resultsMain.innerHTML = `
+        <section class="card results-score">
+          <p class="results-eyebrow">Overall Brand Score</p>
+
+          <div class="score-circle">
+            <div>
+              <span>${escapeHtml(result.overallScore)}</span>
+              <small>/ 100</small>
+            </div>
           </div>
-        </nav>
 
-        <main>
-          <section class="card results-score">
-            <p class="results-eyebrow">Overall Brand Score</p>
+          <h1 class="results-verdict">${escapeHtml(result.verdict)}</h1>
+          <p class="results-summary">${escapeHtml(result.summary)}</p>
+        </section>
 
-            <div class="score-circle">
+        <section class="results-grid">
+          ${categories.map(cat => `
+            <article class="card category-card">
+              <h3>${escapeHtml(cat.name)}</h3>
+              <p class="category-score">${escapeHtml(cat.score)}</p>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:${Math.max(0, Math.min(100, Number(cat.score) || 0))}%"></div>
+              </div>
+              <p class="category-note">${escapeHtml(cat.note)}</p>
+            </article>
+          `).join('')}
+        </section>
+
+        <section class="card issues-card">
+          <h2>What's holding you back?</h2>
+
+          ${issues.map(issue => `
+            <div class="issue-row">
               <div>
-                <span>${escapeHtml(result.overallScore)}</span>
-                <small>/ 100</small>
+                <p class="issue-meta">${escapeHtml(issue.category)} · ${escapeHtml(issue.severity)}</p>
+                <p class="issue-problem">${escapeHtml(issue.problem)}</p>
               </div>
+              <p class="issue-impact"><strong>Impact:</strong> ${escapeHtml(issue.impact)}</p>
             </div>
+          `).join('')}
 
-            <h1 class="results-verdict">${escapeHtml(result.verdict)}</h1>
-            <p class="results-summary">${escapeHtml(result.summary)}</p>
-          </section>
+          <div class="locked-box">
+            <h3>${escapeHtml(result.lockedIssueCount || 3)} hidden insights found</h3>
+            <p>Send yourself the results to keep your score and review the biggest opportunities.</p>
 
-          <section class="results-grid">
-            ${categories.map(cat => `
-              <article class="card category-card">
-                <h3>${escapeHtml(cat.name)}</h3>
-                <p class="category-score">${escapeHtml(cat.score)}</p>
-                <div class="bar-track">
-                  <div class="bar-fill" style="width:${Math.max(0, Math.min(100, Number(cat.score) || 0))}%"></div>
-                </div>
-                <p class="category-note">${escapeHtml(cat.note)}</p>
-              </article>
-            `).join('')}
-          </section>
-
-          <section class="card issues-card">
-            <h2>What’s holding you back?</h2>
-
-            ${issues.map(issue => `
-              <div class="issue-row">
-                <div>
-                  <p class="issue-meta">${escapeHtml(issue.category)} · ${escapeHtml(issue.severity)}</p>
-                  <p class="issue-problem">${escapeHtml(issue.problem)}</p>
-                </div>
-                <p class="issue-impact"><strong>Impact:</strong> ${escapeHtml(issue.impact)}</p>
-              </div>
-            `).join('')}
-
-            <div class="locked-box">
-              <h3>${escapeHtml(result.lockedIssueCount || 3)} hidden insights found</h3>
-              <p>Send yourself the results to keep your score and review the biggest opportunities.</p>
-
-              <div class="locked-insights">
-                <div class="locked-insight">🔒 Hidden Issue #1</div>
-                <div class="locked-insight">🔒 Hidden Issue #2</div>
-                <div class="locked-insight">🔒 Hidden Issue #3</div>
-              </div>
-            </div>
-          </section>
-
-          <section class="card unlock-card">
-            <h2>Send your brand results</h2>
-            <p>Save your score, category breakdown, and key opportunities so you can review them later.</p>
-            <button class="primary-btn" id="unlock-report-btn" type="button">Send me my results</button>
-          </section>
-
-          <div class="restart-wrap">
-            <button class="primary-btn" onclick="location.reload()">Analyze another brand</button>
-          </div>
-        </main>
-
-        <footer class="site-footer">
-          <div class="footer-inner">
-            <div>© Milky Minds Creative</div>
-            <div class="footer-links">
-              <a href="/privacy.html">Privacy</a>
-              <span>•</span>
-              <a href="/terms.html">Terms</a>
+            <div class="locked-insights">
+              <div class="locked-insight">🔒 Hidden Issue #1</div>
+              <div class="locked-insight">🔒 Hidden Issue #2</div>
+              <div class="locked-insight">🔒 Hidden Issue #3</div>
             </div>
           </div>
-        </footer>
+        </section>
 
-        <div class="lead-modal-backdrop" id="lead-modal" aria-hidden="true">
-          <div class="lead-modal" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
-            <h2 id="lead-modal-title">Unlock your full breakdown</h2>
-            <p>Share a few details and I’ll save your Brand Rater results so we can review the strongest opportunities for your brand.</p>
+        <section class="card unlock-card">
+          <h2>Send your brand results</h2>
+          <p>Save your score, category breakdown, and key opportunities so you can review them later.</p>
+          <button class="primary-btn" id="unlock-report-btn" type="button">Send me my results</button>
+        </section>
 
-            <form id="lead-capture-form" class="lead-form-grid">
-              <input class="lead-input" type="text" name="name" placeholder="Your name" required>
-              <input class="lead-input" type="email" name="email" placeholder="Email address" required>
-              <input class="lead-input" type="text" name="company" placeholder="Company / brand name">
-              <input class="lead-input" type="url" name="website" placeholder="Website URL">
-              <input class="bot-field" type="text" name="bot-field" tabindex="-1" autocomplete="off">
-
-              <div class="lead-actions">
-                <button class="secondary-btn" id="close-lead-modal" type="button">Cancel</button>
-                <button class="primary-btn" id="lead-submit-btn" type="submit">Continue</button>
-              </div>
-              <p class="lead-note">Your submission is saved privately through Milky Minds Creative. Your uploaded files are not stored here.</p>
-            </form>
-          </div>
+        <div class="restart-wrap">
+          <button class="primary-btn" id="restart-btn">Analyze another brand</button>
         </div>
       `;
 
+      intakeView.style.display = 'none';
+      resultsView.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       document.getElementById('unlock-report-btn').addEventListener('click', openLeadModal);
+      document.getElementById('restart-btn').addEventListener('click', () => {
+        document.title = 'Fresh or Spoiled? Brand Rater | Milky Minds Creative';
+        resultsView.style.display = 'none';
+        intakeView.style.display = 'block';
+        uploadedFiles = [];
+        fileInput.value = '';
+        contextInput.value = '';
+        renderPreviews();
+        submitButton.disabled = false;
+        submitButton.textContent = 'Get your score';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
       document.getElementById('close-lead-modal').addEventListener('click', closeLeadModal);
       document.getElementById('lead-modal').addEventListener('click', event => {
         if (event.target.id === 'lead-modal') closeLeadModal();
@@ -1081,6 +1105,9 @@
       const modal = document.getElementById('lead-modal');
       modal.classList.add('is-open');
       modal.setAttribute('aria-hidden', 'false');
+      // Move focus to the first input for accessibility
+      const firstInput = modal.querySelector('input:not(.bot-field)');
+      if (firstInput) firstInput.focus();
     }
 
     function closeLeadModal() {
