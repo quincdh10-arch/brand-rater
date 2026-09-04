@@ -40,7 +40,7 @@ const IMAGE_DETAIL =
     process.env.OPENAI_IMAGE_DETAIL
   )
     ? process.env.OPENAI_IMAGE_DETAIL
-    : "auto";
+    : "low";
 
 const SCORING_VERSION = "2.0.0";
 
