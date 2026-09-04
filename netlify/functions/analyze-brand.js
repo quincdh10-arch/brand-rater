@@ -40,13 +40,13 @@ const IMAGE_DETAIL =
     process.env.OPENAI_IMAGE_DETAIL
   )
     ? process.env.OPENAI_IMAGE_DETAIL
-    : "high";
+    : "auto";
 
 const SCORING_VERSION = "2.0.0";
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_TOTAL_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_IMAGE_BYTES = 4 * 1024 * 1024;
 
 /* =========================================================
    RUBRIC
@@ -2572,7 +2572,7 @@ exports.handler =
           body:
             JSON.stringify({
               error:
-                "The combined image upload is larger than 8 MB. Please upload fewer or smaller images.",
+                "The combined image upload is larger than 4 MB. Please upload fewer or smaller images.",
             }),
         };
       }
@@ -2630,7 +2630,7 @@ exports.handler =
             "brand_rater_v2_analysis",
 
           maxOutputTokens:
-            8000,
+            5000,
         });
 
       const categories =
@@ -2717,7 +2717,7 @@ exports.handler =
             "brand_rater_v2_narrative",
 
           maxOutputTokens:
-            3500,
+            2000,
         });
 
       const result = {
