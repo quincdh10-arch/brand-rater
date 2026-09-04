@@ -2775,18 +2775,27 @@
             );
           }
           else {
-            showError(
-              'step-3-error',
-              message ||
-              'Something went wrong. Please try again.'
-            );
-          }
+  showError(
+    'step-3-error',
+    message ||
+    'Something went wrong. Please try again.'
+  );
+}
 
-          submitButton.disabled =
-            false;
+turnstileToken = '';
 
-          submitButton.textContent =
-            'Analyze my brand →';
+if (
+  window.turnstile &&
+  typeof window.turnstile.reset === 'function'
+) {
+  window.turnstile.reset();
+}
+
+submitButton.disabled =
+  false;
+
+submitButton.textContent =
+  'Analyze my brand →';
         }
       }
     );
