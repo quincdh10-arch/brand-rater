@@ -2299,6 +2299,142 @@ Return only the structured result required by the supplied JSON schema.
 `;
 }
 
+
+function buildLocalNarrative({
+  business,
+  brandHealth,
+  categories,
+  maturity,
+  gap,
+  pattern,
+  priority,
+  strongest,
+}) {
+  const categorySummaries = {};
+
+  for (const category of categories) {
+    const assessed =
+      category.subcriteria
+        .filter(item => item.assessed)
+        .sort((a, b) => a.score - b.score);
+
+    if (!assessed.length) {
+      categorySummaries[category.id] =
+        "There was not enough customer-facing evidence to assess this area confidently.";
+      continue;
+    }
+
+    const weakest = assessed[0];
+    const best = assessed[assessed.length - 1];
+
+    if (weakest.score <= 2) {
+      categorySummaries[category.id] =
+        `${weakest.name} is the main limiter here. ${weakest.evidence} ${weakest.businessImpact}`.trim();
+    }
+    else if (best.score >= 4) {
+      categorySummaries[category.id] =
+        `${best.name} is a clear strength. ${best.evidence}`.trim();
+    }
+    else {
+      categorySummaries[category.id] =
+        `${category.name} is functional but has room to become more effective. ${weakest.evidence}`.trim();
+    }
+  }
+
+  let gapSummary;
+
+  if (gap.level === "Brand Advantage") {
+    gapSummary =
+      "The brand is currently presenting ahead of what we would normally expect for a business at this stage.";
+  }
+  else if (gap.level === "Aligned") {
+    gapSummary =
+      "The brand is broadly keeping pace with the maturity of the business.";
+  }
+  else {
+    gapSummary =
+      `The business is operating at a maturity score of ${gap.businessMaturity}, while Brand Health is ${gap.actualBrandHealth}. That creates a ${gap.level.toLowerCase()} and suggests the brand is not fully keeping pace with the business behind it.`;
+  }
+
+  const strength =
+    strongest || priority;
+
+  const evidenceCandidates =
+    [
+      strongest,
+      priority,
+      ...categories.flatMap(
+        category =>
+          category.subcriteria
+            .filter(item => item.assessed)
+      ),
+    ]
+      .filter(Boolean)
+      .filter(
+        (item, index, array) =>
+          array.findIndex(
+            candidate =>
+              candidate.categoryId === item.categoryId &&
+              candidate.id === item.id
+          ) === index
+      )
+      .filter(item => item.evidence)
+      .slice(0, 3);
+
+  return {
+    brandHealthSummary:
+      `${business.name || "This brand"} earned a Brand Health score of ${brandHealth.score}/100, placing it in the ${brandHealth.level} range. The strongest opportunity is to improve ${priority.name.toLowerCase()} so the brand better supports the business's current stage and goals.`,
+
+    patternSummary:
+      `${pattern.name} best describes the current brand. ${pattern.definition}`,
+
+    gapSummary,
+
+    categorySummaries,
+
+    biggestStrength: {
+      title:
+        strength?.name ||
+        "Strongest observed signal",
+
+      summary:
+        strength?.evidence ||
+        "The submitted materials show several workable brand elements.",
+    },
+
+    biggestOpportunity: {
+      title:
+        priority.name,
+
+      summary:
+        `${priority.evidence} ${priority.businessImpact}`.trim(),
+    },
+
+    evidence:
+      evidenceCandidates.map(
+        item => ({
+          observation:
+            item.evidence,
+
+          impact:
+            item.businessImpact ||
+            item.reasoning ||
+            "This affects how clearly and confidently customers experience the brand.",
+        })
+      ),
+
+    freeRecommendation: {
+      title:
+        `Start with ${priority.name}`,
+
+      summary:
+        priority.businessImpact
+          ? `Address this first: ${priority.businessImpact}`
+          : `Make ${priority.name.toLowerCase()} the first improvement before investing in lower-priority brand changes.`,
+    },
+  };
+}
+
 /* =========================================================
    FINAL RESPONSE ASSEMBLY
 ========================================================= */
@@ -2677,13 +2813,8 @@ exports.handler =
           categories
         );
 
-      /*
-        Second pass: no images are required. This pass receives only
-        the verified evidence + deterministic scores and writes the
-        founder-facing explanation.
-      */
-      const narrativePrompt =
-        buildNarrativePrompt({
+      const narrative =
+        buildLocalNarrative({
           business,
           brandHealth,
           categories,
@@ -2692,32 +2823,6 @@ exports.handler =
           pattern,
           priority,
           strongest,
-          businessSignals:
-            modelAnalysis.businessSignals,
-        });
-
-      const narrative =
-        await callOpenAI({
-          model:
-            NARRATIVE_MODEL,
-
-          content: [
-            {
-              type:
-                "input_text",
-              text:
-                narrativePrompt,
-            },
-          ],
-
-          schema:
-            NARRATIVE_SCHEMA,
-
-          schemaName:
-            "brand_rater_v2_narrative",
-
-          maxOutputTokens:
-            2000,
         });
 
       const result = {
@@ -2830,7 +2935,7 @@ exports.handler =
             ANALYSIS_MODEL,
 
           narrativeModel:
-            NARRATIVE_MODEL,
+            "local-deterministic",
 
           imageDetail:
             IMAGE_DETAIL,
