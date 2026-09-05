@@ -1460,6 +1460,135 @@
         align-items: flex-start;
       }
     }
+
+    /* =======================================================
+       BRAND ACTION PLAN
+    ======================================================== */
+
+    .action-plan-section {
+      margin-top: 80px;
+    }
+
+    .action-plan-loading,
+    .action-plan-error,
+    .action-plan-intro,
+    .action-plan-diagnosis,
+    .dont-prioritize-card,
+    .budget-card,
+    .action-plan-close {
+      padding: clamp(28px, 4vw, 44px);
+      margin-bottom: 24px;
+    }
+
+    .action-plan-lead {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 20px;
+      line-height: 1.55;
+    }
+
+    .action-plan-priority-grid,
+    .quick-win-grid,
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .quick-win-grid,
+    .roadmap-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .action-plan-priority,
+    .quick-win-card,
+    .roadmap-card {
+      padding: 28px;
+    }
+
+    .action-plan-priority h3,
+    .quick-win-card h3,
+    .roadmap-card h3 {
+      margin: 0 0 14px;
+      color: var(--text);
+      font-size: 27px;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+
+    .action-plan-callout {
+      margin: 22px 0;
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(30, 102, 165, 0.06);
+    }
+
+    .action-plan-callout p,
+    .budget-next-dollar p,
+    .budget-grid p {
+      margin-bottom: 0;
+    }
+
+    .action-plan-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin: 18px 0;
+    }
+
+    .action-plan-meta span {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(14, 30, 60, 0.06);
+      font-size: 12px;
+    }
+
+    .action-plan-impact {
+      margin-bottom: 0;
+    }
+
+    .quick-win-card .step-number {
+      margin-bottom: 26px;
+    }
+
+    .roadmap-card ul {
+      padding-left: 20px;
+    }
+
+    .roadmap-card li {
+      margin-bottom: 9px;
+      line-height: 1.45;
+    }
+
+    .budget-next-dollar {
+      margin-bottom: 26px;
+      padding: 20px;
+      border-radius: 15px;
+      background: rgba(30, 102, 165, 0.07);
+    }
+
+    .budget-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .budget-grid > div {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+    }
+
+    @media (max-width: 800px) {
+      .action-plan-priority-grid,
+      .quick-win-grid,
+      .roadmap-grid,
+      .budget-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
 
@@ -1849,7 +1978,7 @@
 
                   <p class="upload-hint">
                     Logo, homepage, social, marketing, packaging, or other customer-facing brand examples.
-                    PNG, JPG, or WEBP · 5 MB max per image · 4 MB total.
+                    PNG, JPG, or WEBP · 5 MB max per image · 8 MB total.
                   </p>
                 </div>
 
@@ -2142,6 +2271,9 @@
     const ANALYZE_ENDPOINT =
       '/.netlify/functions/analyze-brand';
 
+    const ACTION_PLAN_ENDPOINT =
+      '/.netlify/functions/generate-action-plan';
+
     /*
       When the paid Brand Action Plan is ready, add its checkout URL here.
       Leave blank for now and the UI will show "Coming soon".
@@ -2194,7 +2326,7 @@
       5 * 1024 * 1024;
 
     const MAX_TOTAL_SIZE =
-      4 * 1024 * 1024;
+      8 * 1024 * 1024;
 
     const LAST_SUBMISSION_KEY =
       'brand_rater_last_submission';
@@ -2775,27 +2907,18 @@
             );
           }
           else {
-  showError(
-    'step-3-error',
-    message ||
-    'Something went wrong. Please try again.'
-  );
-}
+            showError(
+              'step-3-error',
+              message ||
+              'Something went wrong. Please try again.'
+            );
+          }
 
-turnstileToken = '';
+          submitButton.disabled =
+            false;
 
-if (
-  window.turnstile &&
-  typeof window.turnstile.reset === 'function'
-) {
-  window.turnstile.reset();
-}
-
-submitButton.disabled =
-  false;
-
-submitButton.textContent =
-  'Analyze my brand →';
+          submitButton.textContent =
+            'Analyze my brand →';
         }
       }
     );
@@ -3061,11 +3184,10 @@ submitButton.textContent =
           : `
             <button
               class="light-btn"
+              id="generate-action-plan-btn"
               type="button"
-              disabled
-              style="opacity:.62;cursor:not-allowed;"
             >
-              Brand Action Plan — coming soon
+              Generate Test Action Plan
             </button>
           `;
 
@@ -3298,6 +3420,8 @@ submitButton.textContent =
 
         ${renderPriority(result)}
 
+        <div id="action-plan-results"></div>
+
         <div class="restart-wrap">
           <button
             class="secondary-btn"
@@ -3331,6 +3455,15 @@ submitButton.textContent =
 
       document
         .getElementById(
+          'generate-action-plan-btn'
+        )
+        ?.addEventListener(
+          'click',
+          generateActionPlan
+        );
+
+      document
+        .getElementById(
           'restart-btn'
         )
         ?.addEventListener(
@@ -3343,6 +3476,264 @@ submitButton.textContent =
 
       submitButton.textContent =
         'Analyze my brand →';
+    }
+
+    async function generateActionPlan() {
+      const button =
+        document.getElementById(
+          'generate-action-plan-btn'
+        );
+
+      const container =
+        document.getElementById(
+          'action-plan-results'
+        );
+
+      if (
+        !latestResult ||
+        !latestBusiness ||
+        !container
+      ) {
+        return;
+      }
+
+      try {
+        if (button) {
+          button.disabled = true;
+          button.textContent =
+            'Building your Action Plan...';
+        }
+
+        container.innerHTML = `
+          <section class="card action-plan-loading">
+            <p class="section-kicker">Brand Action Plan</p>
+            <h2>Building your personalized plan...</h2>
+            <p>We’re turning your Brand Rater diagnosis into a prioritized 90-day plan.</p>
+          </section>
+        `;
+
+        const response =
+          await fetch(
+            ACTION_PLAN_ENDPOINT,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                business: latestBusiness,
+                assessment: latestResult
+              })
+            }
+          );
+
+        let actionPlan;
+
+        try {
+          actionPlan = await response.json();
+        }
+        catch {
+          throw new Error(
+            `Brand Action Plan received an invalid response (${response.status}).`
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            actionPlan.error ||
+            'Something went wrong while generating your Action Plan.'
+          );
+        }
+
+        sessionStorage.setItem(
+          'brandActionPlan',
+          JSON.stringify(actionPlan)
+        );
+
+        renderActionPlan(actionPlan);
+
+        container.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+      catch (error) {
+        container.innerHTML = `
+          <section class="card action-plan-error">
+            <p class="section-kicker">Brand Action Plan</p>
+            <h2>We couldn’t build your plan.</h2>
+            <p>${escapeHtml(error.message || 'Please try again.')}</p>
+          </section>
+        `;
+
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Try Action Plan Again';
+        }
+      }
+    }
+
+    function renderActionPlan(plan) {
+      const container =
+        document.getElementById(
+          'action-plan-results'
+        );
+
+      if (!container) {
+        return;
+      }
+
+      const quickWins =
+        Array.isArray(plan.quickWins)
+          ? plan.quickWins
+          : [];
+
+      const roadmap = plan.roadmap || {};
+
+      function renderPriorityBlock(label, item) {
+        if (!item) {
+          return '';
+        }
+
+        return `
+          <article class="card action-plan-priority">
+            <p class="section-kicker">${escapeHtml(label)}</p>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p>${escapeHtml(item.whyItMatters)}</p>
+
+            <div class="action-plan-callout">
+              <strong>What to do</strong>
+              <p>${escapeHtml(item.whatToDo)}</p>
+            </div>
+
+            <div class="action-plan-meta">
+              <span>Effort: <strong>${escapeHtml(item.effort)}</strong></span>
+              <span>Investment: <strong>${escapeHtml(item.investment)}</strong></span>
+              <span>Best owner: <strong>${escapeHtml(item.bestOwner)}</strong></span>
+            </div>
+
+            <p class="action-plan-impact">
+              <strong>Expected impact:</strong>
+              ${escapeHtml(item.expectedImpact)}
+            </p>
+          </article>
+        `;
+      }
+
+      function renderRoadmapPhase(label, phase) {
+        if (!phase) {
+          return '';
+        }
+
+        const actions =
+          Array.isArray(phase.actions)
+            ? phase.actions
+            : [];
+
+        return `
+          <article class="card roadmap-card">
+            <p class="section-kicker">${escapeHtml(label)}</p>
+            <h3>${escapeHtml(phase.focus)}</h3>
+            <ul>
+              ${actions.map(action => `
+                <li>${escapeHtml(action)}</li>
+              `).join('')}
+            </ul>
+            <p>
+              <strong>Success looks like:</strong>
+              ${escapeHtml(phase.successSignal)}
+            </p>
+          </article>
+        `;
+      }
+
+      container.innerHTML = `
+        <section class="action-plan-section">
+          <div class="results-section-header">
+            <p class="eyebrow">Your Brand Action Plan</p>
+            <h2>Know what to fix next.</h2>
+          </div>
+
+          <section class="card action-plan-intro">
+            <p class="section-kicker">Executive summary</p>
+            <p class="action-plan-lead">${escapeHtml(plan.executiveSummary)}</p>
+          </section>
+
+          <section class="card action-plan-diagnosis">
+            <p class="section-kicker">Your diagnosis</p>
+            <h2>${escapeHtml(plan.diagnosis?.headline || 'Your brand diagnosis')}</h2>
+            <p>${escapeHtml(plan.diagnosis?.summary || '')}</p>
+            <p><strong>Why this matters now:</strong> ${escapeHtml(plan.diagnosis?.whyNow || '')}</p>
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">Priorities</p>
+            <h2>Put your effort here first.</h2>
+          </div>
+
+          <section class="action-plan-priority-grid">
+            ${renderPriorityBlock('Fix First', plan.fixFirst)}
+            ${renderPriorityBlock('Fix Next', plan.fixNext)}
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">Quick wins</p>
+            <h2>Three things you can improve this week.</h2>
+          </div>
+
+          <section class="quick-win-grid">
+            ${quickWins.map((item, index) => `
+              <article class="card quick-win-card">
+                <span class="step-number">0${index + 1}</span>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.action)}</p>
+                <p><strong>Why:</strong> ${escapeHtml(item.why)}</p>
+              </article>
+            `).join('')}
+          </section>
+
+          <section class="card dont-prioritize-card">
+            <p class="section-kicker">Don't prioritize</p>
+            <h2>${escapeHtml(plan.dontPrioritize?.title || '')}</h2>
+            <p>${escapeHtml(plan.dontPrioritize?.reason || '')}</p>
+            <p><strong>Revisit when:</strong> ${escapeHtml(plan.dontPrioritize?.revisitWhen || '')}</p>
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">Where to spend</p>
+            <h2>Put your next dollar where it matters.</h2>
+          </div>
+
+          <section class="card budget-card">
+            <div class="budget-next-dollar">
+              <strong>Your next dollar</strong>
+              <p>${escapeHtml(plan.budgetGuidance?.nextDollar || '')}</p>
+            </div>
+
+            <div class="budget-grid">
+              <div><strong>DIY</strong><p>${escapeHtml(plan.budgetGuidance?.diy || '')}</p></div>
+              <div><strong>Freelancer</strong><p>${escapeHtml(plan.budgetGuidance?.freelancer || '')}</p></div>
+              <div><strong>Professional</strong><p>${escapeHtml(plan.budgetGuidance?.professional || '')}</p></div>
+            </div>
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">90-day roadmap</p>
+            <h2>Improve the brand in the right order.</h2>
+          </div>
+
+          <section class="roadmap-grid">
+            ${renderRoadmapPhase('Days 1–30', roadmap.days1to30)}
+            ${renderRoadmapPhase('Days 31–60', roadmap.days31to60)}
+            ${renderRoadmapPhase('Days 61–90', roadmap.days61to90)}
+          </section>
+
+          <section class="card action-plan-close">
+            <p class="section-kicker">Final guidance</p>
+            <p class="action-plan-lead">${escapeHtml(plan.closingAdvice || '')}</p>
+          </section>
+        </section>
+      `;
     }
 
     function restartBrandRater() {
