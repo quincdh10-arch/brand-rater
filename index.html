@@ -2348,11 +2348,8 @@
     const ACTION_PLAN_ENDPOINT =
       '/.netlify/functions/generate-action-plan';
 
-    /*
-      When the paid Brand Action Plan is ready, add its checkout URL here.
-      Leave blank for now and the UI will show "Coming soon".
-    */
-    const ACTION_PLAN_URL = '';
+    const CHECKOUT_ENDPOINT =
+      '/.netlify/functions/create-checkout-session';
 
     const form =
       document.getElementById('brand-rater-form');
@@ -3245,25 +3242,15 @@
         recommendation.text ||
         'Your V2 Brand Action Plan will prioritize the most important improvements based on business impact, effort, investment, and your stated goals.';
 
-      const paidButton =
-        ACTION_PLAN_URL
-          ? `
-            <a
-              class="light-btn"
-              href="${escapeHtml(ACTION_PLAN_URL)}"
-            >
-              Get My Brand Action Plan — $39
-            </a>
-          `
-          : `
-            <button
-              class="light-btn"
-              id="generate-action-plan-btn"
-              type="button"
-            >
-              Generate Test Action Plan
-            </button>
-          `;
+      const paidButton = `
+        <button
+          class="light-btn"
+          id="generate-action-plan-btn"
+          type="button"
+        >
+          Get My Brand Action Plan — $39
+        </button>
+      `;
 
       return `
         <section class="card priority-card">
@@ -3533,7 +3520,7 @@
         )
         ?.addEventListener(
           'click',
-          generateActionPlan
+          startActionPlanCheckout
         );
 
       document
@@ -3550,6 +3537,112 @@
 
       submitButton.textContent =
         'Analyze my brand →';
+    }
+
+    async function startActionPlanCheckout() {
+      const button =
+        document.getElementById(
+          'generate-action-plan-btn'
+        );
+
+      if (
+        !latestResult ||
+        !latestBusiness
+      ) {
+        return;
+      }
+
+      try {
+        if (button) {
+          button.disabled = true;
+          button.textContent =
+            'Opening secure checkout...';
+        }
+
+        /*
+          Temporary checkout-return storage.
+
+          This keeps the current assessment available
+          when Stripe redirects the browser back to
+          Brand Rater. We will replace this with
+          server-side purchase persistence before
+          production launch.
+        */
+        sessionStorage.setItem(
+          'brandRaterBusiness',
+          JSON.stringify(latestBusiness)
+        );
+
+        sessionStorage.setItem(
+          'brandRaterAssessment',
+          JSON.stringify(latestResult)
+        );
+
+        const response =
+          await fetch(
+            CHECKOUT_ENDPOINT,
+            {
+              method: 'POST',
+
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              body:
+                JSON.stringify({
+                  product:
+                    'brand-action-plan'
+                })
+            }
+          );
+
+        let checkout;
+
+        try {
+          checkout =
+            await response.json();
+        }
+        catch {
+          throw new Error(
+            `Checkout received an invalid response (${response.status}).`
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            checkout.error ||
+            'Unable to start checkout.'
+          );
+        }
+
+        if (!checkout.checkoutUrl) {
+          throw new Error(
+            'Stripe did not return a checkout URL.'
+          );
+        }
+
+        window.location.href =
+          checkout.checkoutUrl;
+      }
+
+      catch (error) {
+        console.error(
+          'Action Plan checkout error:',
+          error
+        );
+
+        if (button) {
+          button.disabled = false;
+          button.textContent =
+            'Get My Brand Action Plan — $39';
+        }
+
+        alert(
+          error.message ||
+          'We could not start checkout. Please try again.'
+        );
+      }
     }
 
     async function generateActionPlan() {
