@@ -1525,9 +1525,34 @@
     }
 
     .action-plan-callout p,
+    .budget-recommendation p,
     .budget-next-dollar p,
     .budget-grid p {
       margin-bottom: 0;
+    }
+
+    .action-plan-evidence {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .action-plan-evidence strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .action-plan-evidence p {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 14px;
+      line-height: 1.5;
     }
 
     .action-plan-meta {
@@ -1561,6 +1586,32 @@
       line-height: 1.45;
     }
 
+    .budget-recommendation {
+      margin-bottom: 16px;
+      padding: 24px;
+      border: 1px solid rgba(30, 102, 165, 0.2);
+      border-radius: 16px;
+      background: rgba(30, 102, 165, 0.055);
+    }
+
+    .budget-recommendation .section-kicker {
+      margin-bottom: 8px;
+    }
+
+    .budget-recommendation h3 {
+      margin: 0 0 10px;
+      color: var(--text);
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .budget-recommendation p:last-child {
+      margin: 0;
+      color: var(--body-text);
+      line-height: 1.5;
+    }
+
     .budget-next-dollar {
       margin-bottom: 26px;
       padding: 20px;
@@ -1575,9 +1626,32 @@
     }
 
     .budget-grid > div {
+      position: relative;
       padding: 20px;
       border: 1px solid var(--line);
       border-radius: 15px;
+      background: #fff;
+    }
+
+    .budget-grid > div.is-recommended {
+      border-color: rgba(30, 102, 165, 0.35);
+      background: rgba(30, 102, 165, 0.055);
+      box-shadow: 0 0 0 2px rgba(30, 102, 165, 0.06);
+    }
+
+    .budget-path-badge {
+      width: fit-content;
+      display: inline-flex;
+      margin-bottom: 10px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--milky-blue);
+      color: #fff;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     @media (max-width: 800px) {
@@ -3616,6 +3690,17 @@
               <strong>Expected impact:</strong>
               ${escapeHtml(item.expectedImpact)}
             </p>
+
+            ${
+              item.evidence
+                ? `
+                  <div class="action-plan-evidence">
+                    <strong>Why we're recommending this</strong>
+                    <p>${escapeHtml(item.evidence)}</p>
+                  </div>
+                `
+                : ''
+            }
           </article>
         `;
       }
@@ -3705,15 +3790,41 @@
           </div>
 
           <section class="card budget-card">
+            ${
+              plan.budgetGuidance?.recommendedPath
+                ? `
+                  <div class="budget-recommendation">
+                    <p class="section-kicker">Recommended path</p>
+                    <h3>${escapeHtml(plan.budgetGuidance.recommendedPath)}</h3>
+                    <p>${escapeHtml(plan.budgetGuidance?.recommendedReason || '')}</p>
+                  </div>
+                `
+                : ''
+            }
+
             <div class="budget-next-dollar">
-              <strong>Your next dollar</strong>
+              <strong>Where I'd put your next dollar</strong>
               <p>${escapeHtml(plan.budgetGuidance?.nextDollar || '')}</p>
             </div>
 
             <div class="budget-grid">
-              <div><strong>DIY</strong><p>${escapeHtml(plan.budgetGuidance?.diy || '')}</p></div>
-              <div><strong>Freelancer</strong><p>${escapeHtml(plan.budgetGuidance?.freelancer || '')}</p></div>
-              <div><strong>Professional</strong><p>${escapeHtml(plan.budgetGuidance?.professional || '')}</p></div>
+              <div class="${plan.budgetGuidance?.recommendedPath === 'DIY' ? 'is-recommended' : ''}">
+                ${plan.budgetGuidance?.recommendedPath === 'DIY' ? '<span class="budget-path-badge">Recommended</span>' : ''}
+                <strong>DIY</strong>
+                <p>${escapeHtml(plan.budgetGuidance?.diy || '')}</p>
+              </div>
+
+              <div class="${plan.budgetGuidance?.recommendedPath === 'Freelancer' ? 'is-recommended' : ''}">
+                ${plan.budgetGuidance?.recommendedPath === 'Freelancer' ? '<span class="budget-path-badge">Recommended</span>' : ''}
+                <strong>Freelancer</strong>
+                <p>${escapeHtml(plan.budgetGuidance?.freelancer || '')}</p>
+              </div>
+
+              <div class="${plan.budgetGuidance?.recommendedPath === 'Professional' ? 'is-recommended' : ''}">
+                ${plan.budgetGuidance?.recommendedPath === 'Professional' ? '<span class="budget-path-badge">Recommended</span>' : ''}
+                <strong>Professional</strong>
+                <p>${escapeHtml(plan.budgetGuidance?.professional || '')}</p>
+              </div>
             </div>
           </section>
 
