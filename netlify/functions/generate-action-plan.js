@@ -24,7 +24,7 @@ const ACTION_PLAN_MODEL =
   process.env.OPENAI_ACTION_PLAN_MODEL ||
   "gpt-4.1-mini";
 
-const ACTION_PLAN_VERSION = "1.1.0";
+const ACTION_PLAN_VERSION = "1.2.0";
 
 /* =========================================================
    HELPERS
@@ -170,6 +170,7 @@ function compactAssessment(assessment) {
 const PRIORITY_SCHEMA = {
   type: "object",
   additionalProperties: false,
+
   required: [
     "title",
     "whyItMatters",
@@ -180,25 +181,49 @@ const PRIORITY_SCHEMA = {
     "bestOwner",
     "evidence",
   ],
+
   properties: {
-    title: { type: "string" },
-    whyItMatters: { type: "string" },
-    whatToDo: { type: "string" },
-    expectedImpact: { type: "string" },
+    title: {
+      type: "string",
+    },
+
+    whyItMatters: {
+      type: "string",
+    },
+
+    whatToDo: {
+      type: "string",
+    },
+
+    expectedImpact: {
+      type: "string",
+    },
 
     effort: {
       type: "string",
-      enum: ["Easy", "Moderate", "Significant"],
+      enum: [
+        "Easy",
+        "Moderate",
+        "Significant",
+      ],
     },
 
     investment: {
       type: "string",
-      enum: ["$", "$$", "$$$"],
+      enum: [
+        "$",
+        "$$",
+        "$$$",
+      ],
     },
 
     bestOwner: {
       type: "string",
-      enum: ["DIY", "Freelancer", "Professional"],
+      enum: [
+        "DIY",
+        "Freelancer",
+        "Professional",
+      ],
     },
 
     evidence: {
@@ -251,6 +276,7 @@ const ROADMAP_PHASE_SCHEMA = {
       type: "array",
       minItems: 2,
       maxItems: 4,
+
       items: {
         type: "string",
       },
@@ -267,6 +293,7 @@ const ACTION_PLAN_SCHEMA = {
   additionalProperties: false,
 
   required: [
+    "actionPlanTheme",
     "executiveSummary",
     "diagnosis",
     "fixFirst",
@@ -279,6 +306,10 @@ const ACTION_PLAN_SCHEMA = {
   ],
 
   properties: {
+    actionPlanTheme: {
+      type: "string",
+    },
+
     executiveSummary: {
       type: "string",
     },
@@ -360,6 +391,7 @@ const ACTION_PLAN_SCHEMA = {
       properties: {
         recommendedPath: {
           type: "string",
+
           enum: [
             "DIY",
             "Freelancer",
@@ -468,6 +500,7 @@ CORE PRODUCT PROMISE
 
 The customer should finish this report knowing:
 
+- the single strategic theme that should guide the next 90 days,
 - what is actually holding the brand back,
 - what to fix first,
 - what to fix next,
@@ -478,15 +511,19 @@ The customer should finish this report knowing:
 
 NON-NEGOTIABLE RULES
 
-1. Treat Brand Rater scores, category scores, Brand Pattern, Brand Gap, maturity, priority, and observed evidence as fixed facts.
+1. Treat Brand Rater scores, category scores, Brand Pattern, Brand Gap,
+maturity, priority, and observed evidence as fixed facts.
 
 Do not change or reinterpret them.
 
-2. Never claim the live website was inspected unless the assessment explicitly contains evidence from it.
+2. Never claim the live website was inspected unless the assessment
+explicitly contains evidence from it.
 
-3. Never invent reviews, revenue, customer counts, locations, awards, services, competitors, visual details, or performance metrics.
+3. Never invent reviews, revenue, customer counts, locations, awards,
+services, competitors, visual details, or performance metrics.
 
-4. Every major recommendation must connect to specific evidence contained in the assessment whenever that evidence exists.
+4. Every major recommendation must connect to specific evidence
+contained in the assessment whenever that evidence exists.
 
 5. Recommendations must answer four questions:
 
@@ -509,9 +546,12 @@ Prefer concrete references to observed:
 - imagery,
 - or other supplied evidence.
 
-7. Do not recommend a full rebrand unless the evidence clearly demonstrates that the current identity/system is itself the primary strategic problem.
+7. Do not recommend a full rebrand unless the evidence clearly
+demonstrates that the current identity/system is itself the primary
+strategic problem.
 
-8. Be willing to say the logo is NOT the problem when another issue deserves investment first.
+8. Be willing to say the logo is NOT the problem when another issue
+deserves investment first.
 
 9. FIX FIRST must be the single highest-leverage improvement based on:
 
@@ -532,7 +572,8 @@ Every Quick Win should:
 - require little or no spending,
 - generally take approximately 30–90 minutes,
 - be possible within one week,
-- and not require a full redesign, strategy project, or outside discovery process.
+- and not require a full redesign, strategy project, or outside
+  discovery process.
 
 12. Good Quick Win scope includes things like:
 
@@ -544,13 +585,15 @@ Every Quick Win should:
 
 Only recommend these when supported by the assessment.
 
-13. DON'T PRIORITIZE must identify a realistic brand expense, project, or activity the customer might otherwise spend money on.
+13. DON'T PRIORITIZE must identify a realistic brand expense, project,
+or activity the customer might otherwise spend money on.
 
 Explain why delaying it is strategically smarter right now.
 
 Do not choose a trivial task.
 
-When supported by the assessment, be willing to explicitly say things such as:
+When supported by the assessment, be willing to explicitly say things
+such as:
 
 - "Your logo is not the problem."
 - "A full rebrand is not the best use of your next dollar."
@@ -564,7 +607,8 @@ Choose exactly ONE recommendedPath:
 - Freelancer
 - Professional
 
-Then explain why that path best fits the current highest-priority problem.
+Then explain why that path best fits the current highest-priority
+problem.
 
 15. The customer should finish Budget Guidance knowing:
 
@@ -575,13 +619,15 @@ Then explain why that path best fits the current highest-priority problem.
 
 16. THE 90-DAY ROADMAP MUST HAVE THREE DISTINCT JOBS.
 
-Do not repeat essentially the same recommendation across all three phases.
+Do not repeat essentially the same recommendation across all three
+phases.
 
 17. DAYS 1–30 = FIX THE FOUNDATION.
 
 Resolve the highest-priority foundational issue.
 
-Keep the focus narrow rather than trying to solve every brand problem at once.
+Keep the focus narrow rather than trying to solve every brand problem
+at once.
 
 18. DAYS 31–60 = BUILD ON THE FOUNDATION.
 
@@ -614,7 +660,8 @@ Identify the next brand decision based on what has been improved.
 
 21. Use founder-friendly language.
 
-Avoid unexplained branding jargon, consultant filler, and generic AI phrasing.
+Avoid unexplained branding jargon, consultant filler, and generic AI
+phrasing.
 
 22. Be decisive.
 
@@ -622,9 +669,82 @@ Prioritize decisions over education.
 
 Tell the customer what to do and what not to do.
 
-23. Keep this valuable enough to justify a paid $39 report, but do not turn it into a full agency scope of work.
+23. Keep this valuable enough to justify a paid $39 report, but do not
+turn it into a full agency scope of work.
 
-24. The finished report should feel valuable because it saves the business owner from spending time or money on the wrong problem.
+24. The finished report should feel valuable because it saves the
+business owner from spending time or money on the wrong problem.
+
+25. Create an actionPlanTheme: one short strategic sentence that acts
+as the thesis for the entire report.
+
+The theme should:
+
+- be specific to the diagnosis,
+- express a clear strategic tradeoff or sequence,
+- be no more than roughly 12 words,
+- avoid scores, jargon, and generic encouragement,
+- and make the rest of the report feel like one coherent plan.
+
+GOOD EXAMPLES:
+
+- "Build consistency before investing in a bigger redesign."
+- "Clarify the message before expanding the visual identity."
+- "Strengthen trust before spending more on acquisition."
+- "Turn strong visuals into a more distinctive, ownable brand."
+
+Do not copy these examples unless they genuinely fit the assessment.
+
+26. Avoid unnecessary repetition across sections.
+
+The core priority may appear throughout the report, but each section
+must do a different job:
+
+- actionPlanTheme = the strategic thesis.
+- executiveSummary = the situation and overall direction.
+- diagnosis = what is wrong and why it matters.
+- Fix First = the first project to execute.
+- Fix Next = the second distinct problem to address.
+- Quick Wins = immediate small actions, not restatements of Fix First.
+- Budget Guidance = the spending decision.
+- Roadmap = sequencing and rollout.
+
+Do not repeatedly restate the same typography, color, messaging, or
+credibility observation using slightly different words.
+
+27. DAYS 1–30 should define the smallest useful foundation, not an
+oversized brand-system project.
+
+When the priority involves visual consistency, prefer a minimum viable
+brand guide or compact working standard over a full brand guideline
+project unless the assessment clearly supports greater scope.
+
+A minimum viable guide may include only what is necessary to execute
+consistently, such as:
+
+- primary and secondary type choices,
+- a limited color palette,
+- basic logo-use rules,
+- simple CTA or messaging conventions,
+- and the highest-priority customer-facing examples.
+
+28. Success Signals must be observable and practical.
+
+Avoid vague success signals such as:
+
+- "the brand feels stronger,"
+- "customers trust the business more,"
+
+unless the report identifies a concrete observable indicator.
+
+Prefer signals such as:
+
+- priority materials use the same type and color rules,
+- the same CTA appears across selected touchpoints,
+- testimonial/proof content is present in agreed locations,
+- updated materials pass a simple consistency review,
+- or customer-facing copy clearly communicates the selected value
+  proposition.
 
 SPECIFICITY STANDARD
 
@@ -634,11 +754,15 @@ BAD:
 
 BETTER:
 
-"The supplied materials use inconsistent typography and color treatments, so customers may not immediately recognize them as coming from the same business."
+"The supplied materials use inconsistent typography and color
+treatments, so customers may not immediately recognize them as coming
+from the same business."
 
 BEST:
 
-Name the specific customer-facing element that was observed and explain exactly what should change, where it should change, and why it matters.
+Name the specific customer-facing element that was observed and
+explain exactly what should change, where it should change, and why
+it matters.
 
 Do not claim specificity that the assessment does not actually contain.
 
@@ -670,10 +794,12 @@ DIY:
 Reasonable for the founder/team to execute themselves.
 
 Freelancer:
-Execution help is useful but senior strategic direction is not essential.
+Execution help is useful but senior strategic direction is not
+essential.
 
 Professional:
-Strategy, positioning, identity systems, complex web/brand work, or high-stakes decisions need experienced support.
+Strategy, positioning, identity systems, complex web/brand work, or
+high-stakes decisions need experienced support.
 
 RECOMMENDED PATH DECISION
 
@@ -689,18 +815,21 @@ Choose DIY when:
 Choose Freelancer when:
 
 - the strategy is sufficiently clear,
-- but focused design, writing, or implementation help would materially improve the result.
+- but focused design, writing, or implementation help would materially
+  improve the result.
 
 Choose Professional when:
 
 - the business needs strategic positioning,
 - a broader identity/system decision,
 - a complex website or brand change,
-- or another high-stakes decision where experienced senior guidance materially reduces risk.
+- or another high-stakes decision where experienced senior guidance
+  materially reduces risk.
 
 Do not default to the most expensive option.
 
-Match the recommendation to the actual complexity of the problem and the evidence available.
+Match the recommendation to the actual complexity of the problem and
+the evidence available.
 
 BUDGET GUIDANCE OUTPUT
 
@@ -708,21 +837,26 @@ recommendedPath:
 Choose exactly one of DIY, Freelancer, or Professional.
 
 recommendedReason:
-Explain in plain language why this is the right level of support for the business right now.
+Explain in plain language why this is the right level of support for
+the business right now.
 
 nextDollar:
 State specifically where the next incremental brand dollar should go.
 
 diy:
-Explain the portion of the current plan the owner/team can reasonably execute themselves.
+Explain the portion of the current plan the owner/team can reasonably
+execute themselves.
 
 freelancer:
-Explain what focused execution work would make sense to delegate to a freelancer.
+Explain what focused execution work would make sense to delegate to a
+freelancer.
 
 professional:
-Explain what future condition or level of complexity would justify hiring a senior brand strategist, agency, or other professional.
+Explain what future condition or level of complexity would justify
+hiring a senior brand strategist, agency, or other professional.
 
-The three descriptions should NOT make all three choices sound equally recommended.
+The three descriptions should NOT make all three choices sound equally
+recommended.
 
 QUICK WIN QUALITY CHECK
 
@@ -731,7 +865,8 @@ Before returning each Quick Win, mentally verify:
 - Could the owner realistically start this today?
 - Could it usually be completed in approximately 30–90 minutes?
 - Does it require little or no spending?
-- Is the action specific enough that the owner knows exactly what to change?
+- Is the action specific enough that the owner knows exactly what to
+  change?
 - Is it supported by the assessment?
 
 If not, replace it with a smaller, more concrete action.
@@ -739,6 +874,13 @@ If not, replace it with a smaller, more concrete action.
 ROADMAP QUALITY CHECK
 
 Before returning the roadmap, mentally verify:
+
+- Is Days 1–30 the smallest useful foundation rather than an oversized
+  system project?
+- Does each phase have a different strategic job?
+- Are success signals observable rather than subjective?
+
+Then verify:
 
 Days 1–30:
 Are we fixing the foundation?
@@ -755,10 +897,14 @@ FINAL QUALITY CHECK
 
 Before returning the report, verify:
 
+- actionPlanTheme clearly expresses the strategic thesis in one short
+  sentence.
+- The same core issue is not redundantly repeated across every section.
 - Fix First and Fix Next are meaningfully different.
 - Major recommendations reference actual evidence where possible.
 - Quick Wins are truly small.
-- Don't Prioritize protects the customer from a plausible unnecessary expense.
+- Don't Prioritize protects the customer from a plausible unnecessary
+  expense.
 - Budget Guidance clearly recommends one path.
 - The 90-day roadmap progresses rather than repeats.
 - The report sounds specific to THIS business.
@@ -766,7 +912,8 @@ Before returning the report, verify:
 
 Write concise but specific recommendations.
 
-The report should feel like a strategist looked at THIS business, not like a generic branding checklist.
+The report should feel like a strategist looked at THIS business, not
+like a generic branding checklist.
 
 Return only the structured JSON required by the supplied schema.
 `;
@@ -817,7 +964,7 @@ Return only the structured JSON required by the supplied schema.
                 "json_schema",
 
               name:
-                "brand_action_plan_v1_1",
+                "brand_action_plan_v1_2",
 
               strict:
                 true,
