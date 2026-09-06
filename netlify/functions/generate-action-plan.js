@@ -24,7 +24,7 @@ const ACTION_PLAN_MODEL =
   process.env.OPENAI_ACTION_PLAN_MODEL ||
   "gpt-4.1-mini";
 
-const ACTION_PLAN_VERSION = "1.0.0";
+const ACTION_PLAN_VERSION = "1.1.0";
 
 /* =========================================================
    HELPERS
@@ -185,60 +185,87 @@ const PRIORITY_SCHEMA = {
     whyItMatters: { type: "string" },
     whatToDo: { type: "string" },
     expectedImpact: { type: "string" },
+
     effort: {
       type: "string",
       enum: ["Easy", "Moderate", "Significant"],
     },
+
     investment: {
       type: "string",
       enum: ["$", "$$", "$$$"],
     },
+
     bestOwner: {
       type: "string",
       enum: ["DIY", "Freelancer", "Professional"],
     },
-    evidence: { type: "string" },
+
+    evidence: {
+      type: "string",
+    },
   },
 };
 
 const QUICK_WIN_SCHEMA = {
   type: "object",
   additionalProperties: false,
+
   required: [
     "title",
     "action",
     "why",
   ],
+
   properties: {
-    title: { type: "string" },
-    action: { type: "string" },
-    why: { type: "string" },
+    title: {
+      type: "string",
+    },
+
+    action: {
+      type: "string",
+    },
+
+    why: {
+      type: "string",
+    },
   },
 };
 
 const ROADMAP_PHASE_SCHEMA = {
   type: "object",
   additionalProperties: false,
+
   required: [
     "focus",
     "actions",
     "successSignal",
   ],
+
   properties: {
-    focus: { type: "string" },
+    focus: {
+      type: "string",
+    },
+
     actions: {
       type: "array",
       minItems: 2,
       maxItems: 4,
-      items: { type: "string" },
+      items: {
+        type: "string",
+      },
     },
-    successSignal: { type: "string" },
+
+    successSignal: {
+      type: "string",
+    },
   },
 };
 
 const ACTION_PLAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
+
   required: [
     "executiveSummary",
     "diagnosis",
@@ -250,6 +277,7 @@ const ACTION_PLAN_SCHEMA = {
     "roadmap",
     "closingAdvice",
   ],
+
   properties: {
     executiveSummary: {
       type: "string",
@@ -258,19 +286,30 @@ const ACTION_PLAN_SCHEMA = {
     diagnosis: {
       type: "object",
       additionalProperties: false,
+
       required: [
         "headline",
         "summary",
         "whyNow",
       ],
+
       properties: {
-        headline: { type: "string" },
-        summary: { type: "string" },
-        whyNow: { type: "string" },
+        headline: {
+          type: "string",
+        },
+
+        summary: {
+          type: "string",
+        },
+
+        whyNow: {
+          type: "string",
+        },
       },
     },
 
     fixFirst: PRIORITY_SCHEMA,
+
     fixNext: PRIORITY_SCHEMA,
 
     quickWins: {
@@ -283,47 +322,92 @@ const ACTION_PLAN_SCHEMA = {
     dontPrioritize: {
       type: "object",
       additionalProperties: false,
+
       required: [
         "title",
         "reason",
         "revisitWhen",
       ],
+
       properties: {
-        title: { type: "string" },
-        reason: { type: "string" },
-        revisitWhen: { type: "string" },
+        title: {
+          type: "string",
+        },
+
+        reason: {
+          type: "string",
+        },
+
+        revisitWhen: {
+          type: "string",
+        },
       },
     },
 
     budgetGuidance: {
       type: "object",
       additionalProperties: false,
+
       required: [
+        "recommendedPath",
+        "recommendedReason",
         "nextDollar",
         "diy",
         "freelancer",
         "professional",
       ],
+
       properties: {
-        nextDollar: { type: "string" },
-        diy: { type: "string" },
-        freelancer: { type: "string" },
-        professional: { type: "string" },
+        recommendedPath: {
+          type: "string",
+          enum: [
+            "DIY",
+            "Freelancer",
+            "Professional",
+          ],
+        },
+
+        recommendedReason: {
+          type: "string",
+        },
+
+        nextDollar: {
+          type: "string",
+        },
+
+        diy: {
+          type: "string",
+        },
+
+        freelancer: {
+          type: "string",
+        },
+
+        professional: {
+          type: "string",
+        },
       },
     },
 
     roadmap: {
       type: "object",
       additionalProperties: false,
+
       required: [
         "days1to30",
         "days31to60",
         "days61to90",
       ],
+
       properties: {
-        days1to30: ROADMAP_PHASE_SCHEMA,
-        days31to60: ROADMAP_PHASE_SCHEMA,
-        days61to90: ROADMAP_PHASE_SCHEMA,
+        days1to30:
+          ROADMAP_PHASE_SCHEMA,
+
+        days31to60:
+          ROADMAP_PHASE_SCHEMA,
+
+        days61to90:
+          ROADMAP_PHASE_SCHEMA,
       },
     },
 
@@ -370,7 +454,8 @@ You are the Brand Action Plan strategist for Brand Rater by Milky Minds Creative
 
 Your role is to turn an EXISTING Brand Rater assessment into a practical 90-day action plan for a founder or small marketing team.
 
-IMPORTANT: You are NOT re-scoring the brand and you are NOT analyzing new images.
+IMPORTANT:
+You are NOT re-scoring the brand and you are NOT analyzing new images.
 The assessment below is the source of truth.
 
 BUSINESS CONTEXT
@@ -380,7 +465,9 @@ VERIFIED BRAND RATER ASSESSMENT
 ${JSON.stringify(assessment, null, 2)}
 
 CORE PRODUCT PROMISE
+
 The customer should finish this report knowing:
+
 - what is actually holding the brand back,
 - what to fix first,
 - what to fix next,
@@ -390,37 +477,296 @@ The customer should finish this report knowing:
 - and what to do over the next 90 days.
 
 NON-NEGOTIABLE RULES
-1. Treat Brand Rater scores, category scores, Brand Pattern, Brand Gap, maturity, priority, and observed evidence as fixed facts. Do not change them.
+
+1. Treat Brand Rater scores, category scores, Brand Pattern, Brand Gap, maturity, priority, and observed evidence as fixed facts.
+
+Do not change or reinterpret them.
+
 2. Never claim the live website was inspected unless the assessment explicitly contains evidence from it.
-3. Never invent reviews, revenue, customer counts, locations, awards, services, competitors, or performance metrics.
-4. Every major recommendation must connect to evidence contained in the assessment.
-5. Do not recommend a full rebrand unless the evidence clearly demonstrates that the current identity/system is itself the primary strategic problem.
-6. Be willing to say the logo is NOT the problem when another issue deserves investment first.
-7. Fix First and Fix Next must be meaningfully different priorities.
-8. Quick Wins must be achievable within roughly one week and should generally require little or no outside spend.
-9. Don't Prioritize must identify a plausible brand expense or project the customer should delay—not a trivial task.
-10. Budget guidance must distinguish what the owner can DIY, what a freelancer could handle, and what deserves professional strategy/design support.
-11. The 90-day roadmap must sequence the work; do not repeat the same recommendation in all three phases.
-12. Use founder-friendly language. Avoid unexplained branding jargon.
-13. Be decisive. Do not bury recommendations in caveats.
-14. Keep this valuable enough to justify a paid $39 report, but do not turn it into a full agency scope of work.
+
+3. Never invent reviews, revenue, customer counts, locations, awards, services, competitors, visual details, or performance metrics.
+
+4. Every major recommendation must connect to specific evidence contained in the assessment whenever that evidence exists.
+
+5. Recommendations must answer four questions:
+
+- What should change?
+- Where should it change?
+- Why does it matter?
+- What should the business owner actually do?
+
+6. Avoid recommendations that could apply to almost any small business.
+
+Prefer concrete references to observed:
+
+- typography,
+- color usage,
+- CTA phrasing,
+- contact information,
+- logo placement,
+- messaging hierarchy,
+- trust proof,
+- imagery,
+- or other supplied evidence.
+
+7. Do not recommend a full rebrand unless the evidence clearly demonstrates that the current identity/system is itself the primary strategic problem.
+
+8. Be willing to say the logo is NOT the problem when another issue deserves investment first.
+
+9. FIX FIRST must be the single highest-leverage improvement based on:
+
+- the existing priority,
+- Brand Gap,
+- business goal,
+- and observed evidence.
+
+10. FIX NEXT must solve a meaningfully different problem from FIX FIRST.
+
+Do not split one recommendation into two differently worded versions.
+
+11. QUICK WINS must be genuinely quick.
+
+Every Quick Win should:
+
+- describe ONE concrete action,
+- require little or no spending,
+- generally take approximately 30–90 minutes,
+- be possible within one week,
+- and not require a full redesign, strategy project, or outside discovery process.
+
+12. Good Quick Win scope includes things like:
+
+- standardizing one CTA phrase,
+- creating one contact-information format,
+- defining one logo placement rule,
+- rewriting one headline,
+- selecting one consistent typography treatment.
+
+Only recommend these when supported by the assessment.
+
+13. DON'T PRIORITIZE must identify a realistic brand expense, project, or activity the customer might otherwise spend money on.
+
+Explain why delaying it is strategically smarter right now.
+
+Do not choose a trivial task.
+
+When supported by the assessment, be willing to explicitly say things such as:
+
+- "Your logo is not the problem."
+- "A full rebrand is not the best use of your next dollar."
+- "Do not rebuild the website yet."
+
+14. BUDGET GUIDANCE must make a decision, not simply present options.
+
+Choose exactly ONE recommendedPath:
+
+- DIY
+- Freelancer
+- Professional
+
+Then explain why that path best fits the current highest-priority problem.
+
+15. The customer should finish Budget Guidance knowing:
+
+- what level of help to pay for right now,
+- what they can reasonably DIY,
+- what a freelancer could execute,
+- and what would justify professional strategic support.
+
+16. THE 90-DAY ROADMAP MUST HAVE THREE DISTINCT JOBS.
+
+Do not repeat essentially the same recommendation across all three phases.
+
+17. DAYS 1–30 = FIX THE FOUNDATION.
+
+Resolve the highest-priority foundational issue.
+
+Keep the focus narrow rather than trying to solve every brand problem at once.
+
+18. DAYS 31–60 = BUILD ON THE FOUNDATION.
+
+Use the improved foundation to strengthen the next strategic issue.
+
+Examples may include:
+
+- messaging,
+- credibility,
+- recognition,
+- differentiation,
+- customer proof,
+- or another issue supported by the assessment.
+
+19. DAYS 61–90 = APPLY, TEST, AND REVIEW.
+
+Roll the improvements across relevant customer-facing materials.
+
+Check consistency.
+
+Gather useful feedback where appropriate.
+
+Identify the next brand decision based on what has been improved.
+
+20. Each roadmap phase must contain:
+
+- one clear focus,
+- 2–4 concrete actions,
+- and one observable success signal.
+
+21. Use founder-friendly language.
+
+Avoid unexplained branding jargon, consultant filler, and generic AI phrasing.
+
+22. Be decisive.
+
+Prioritize decisions over education.
+
+Tell the customer what to do and what not to do.
+
+23. Keep this valuable enough to justify a paid $39 report, but do not turn it into a full agency scope of work.
+
+24. The finished report should feel valuable because it saves the business owner from spending time or money on the wrong problem.
+
+SPECIFICITY STANDARD
+
+BAD:
+
+"Improve brand consistency."
+
+BETTER:
+
+"The supplied materials use inconsistent typography and color treatments, so customers may not immediately recognize them as coming from the same business."
+
+BEST:
+
+Name the specific customer-facing element that was observed and explain exactly what should change, where it should change, and why it matters.
+
+Do not claim specificity that the assessment does not actually contain.
 
 EFFORT
-- Easy: can usually be completed quickly with limited coordination.
-- Moderate: requires planning, rewriting, design refinement, or several touchpoints.
-- Significant: requires strategic decisions, system changes, or professional support.
+
+Easy:
+Can usually be completed quickly with limited coordination.
+
+Moderate:
+Requires planning, rewriting, design refinement, or several touchpoints.
+
+Significant:
+Requires strategic decisions, system changes, or professional support.
 
 INVESTMENT
-- $: mostly DIY / minimal spend.
-- $$: likely freelancer or focused professional help.
-- $$$: meaningful strategic/design investment.
+
+$:
+Mostly DIY / minimal spend.
+
+$$:
+Likely freelancer or focused professional help.
+
+$$$:
+Meaningful strategic/design investment.
 
 BEST OWNER
-- DIY: reasonable for the founder/team to execute themselves.
-- Freelancer: execution help is useful but senior strategic direction is not essential.
-- Professional: strategy, positioning, identity systems, complex web/brand work, or high-stakes decisions need experienced support.
 
-Write concise but specific recommendations. The report should feel like a strategist looked at THIS business, not like a generic branding checklist.
+DIY:
+Reasonable for the founder/team to execute themselves.
+
+Freelancer:
+Execution help is useful but senior strategic direction is not essential.
+
+Professional:
+Strategy, positioning, identity systems, complex web/brand work, or high-stakes decisions need experienced support.
+
+RECOMMENDED PATH DECISION
+
+Choose exactly one recommendedPath for Budget Guidance.
+
+Choose DIY when:
+
+- the priority is narrow,
+- the risk is relatively low,
+- the required decision is already clear,
+- and the owner/team can realistically execute it with direction.
+
+Choose Freelancer when:
+
+- the strategy is sufficiently clear,
+- but focused design, writing, or implementation help would materially improve the result.
+
+Choose Professional when:
+
+- the business needs strategic positioning,
+- a broader identity/system decision,
+- a complex website or brand change,
+- or another high-stakes decision where experienced senior guidance materially reduces risk.
+
+Do not default to the most expensive option.
+
+Match the recommendation to the actual complexity of the problem and the evidence available.
+
+BUDGET GUIDANCE OUTPUT
+
+recommendedPath:
+Choose exactly one of DIY, Freelancer, or Professional.
+
+recommendedReason:
+Explain in plain language why this is the right level of support for the business right now.
+
+nextDollar:
+State specifically where the next incremental brand dollar should go.
+
+diy:
+Explain the portion of the current plan the owner/team can reasonably execute themselves.
+
+freelancer:
+Explain what focused execution work would make sense to delegate to a freelancer.
+
+professional:
+Explain what future condition or level of complexity would justify hiring a senior brand strategist, agency, or other professional.
+
+The three descriptions should NOT make all three choices sound equally recommended.
+
+QUICK WIN QUALITY CHECK
+
+Before returning each Quick Win, mentally verify:
+
+- Could the owner realistically start this today?
+- Could it usually be completed in approximately 30–90 minutes?
+- Does it require little or no spending?
+- Is the action specific enough that the owner knows exactly what to change?
+- Is it supported by the assessment?
+
+If not, replace it with a smaller, more concrete action.
+
+ROADMAP QUALITY CHECK
+
+Before returning the roadmap, mentally verify:
+
+Days 1–30:
+Are we fixing the foundation?
+
+Days 31–60:
+Are we building something new on top of that foundation?
+
+Days 61–90:
+Are we applying, testing, reviewing, or extending the work?
+
+If two phases are essentially saying the same thing, rewrite them.
+
+FINAL QUALITY CHECK
+
+Before returning the report, verify:
+
+- Fix First and Fix Next are meaningfully different.
+- Major recommendations reference actual evidence where possible.
+- Quick Wins are truly small.
+- Don't Prioritize protects the customer from a plausible unnecessary expense.
+- Budget Guidance clearly recommends one path.
+- The 90-day roadmap progresses rather than repeats.
+- The report sounds specific to THIS business.
+- No unsupported facts have been invented.
+
+Write concise but specific recommendations.
+
+The report should feel like a strategist looked at THIS business, not like a generic branding checklist.
 
 Return only the structured JSON required by the supplied schema.
 `;
@@ -430,44 +776,68 @@ Return only the structured JSON required by the supplied schema.
       "https://api.openai.com/v1/responses",
       {
         method: "POST",
+
         headers: {
           Authorization:
             `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
+
+          "Content-Type":
+            "application/json",
         },
+
         body: JSON.stringify({
-          model: ACTION_PLAN_MODEL,
-          store: false,
-          max_output_tokens: 3500,
+          model:
+            ACTION_PLAN_MODEL,
+
+          store:
+            false,
+
+          max_output_tokens:
+            3500,
+
           input: [
             {
               role: "user",
+
               content: [
                 {
-                  type: "input_text",
-                  text: prompt,
+                  type:
+                    "input_text",
+
+                  text:
+                    prompt,
                 },
               ],
             },
           ],
+
           text: {
             format: {
-              type: "json_schema",
-              name: "brand_action_plan_v1",
-              strict: true,
-              schema: ACTION_PLAN_SCHEMA,
+              type:
+                "json_schema",
+
+              name:
+                "brand_action_plan_v1_1",
+
+              strict:
+                true,
+
+              schema:
+                ACTION_PLAN_SCHEMA,
             },
           },
         }),
       }
     );
 
-  const raw = await response.text();
+  const raw =
+    await response.text();
 
   let data;
 
   try {
-    data = JSON.parse(raw);
+    data =
+      JSON.parse(raw);
   }
   catch {
     throw new Error(
@@ -492,7 +862,9 @@ Return only the structured JSON required by the supplied schema.
   }
 
   try {
-    return JSON.parse(outputText);
+    return JSON.parse(
+      outputText
+    );
   }
   catch {
     throw new Error(
@@ -505,148 +877,208 @@ Return only the structured JSON required by the supplied schema.
    HANDLER
 ========================================================= */
 
-exports.handler = async function (event) {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-      body: JSON.stringify({
-        success: true,
-        version: ACTION_PLAN_VERSION,
-        message:
-          "Brand Action Plan generator is ready. POST an existing Brand Rater assessment and business context.",
-      }),
-    };
-  }
+exports.handler =
+  async function (event) {
 
-  try {
-    let body;
+    if (
+      event.httpMethod !== "POST"
+    ) {
+      return {
+        statusCode: 200,
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "Cache-Control":
+            "no-store",
+        },
+
+        body:
+          JSON.stringify({
+            success: true,
+
+            version:
+              ACTION_PLAN_VERSION,
+
+            message:
+              "Brand Action Plan generator is ready. POST an existing Brand Rater assessment and business context.",
+          }),
+      };
+    }
 
     try {
-      body = JSON.parse(event.body || "{}");
-    }
-    catch {
+      let body;
+
+      try {
+        body =
+          JSON.parse(
+            event.body || "{}"
+          );
+      }
+      catch {
+        return {
+          statusCode: 400,
+
+          body:
+            JSON.stringify({
+              error:
+                "The request body was not valid JSON.",
+            }),
+        };
+      }
+
+      if (
+        !process.env.OPENAI_API_KEY
+      ) {
+        return {
+          statusCode: 500,
+
+          body:
+            JSON.stringify({
+              error:
+                "OPENAI_API_KEY is missing from Netlify.",
+            }),
+        };
+      }
+
+      const validationError =
+        validateAssessment(
+          body.assessment
+        );
+
+      if (validationError) {
+        return {
+          statusCode: 400,
+
+          body:
+            JSON.stringify({
+              error:
+                validationError,
+            }),
+        };
+      }
+
+      const ip =
+        getClientIp(event);
+
+      if (
+        !checkRateLimit(ip)
+      ) {
+        return {
+          statusCode: 429,
+
+          body:
+            JSON.stringify({
+              error:
+                "Too many Action Plan requests. Please try again later.",
+            }),
+        };
+      }
+
+      const business =
+        normalizeBusiness(
+          body.business
+        );
+
+      const assessment =
+        compactAssessment(
+          body.assessment
+        );
+
+      const generated =
+        await generateActionPlan({
+          business,
+          assessment,
+        });
+
+      const result = {
+        version:
+          ACTION_PLAN_VERSION,
+
+        generatedAt:
+          new Date()
+            .toISOString(),
+
+        sourceAssessment: {
+          scoringVersion:
+            assessment.version ||
+            "2.0.0",
+
+          brandHealth:
+            assessment.brandHealth,
+
+          brandPattern:
+            assessment.brandPattern,
+
+          brandGap:
+            assessment.brandGap,
+        },
+
+        business: {
+          name:
+            business.name,
+
+          twelveMonthGoal:
+            business
+              .twelveMonthGoal,
+
+          brandConcern:
+            business
+              .brandConcern,
+        },
+
+        ...generated,
+
+        meta: {
+          model:
+            ACTION_PLAN_MODEL,
+
+          generatorVersion:
+            ACTION_PLAN_VERSION,
+        },
+      };
+
       return {
-        statusCode: 400,
-        body: JSON.stringify({
-          error: "The request body was not valid JSON.",
-        }),
+        statusCode: 200,
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "Cache-Control":
+            "no-store",
+        },
+
+        body:
+          JSON.stringify(
+            result
+          ),
       };
     }
+    catch (error) {
+      console.error(
+        "Brand Action Plan error:",
+        error
+      );
 
-    if (!process.env.OPENAI_API_KEY) {
       return {
         statusCode: 500,
-        body: JSON.stringify({
-          error: "OPENAI_API_KEY is missing from Netlify.",
-        }),
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          "Cache-Control":
+            "no-store",
+        },
+
+        body:
+          JSON.stringify({
+            error:
+              error.message ||
+              "Something went wrong generating the Brand Action Plan.",
+          }),
       };
     }
-
-    const validationError =
-      validateAssessment(body.assessment);
-
-    if (validationError) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          error: validationError,
-        }),
-      };
-    }
-
-    const ip = getClientIp(event);
-
-    if (!checkRateLimit(ip)) {
-      return {
-        statusCode: 429,
-        body: JSON.stringify({
-          error:
-            "Too many Action Plan requests. Please try again later.",
-        }),
-      };
-    }
-
-    const business =
-      normalizeBusiness(body.business);
-
-    const assessment =
-      compactAssessment(body.assessment);
-
-    const generated =
-      await generateActionPlan({
-        business,
-        assessment,
-      });
-
-    const result = {
-      version: ACTION_PLAN_VERSION,
-      generatedAt:
-        new Date().toISOString(),
-
-      sourceAssessment: {
-        scoringVersion:
-          assessment.version || "2.0.0",
-
-        brandHealth:
-          assessment.brandHealth,
-
-        brandPattern:
-          assessment.brandPattern,
-
-        brandGap:
-          assessment.brandGap,
-      },
-
-      business: {
-        name: business.name,
-
-        twelveMonthGoal:
-          business.twelveMonthGoal,
-
-        brandConcern:
-          business.brandConcern,
-      },
-
-      ...generated,
-
-      meta: {
-        model: ACTION_PLAN_MODEL,
-
-        generatorVersion:
-          ACTION_PLAN_VERSION,
-      },
-    };
-
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-      body: JSON.stringify(result),
-    };
-  }
-  catch (error) {
-    console.error(
-      "Brand Action Plan error:",
-      error
-    );
-
-    return {
-      statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-      body: JSON.stringify({
-        error:
-          error.message ||
-          "Something went wrong generating the Brand Action Plan.",
-      }),
-    };
-  }
-};
+  };
