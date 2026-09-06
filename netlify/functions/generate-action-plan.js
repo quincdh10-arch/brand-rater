@@ -24,7 +24,7 @@ const ACTION_PLAN_MODEL =
   process.env.OPENAI_ACTION_PLAN_MODEL ||
   "gpt-4.1-mini";
 
-const ACTION_PLAN_VERSION = "1.2.0";
+const ACTION_PLAN_VERSION = "1.3.0";
 
 /* =========================================================
    HELPERS
@@ -159,6 +159,139 @@ function compactAssessment(assessment) {
       businessSignals: diagnostics.businessSignals,
       priority: diagnostics.priority,
       strongestSignal: diagnostics.strongestSignal,
+    },
+  };
+}
+
+/* =========================================================
+   RECOMMENDATION GUARDRAILS
+========================================================= */
+
+function buildRecommendationGuardrails(assessment) {
+  const categories =
+    Array.isArray(assessment.categories)
+      ? assessment.categories
+      : [];
+
+  const primaryPriority =
+    assessment.diagnostics?.priority || null;
+
+  const primaryCategoryId =
+    primaryPriority?.categoryId ||
+    primaryPriority?.category ||
+    "";
+
+  const categoryRanking =
+    categories
+      .map(category => ({
+        id: category.id,
+        name: category.name,
+        score:
+          typeof category.score === "number"
+            ? category.score
+            : null,
+        confidence:
+          category.confidence || "unknown",
+      }))
+      .filter(category =>
+        typeof category.score === "number"
+      )
+      .sort(
+        (a, b) =>
+          a.score - b.score
+      );
+
+  const secondaryCategoryPreference =
+    categoryRanking
+      .filter(category =>
+        category.id !== primaryCategoryId &&
+        category.score < 75
+      )
+      .slice(0, 3);
+
+  /*
+    If every non-primary category is already strong, still provide
+    the lowest-scoring alternatives. This gives the model context
+    without forcing it to invent a weakness in a strong category.
+  */
+  const secondaryFallback =
+    secondaryCategoryPreference.length
+      ? []
+      : categoryRanking
+          .filter(category =>
+            category.id !== primaryCategoryId
+          )
+          .slice(0, 2);
+
+  const strongCategories =
+    categoryRanking
+      .filter(category =>
+        category.score >= 75
+      );
+
+  const weakObservedSubcriteria =
+    categories
+      .flatMap(category =>
+        Array.isArray(category.subcriteria)
+          ? category.subcriteria.map(item => ({
+              categoryId: category.id,
+              categoryName: category.name,
+              criterionId: item.id,
+              criterionName: item.name,
+              score:
+                typeof item.score === "number"
+                  ? item.score
+                  : null,
+              confidence:
+                item.confidence || "unknown",
+              assessed:
+                Boolean(item.assessed),
+              evidence:
+                item.evidence || "",
+              businessImpact:
+                item.businessImpact || "",
+              priorityScore:
+                typeof item.priorityScore === "number"
+                  ? item.priorityScore
+                  : null,
+            }))
+          : []
+      )
+      .filter(item =>
+        item.assessed &&
+        typeof item.score === "number" &&
+        item.score <= 3
+      )
+      .sort((a, b) => {
+        const priorityA =
+          typeof a.priorityScore === "number"
+            ? a.priorityScore
+            : -1;
+
+        const priorityB =
+          typeof b.priorityScore === "number"
+            ? b.priorityScore
+            : -1;
+
+        if (priorityA !== priorityB) {
+          return priorityB - priorityA;
+        }
+
+        return a.score - b.score;
+      })
+      .slice(0, 10);
+
+  return {
+    primaryPriority,
+    primaryCategoryId,
+    categoryRanking,
+    secondaryCategoryPreference,
+    secondaryFallback,
+    strongCategories,
+    weakObservedSubcriteria,
+    thresholds: {
+      strongCategoryScore: 75,
+      weakSubcriterionMaxScore: 3,
     },
   };
 }
@@ -481,6 +614,11 @@ async function generateActionPlan({
   business,
   assessment,
 }) {
+  const recommendationGuardrails =
+    buildRecommendationGuardrails(
+      assessment
+    );
+
   const prompt = `
 You are the Brand Action Plan strategist for Brand Rater by Milky Minds Creative.
 
@@ -495,6 +633,9 @@ ${JSON.stringify(business, null, 2)}
 
 VERIFIED BRAND RATER ASSESSMENT
 ${JSON.stringify(assessment, null, 2)}
+
+RECOMMENDATION GUARDRAILS
+${JSON.stringify(recommendationGuardrails, null, 2)}
 
 CORE PRODUCT PROMISE
 
@@ -746,6 +887,96 @@ Prefer signals such as:
 - or customer-facing copy clearly communicates the selected value
   proposition.
 
+29. FIX NEXT must respect category weakness and business relevance.
+
+Use the RECOMMENDATION GUARDRAILS above.
+
+In general:
+- prefer a different category from Fix First,
+- prefer one of secondaryCategoryPreference when it contains a
+  well-supported issue,
+- and prefer the next meaningful weakness over a generic best practice.
+
+Do NOT create Fix Next from a category scoring 75 or higher merely
+because that category offers an easy recommendation.
+
+A strong category may become Fix Next only when:
+- a specific assessed subcriterion inside it is genuinely weak,
+- the assessment contains direct evidence for that weakness,
+- and fixing it clearly matters to the stated business goal.
+
+If no secondary weakness is strongly supported, deepen the next
+business-relevant issue already present in the assessment instead of
+inventing a new one.
+
+30. Do not default to CUSTOMER PROOF as a secondary recommendation.
+
+Do not recommend testimonials, reviews, awards, guarantees, case
+studies, or other credibility-building work simply because these are
+common brand tactics.
+
+Recommend customer proof only when at least one of these is true:
+- Credibility is below 70,
+- a Credibility subcriterion is explicitly weak and supported by
+  evidence,
+- the assessment specifically identifies missing proof as a barrier,
+- or the business goal clearly depends on proof and the supplied
+  evidence shows a real gap.
+
+If Credibility is already relatively strong and no proof gap was
+observed, choose a more relevant secondary issue.
+
+31. QUICK WINS must respect the same priority hierarchy as the main
+recommendations.
+
+At least TWO of the three Quick Wins should directly advance Fix First
+or Fix Next.
+
+The third may support another issue only when it is explicitly grounded
+in assessment evidence.
+
+Do not pull a Quick Win from a category scoring 75 or higher unless a
+specific assessed subcriterion in that category is weak and the action
+directly addresses that evidence.
+
+32. The three Quick Wins must be meaningfully different micro-actions.
+
+Do not create two Quick Wins that are simply different placements or
+versions of the same idea.
+
+For example:
+- "Add the tagline to social profiles"
+- and "Add the tagline beside the logo"
+
+are too similar to count as two separate Quick Wins.
+
+A better set would address three distinct immediate actions such as:
+- one messaging change,
+- one hierarchy or CTA change,
+- and one evidence-supported implementation cleanup.
+
+33. Examples in this prompt are NOT default recommendations.
+
+Do not recommend:
+- logo placement rules,
+- typography rules,
+- CTA changes,
+- testimonials,
+- social profile updates,
+- or any other example
+
+unless the assessment actually supports that action.
+
+34. The RECOMMENDATION GUARDRAILS are decision support, not new scores.
+
+Do not alter Brand Rater scoring based on them.
+
+Use:
+- primaryPriority to anchor Fix First,
+- secondaryCategoryPreference to guide Fix Next,
+- strongCategories to avoid unnecessary work,
+- and weakObservedSubcriteria to ground smaller recommendations.
+
 SPECIFICITY STANDARD
 
 BAD:
@@ -900,7 +1131,16 @@ Before returning the report, verify:
 - actionPlanTheme clearly expresses the strategic thesis in one short
   sentence.
 - The same core issue is not redundantly repeated across every section.
-- Fix First and Fix Next are meaningfully different.
+- Fix First follows the assessment's primary priority.
+- Fix Next comes from a genuinely relevant secondary weakness rather
+  than a generic best practice.
+- Fix Next does not unnecessarily target a category scoring 75+.
+- Customer proof is recommended only when the assessment actually
+  supports a credibility gap.
+- At least two Quick Wins directly advance Fix First or Fix Next.
+- The three Quick Wins are distinct from one another.
+- No Quick Win was borrowed from a strong category without specific
+  weak-subcriterion evidence.
 - Major recommendations reference actual evidence where possible.
 - Quick Wins are truly small.
 - Don't Prioritize protects the customer from a plausible unnecessary
@@ -964,7 +1204,7 @@ Return only the structured JSON required by the supplied schema.
                 "json_schema",
 
               name:
-                "brand_action_plan_v1_2",
+                "brand_action_plan_v1_3",
 
               strict:
                 true,
