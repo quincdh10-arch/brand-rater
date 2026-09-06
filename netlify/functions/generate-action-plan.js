@@ -24,7 +24,7 @@ const ACTION_PLAN_MODEL =
   process.env.OPENAI_ACTION_PLAN_MODEL ||
   "gpt-4.1-mini";
 
-const ACTION_PLAN_VERSION = "1.3.0";
+const ACTION_PLAN_VERSION = "1.4.0";
 
 /* =========================================================
    HELPERS
@@ -293,6 +293,155 @@ function buildRecommendationGuardrails(assessment) {
       strongCategoryScore: 75,
       weakSubcriterionMaxScore: 3,
     },
+  };
+}
+
+function getBusinessMaturityScore(assessment) {
+  const maturity =
+    assessment.diagnostics?.businessMaturity;
+
+  if (typeof maturity === "number") {
+    return maturity;
+  }
+
+  if (
+    maturity &&
+    typeof maturity === "object"
+  ) {
+    const candidates = [
+      maturity.score,
+      maturity.total,
+      maturity.value,
+      maturity.businessMaturityScore,
+    ];
+
+    const match =
+      candidates.find(value =>
+        typeof value === "number"
+      );
+
+    if (typeof match === "number") {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function buildStrategicDecisionContext({
+  business,
+  assessment,
+  recommendationGuardrails,
+}) {
+  const categories =
+    Array.isArray(assessment.categories)
+      ? assessment.categories
+      : [];
+
+  const primaryCategory =
+    categories.find(category =>
+      category.id ===
+      recommendationGuardrails.primaryCategoryId
+    ) || null;
+
+  const strategicText =
+    [
+      recommendationGuardrails.primaryPriority,
+      assessment.biggestOpportunity,
+      assessment.freeRecommendation,
+      primaryCategory,
+    ]
+      .map(value =>
+        typeof value === "string"
+          ? value
+          : JSON.stringify(value || {})
+      )
+      .join(" ")
+      .toLowerCase();
+
+  const positioningLed =
+    /position|differentiat|value proposition|brand strategy|strategic direction|ownable|distinctive messaging/.test(
+      strategicText
+    );
+
+  const maturityScore =
+    getBusinessMaturityScore(
+      assessment
+    );
+
+  const traction =
+    cleanString(
+      business.traction
+    ).toLowerCase();
+
+  const yearsInBusiness =
+    cleanString(
+      business.yearsInBusiness
+    ).toLowerCase();
+
+  const teamSize =
+    cleanString(
+      business.teamSize
+    ).toLowerCase();
+
+  const goal =
+    cleanString(
+      business.twelveMonthGoal
+    ).toLowerCase();
+
+  const establishedByContext =
+    [
+      "established",
+      "mature",
+    ].some(term =>
+      traction.includes(term)
+    ) ||
+    /4-7|8\+|8-plus|8 plus|8 or more/.test(
+      yearsInBusiness
+    ) ||
+    /6-10|11-25|25\+|25-plus/.test(
+      teamSize
+    );
+
+  const growthGoal =
+    /grow|growth|larger|higher-value|higher value|upmarket|expand|expansion|increase|premium|enterprise|new market|new location|more clients|bigger clients|average project|average engagement/.test(
+      goal
+    );
+
+  const highStakesStrategicDecision =
+    positioningLed &&
+    (
+      establishedByContext ||
+      growthGoal ||
+      (
+        typeof maturityScore === "number" &&
+        maturityScore >= 60
+      )
+    );
+
+  let supportBias =
+    "No special support bias. Match the recommendation to the actual complexity of the work.";
+
+  if (highStakesStrategicDecision) {
+    supportBias =
+      "Professional is strongly preferred for the foundational strategic decision. DIY may support research and preparation, and a freelancer may support execution after the strategic direction is established.";
+  }
+  else if (positioningLed) {
+    supportBias =
+      "Treat this as a strategic decision, not merely a copywriting task. Prefer Professional when uncertainty or business consequences are meaningful; use DIY only when the positioning decision is already substantially clear.";
+  }
+
+  return {
+    positioningLed,
+    maturityScore,
+    establishedByContext,
+    growthGoal,
+    highStakesStrategicDecision,
+    supportBias,
+    sequencingPrinciple:
+      positioningLed
+        ? "Strategy -> Expression -> Proof/Application. Fix Next should usually make the positioning usable in customer-facing messaging before adding unrelated secondary tactics."
+        : "Foundation -> Next dependent capability -> Apply/Test. Strategic dependency outranks simply choosing the next-lowest category.",
   };
 }
 
@@ -619,6 +768,13 @@ async function generateActionPlan({
       assessment
     );
 
+  const strategicDecisionContext =
+    buildStrategicDecisionContext({
+      business,
+      assessment,
+      recommendationGuardrails,
+    });
+
   const prompt = `
 You are the Brand Action Plan strategist for Brand Rater by Milky Minds Creative.
 
@@ -636,6 +792,9 @@ ${JSON.stringify(assessment, null, 2)}
 
 RECOMMENDATION GUARDRAILS
 ${JSON.stringify(recommendationGuardrails, null, 2)}
+
+STRATEGIC DECISION CONTEXT
+${JSON.stringify(strategicDecisionContext, null, 2)}
 
 CORE PRODUCT PROMISE
 
@@ -887,46 +1046,77 @@ Prefer signals such as:
 - or customer-facing copy clearly communicates the selected value
   proposition.
 
-29. FIX NEXT must respect category weakness and business relevance.
+29. FIX NEXT must respect category weakness, business relevance, AND
+strategic dependency.
 
-Use the RECOMMENDATION GUARDRAILS above.
+Use the RECOMMENDATION GUARDRAILS and STRATEGIC DECISION CONTEXT above.
+
+Category ranking is useful, but it is not the final decision rule.
+
+Ask:
+"What must become true after Fix First for the brand to actually benefit
+from that work?"
+
+Fix Next should usually be that next necessary capability.
 
 In general:
-- prefer a different category from Fix First,
-- prefer one of secondaryCategoryPreference when it contains a
-  well-supported issue,
-- and prefer the next meaningful weakness over a generic best practice.
+- prefer a meaningfully different job from Fix First,
+- prefer one of secondaryCategoryPreference when it is both supported
+  AND logically follows Fix First,
+- but do not choose a lower-scoring category merely because it is the
+  next weakness on the list.
 
-Do NOT create Fix Next from a category scoring 75 or higher merely
+Strategic dependency outranks simple weakness ranking.
+
+30. When FIX FIRST is POSITIONING, DIFFERENTIATION, VALUE PROPOSITION,
+or another foundational strategy decision, use this default sequence:
+
+STRATEGY -> EXPRESSION -> PROOF / APPLICATION
+
+That usually means:
+
+- Fix First defines the position, differentiator, value proposition,
+  audience choice, or strategic promise.
+- Fix Next translates that decision into distinctive customer-facing
+  messaging, offer framing, case-study framing, sales language, or
+  another expression of the new strategy.
+- Proof, testimonials, case studies, broader rollout, and validation
+  follow after the strategic direction can actually be communicated.
+
+Do not jump directly from "define the positioning" to an unrelated
+secondary weakness if the new positioning has not yet been expressed.
+
+31. CUSTOMER PROOF is not automatically the next step after strategy.
+
+Do not recommend testimonials, reviews, awards, guarantees, case
+studies, or other credibility-building work simply because Credibility
+is below another category.
+
+Customer proof may become Fix Next only when:
+- credibility or purchase confidence is itself the primary business
+  barrier,
+- the assessment explicitly identifies missing proof as a material
+  reason customers may hesitate,
+- AND adding proof does not skip a more necessary strategic dependency.
+
+If the core problem is weak differentiation, first make the
+differentiation clear enough to communicate. Then use proof to support
+that differentiated position.
+
+32. Do NOT create Fix Next from a category scoring 75 or higher merely
 because that category offers an easy recommendation.
 
 A strong category may become Fix Next only when:
 - a specific assessed subcriterion inside it is genuinely weak,
 - the assessment contains direct evidence for that weakness,
-- and fixing it clearly matters to the stated business goal.
+- fixing it clearly matters to the stated business goal,
+- and it logically follows Fix First.
 
 If no secondary weakness is strongly supported, deepen the next
-business-relevant issue already present in the assessment instead of
-inventing a new one.
+business-relevant capability required to make Fix First successful
+instead of inventing a new problem.
 
-30. Do not default to CUSTOMER PROOF as a secondary recommendation.
-
-Do not recommend testimonials, reviews, awards, guarantees, case
-studies, or other credibility-building work simply because these are
-common brand tactics.
-
-Recommend customer proof only when at least one of these is true:
-- Credibility is below 70,
-- a Credibility subcriterion is explicitly weak and supported by
-  evidence,
-- the assessment specifically identifies missing proof as a barrier,
-- or the business goal clearly depends on proof and the supplied
-  evidence shows a real gap.
-
-If Credibility is already relatively strong and no proof gap was
-observed, choose a more relevant secondary issue.
-
-31. QUICK WINS must respect the same priority hierarchy as the main
+33. QUICK WINS must respect the same priority hierarchy as the main
 recommendations.
 
 At least TWO of the three Quick Wins should directly advance Fix First
@@ -939,7 +1129,7 @@ Do not pull a Quick Win from a category scoring 75 or higher unless a
 specific assessed subcriterion in that category is weak and the action
 directly addresses that evidence.
 
-32. The three Quick Wins must be meaningfully different micro-actions.
+34. The three Quick Wins must be meaningfully different micro-actions.
 
 Do not create two Quick Wins that are simply different placements or
 versions of the same idea.
@@ -951,11 +1141,11 @@ For example:
 are too similar to count as two separate Quick Wins.
 
 A better set would address three distinct immediate actions such as:
-- one messaging change,
-- one hierarchy or CTA change,
+- one research or strategic-preparation action,
+- one messaging/hierarchy action,
 - and one evidence-supported implementation cleanup.
 
-33. Examples in this prompt are NOT default recommendations.
+35. Examples in this prompt are NOT default recommendations.
 
 Do not recommend:
 - logo placement rules,
@@ -967,15 +1157,77 @@ Do not recommend:
 
 unless the assessment actually supports that action.
 
-34. The RECOMMENDATION GUARDRAILS are decision support, not new scores.
+36. The RECOMMENDATION GUARDRAILS are decision support, not new scores.
 
 Do not alter Brand Rater scoring based on them.
 
 Use:
 - primaryPriority to anchor Fix First,
-- secondaryCategoryPreference to guide Fix Next,
+- secondaryCategoryPreference as supporting context rather than an
+  automatic Fix Next,
 - strongCategories to avoid unnecessary work,
 - and weakObservedSubcriteria to ground smaller recommendations.
+
+37. RECOMMENDED PATH must reflect the TYPE OF DECISION, not merely the
+amount of execution work.
+
+Use STRATEGIC DECISION CONTEXT.
+
+When highStakesStrategicDecision is true:
+- strongly prefer Professional for the foundational strategic decision,
+- especially when the business is established, is moving upmarket,
+  wants larger/higher-value clients, is expanding, or needs an ownable
+  market position,
+- because a poor positioning decision affects future messaging, sales,
+  marketing, case studies, and investment decisions.
+
+Do NOT reduce a positioning problem to "some copy needs rewriting."
+
+DIY may still be useful for:
+- gathering customer/client feedback,
+- documenting strongest outcomes,
+- auditing competitor/category language,
+- listing reasons customers choose the business,
+- and preparing internal inputs.
+
+Freelancer may still be useful for:
+- copywriting,
+- design refinement,
+- implementation,
+- and translating an already-decided strategy into materials.
+
+Professional is appropriate for:
+- choosing the positioning territory,
+- deciding what the business should be known for,
+- resolving competing audience/value-proposition choices,
+- defining an ownable strategic promise,
+- or another foundational decision where being wrong creates meaningful
+  downstream cost.
+
+When highStakesStrategicDecision is false, continue using the normal
+DIY / Freelancer / Professional decision rules.
+
+38. THE ROADMAP must follow dependencies, not category order.
+
+For positioning-led plans, strongly prefer:
+
+DAYS 1-30 = DEFINE
+Make the strategic decision.
+
+DAYS 31-60 = EXPRESS
+Translate the decision into customer-facing messaging and selected
+priority touchpoints.
+
+DAYS 61-90 = PROVE, APPLY, TEST, AND REVIEW
+Support the position with relevant proof, roll it out consistently,
+and validate whether customers understand the intended difference.
+
+For non-positioning plans, use:
+
+FOUNDATION -> NEXT DEPENDENT CAPABILITY -> APPLY / TEST
+
+Do not make Days 31-60 a disconnected cleanup project simply because
+another category has a lower score.
 
 SPECIFICITY STANDARD
 
@@ -1052,10 +1304,17 @@ Choose Freelancer when:
 Choose Professional when:
 
 - the business needs strategic positioning,
-- a broader identity/system decision,
-- a complex website or brand change,
+- the business must decide what it should be known for,
+- differentiation or value proposition requires a foundational choice,
+- a broader identity/system decision is required,
+- a complex website or brand change is required,
 - or another high-stakes decision where experienced senior guidance
   materially reduces risk.
+
+When STRATEGIC DECISION CONTEXT says highStakesStrategicDecision is
+true, Professional should be the default recommendation unless the
+assessment clearly shows the strategic decision has already been made
+and only execution remains.
 
 Do not default to the most expensive option.
 
@@ -1132,11 +1391,18 @@ Before returning the report, verify:
   sentence.
 - The same core issue is not redundantly repeated across every section.
 - Fix First follows the assessment's primary priority.
-- Fix Next comes from a genuinely relevant secondary weakness rather
-  than a generic best practice.
+- Fix Next is the next logical strategic dependency after Fix First,
+  not merely the next-lowest scoring category.
+- Fix Next comes from a genuinely relevant supported issue rather than
+  a generic best practice.
 - Fix Next does not unnecessarily target a category scoring 75+.
+- If Fix First is positioning/differentiation, Fix Next usually
+  expresses that strategy before introducing unrelated secondary work.
 - Customer proof is recommended only when the assessment actually
-  supports a credibility gap.
+  supports a credibility gap AND proof does not skip a more necessary
+  strategic dependency.
+- If highStakesStrategicDecision is true, Budget Guidance strongly
+  prefers Professional unless only execution remains.
 - At least two Quick Wins directly advance Fix First or Fix Next.
 - The three Quick Wins are distinct from one another.
 - No Quick Win was borrowed from a strong category without specific
@@ -1204,7 +1470,7 @@ Return only the structured JSON required by the supplied schema.
                 "json_schema",
 
               name:
-                "brand_action_plan_v1_3",
+                "brand_action_plan_v1_4",
 
               strict:
                 true,
