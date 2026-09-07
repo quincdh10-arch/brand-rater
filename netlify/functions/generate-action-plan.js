@@ -11,13 +11,17 @@ const rateLimitStore = new Map();
     re-analyzing images.
 
   Current phase:
-  - Internal/testing endpoint.
-  - No Stripe verification yet.
+  - Paid endpoint.
+  - Requires a valid Stripe Checkout Session ID.
+  - Verifies the Checkout Session server-side before generating.
+  - Confirms the payment is paid and the expected Brand Action Plan price was purchased.
   - Lightweight IP rate limit included to control accidental abuse.
 
   Environment variables:
   - OPENAI_API_KEY
   - OPENAI_ACTION_PLAN_MODEL (optional)
+  - STRIPE_SECRET_KEY
+  - STRIPE_ACTION_PLAN_PRICE_ID
 */
 
 const ACTION_PLAN_MODEL =
@@ -73,6 +77,217 @@ function cleanString(value) {
   return String(value || "").trim();
 }
 
+function jsonResponse(statusCode, body) {
+  return {
+    statusCode,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
+    body: JSON.stringify(body),
+  };
+}
+
+async function stripeGet(path) {
+  const stripeSecretKey =
+    process.env.STRIPE_SECRET_KEY;
+
+  const response =
+    await fetch(
+      `https://api.stripe.com${path}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization:
+            `Bearer ${stripeSecretKey}`,
+        },
+      }
+    );
+
+  const raw =
+    await response.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    const error =
+      new Error(
+        `Stripe returned a non-JSON response (${response.status}).`
+      );
+
+    error.statusCode =
+      response.status || 500;
+
+    throw error;
+  }
+
+  if (!response.ok) {
+    const error =
+      new Error(
+        data?.error?.message ||
+        `Stripe API error (${response.status}).`
+      );
+
+    error.statusCode =
+      response.status || 500;
+
+    throw error;
+  }
+
+  return data;
+}
+
+async function verifyPaidActionPlanSession(
+  sessionId
+) {
+  const cleanSessionId =
+    cleanString(sessionId);
+
+  if (!cleanSessionId) {
+    const error =
+      new Error(
+        "A Stripe Checkout Session ID is required."
+      );
+
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    !cleanSessionId.startsWith("cs_test_") &&
+    !cleanSessionId.startsWith("cs_live_")
+  ) {
+    const error =
+      new Error(
+        "Invalid Stripe Checkout Session ID."
+      );
+
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const expectedPriceId =
+    process.env
+      .STRIPE_ACTION_PLAN_PRICE_ID;
+
+  if (!expectedPriceId) {
+    const error =
+      new Error(
+        "STRIPE_ACTION_PLAN_PRICE_ID is missing from Netlify."
+      );
+
+    error.statusCode = 500;
+    throw error;
+  }
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    const error =
+      new Error(
+        "STRIPE_SECRET_KEY is missing from Netlify."
+      );
+
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const encodedSessionId =
+    encodeURIComponent(
+      cleanSessionId
+    );
+
+  const session =
+    await stripeGet(
+      `/v1/checkout/sessions/${encodedSessionId}?expand[]=line_items`
+    );
+
+  if (session.mode !== "payment") {
+    const error =
+      new Error(
+        "This Checkout Session is not a one-time payment."
+      );
+
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (
+    session.payment_status !== "paid"
+  ) {
+    const error =
+      new Error(
+        "Payment has not been completed."
+      );
+
+    error.statusCode = 402;
+    throw error;
+  }
+
+  const lineItems =
+    Array.isArray(
+      session.line_items?.data
+    )
+      ? session.line_items.data
+      : [];
+
+  const matchingLineItem =
+    lineItems.find(
+      item =>
+        item?.price?.id ===
+        expectedPriceId
+    );
+
+  if (
+    !matchingLineItem ||
+    Number(
+      matchingLineItem.quantity || 0
+    ) < 1
+  ) {
+    const error =
+      new Error(
+        "This payment does not match the Brand Action Plan."
+      );
+
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return {
+    id:
+      session.id,
+
+    paymentStatus:
+      session.payment_status,
+
+    status:
+      session.status || null,
+
+    livemode:
+      Boolean(
+        session.livemode
+      ),
+
+    customerEmail:
+      session.customer_details?.email ||
+      session.customer_email ||
+      null,
+
+    amountTotal:
+      Number.isFinite(
+        session.amount_total
+      )
+        ? session.amount_total
+        : null,
+
+    currency:
+      session.currency || null,
+
+    priceId:
+      expectedPriceId,
+  };
+}
+
 function normalizeBusiness(input) {
   const business =
     input && typeof input === "object"
@@ -116,49 +331,94 @@ function validateAssessment(assessment) {
 }
 
 function compactAssessment(assessment) {
-  const diagnostics = assessment.diagnostics || {};
-  const rubric = diagnostics.categoryRubric || {};
+  const diagnostics =
+    assessment.diagnostics || {};
+
+  const rubric =
+    diagnostics.categoryRubric || {};
 
   const categories =
     Array.isArray(assessment.categories)
-      ? assessment.categories.map(category => ({
-          id: category.id,
-          name: category.name,
-          score: category.score,
-          confidence: category.confidence,
-          summary: category.summary,
-          subcriteria:
-            Array.isArray(rubric?.[category.id]?.subcriteria)
-              ? rubric[category.id].subcriteria.map(item => ({
-                  id: item.id,
-                  name: item.name,
-                  score: item.score,
-                  assessed: item.assessed,
-                  confidence: item.confidence,
-                  evidence: item.evidence,
-                  reasoning: item.reasoning,
-                  businessImpact: item.businessImpact,
-                  priorityScore: item.priorityScore,
-                }))
-              : [],
-        }))
+      ? assessment.categories.map(
+          category => ({
+            id: category.id,
+            name: category.name,
+            score: category.score,
+            confidence:
+              category.confidence,
+            summary:
+              category.summary,
+
+            subcriteria:
+              Array.isArray(
+                rubric?.[category.id]
+                  ?.subcriteria
+              )
+                ? rubric[
+                    category.id
+                  ].subcriteria.map(
+                    item => ({
+                      id: item.id,
+                      name: item.name,
+                      score: item.score,
+                      assessed:
+                        item.assessed,
+                      confidence:
+                        item.confidence,
+                      evidence:
+                        item.evidence,
+                      reasoning:
+                        item.reasoning,
+                      businessImpact:
+                        item.businessImpact,
+                      priorityScore:
+                        item.priorityScore,
+                    })
+                  )
+                : [],
+          })
+        )
       : [];
 
   return {
-    version: assessment.version,
-    brandHealth: assessment.brandHealth,
-    brandPattern: assessment.brandPattern,
-    brandGap: assessment.brandGap,
+    version:
+      assessment.version,
+
+    brandHealth:
+      assessment.brandHealth,
+
+    brandPattern:
+      assessment.brandPattern,
+
+    brandGap:
+      assessment.brandGap,
+
     categories,
-    biggestStrength: assessment.biggestStrength,
-    biggestOpportunity: assessment.biggestOpportunity,
-    evidence: assessment.evidence,
-    freeRecommendation: assessment.freeRecommendation,
+
+    biggestStrength:
+      assessment.biggestStrength,
+
+    biggestOpportunity:
+      assessment.biggestOpportunity,
+
+    evidence:
+      assessment.evidence,
+
+    freeRecommendation:
+      assessment.freeRecommendation,
+
     diagnostics: {
-      businessMaturity: diagnostics.businessMaturity,
-      businessSignals: diagnostics.businessSignals,
-      priority: diagnostics.priority,
-      strongestSignal: diagnostics.strongestSignal,
+      businessMaturity:
+        diagnostics.businessMaturity,
+
+      businessSignals:
+        diagnostics.businessSignals,
+
+      priority:
+        diagnostics.priority,
+
+      strongestSignal:
+        diagnostics.strongestSignal,
     },
   };
 }
@@ -167,14 +427,19 @@ function compactAssessment(assessment) {
    RECOMMENDATION GUARDRAILS
 ========================================================= */
 
-function buildRecommendationGuardrails(assessment) {
+function buildRecommendationGuardrails(
+  assessment
+) {
   const categories =
-    Array.isArray(assessment.categories)
+    Array.isArray(
+      assessment.categories
+    )
       ? assessment.categories
       : [];
 
   const primaryPriority =
-    assessment.diagnostics?.priority || null;
+    assessment.diagnostics?.priority ||
+    null;
 
   const primaryCategoryId =
     primaryPriority?.categoryId ||
@@ -184,17 +449,26 @@ function buildRecommendationGuardrails(assessment) {
   const categoryRanking =
     categories
       .map(category => ({
-        id: category.id,
-        name: category.name,
+        id:
+          category.id,
+
+        name:
+          category.name,
+
         score:
-          typeof category.score === "number"
+          typeof category.score ===
+          "number"
             ? category.score
             : null,
+
         confidence:
-          category.confidence || "unknown",
+          category.confidence ||
+          "unknown",
       }))
-      .filter(category =>
-        typeof category.score === "number"
+      .filter(
+        category =>
+          typeof category.score ===
+          "number"
       )
       .sort(
         (a, b) =>
@@ -203,81 +477,115 @@ function buildRecommendationGuardrails(assessment) {
 
   const secondaryCategoryPreference =
     categoryRanking
-      .filter(category =>
-        category.id !== primaryCategoryId &&
-        category.score < 75
+      .filter(
+        category =>
+          category.id !==
+            primaryCategoryId &&
+          category.score < 75
       )
       .slice(0, 3);
 
-  /*
-    If every non-primary category is already strong, still provide
-    the lowest-scoring alternatives. This gives the model context
-    without forcing it to invent a weakness in a strong category.
-  */
   const secondaryFallback =
     secondaryCategoryPreference.length
       ? []
       : categoryRanking
-          .filter(category =>
-            category.id !== primaryCategoryId
+          .filter(
+            category =>
+              category.id !==
+              primaryCategoryId
           )
           .slice(0, 2);
 
   const strongCategories =
-    categoryRanking
-      .filter(category =>
+    categoryRanking.filter(
+      category =>
         category.score >= 75
-      );
+    );
 
   const weakObservedSubcriteria =
     categories
       .flatMap(category =>
-        Array.isArray(category.subcriteria)
-          ? category.subcriteria.map(item => ({
-              categoryId: category.id,
-              categoryName: category.name,
-              criterionId: item.id,
-              criterionName: item.name,
-              score:
-                typeof item.score === "number"
-                  ? item.score
-                  : null,
-              confidence:
-                item.confidence || "unknown",
-              assessed:
-                Boolean(item.assessed),
-              evidence:
-                item.evidence || "",
-              businessImpact:
-                item.businessImpact || "",
-              priorityScore:
-                typeof item.priorityScore === "number"
-                  ? item.priorityScore
-                  : null,
-            }))
+        Array.isArray(
+          category.subcriteria
+        )
+          ? category.subcriteria.map(
+              item => ({
+                categoryId:
+                  category.id,
+
+                categoryName:
+                  category.name,
+
+                criterionId:
+                  item.id,
+
+                criterionName:
+                  item.name,
+
+                score:
+                  typeof item.score ===
+                  "number"
+                    ? item.score
+                    : null,
+
+                confidence:
+                  item.confidence ||
+                  "unknown",
+
+                assessed:
+                  Boolean(
+                    item.assessed
+                  ),
+
+                evidence:
+                  item.evidence || "",
+
+                businessImpact:
+                  item.businessImpact ||
+                  "",
+
+                priorityScore:
+                  typeof item.priorityScore ===
+                  "number"
+                    ? item.priorityScore
+                    : null,
+              })
+            )
           : []
       )
-      .filter(item =>
-        item.assessed &&
-        typeof item.score === "number" &&
-        item.score <= 3
+      .filter(
+        item =>
+          item.assessed &&
+          typeof item.score ===
+            "number" &&
+          item.score <= 3
       )
       .sort((a, b) => {
         const priorityA =
-          typeof a.priorityScore === "number"
+          typeof a.priorityScore ===
+          "number"
             ? a.priorityScore
             : -1;
 
         const priorityB =
-          typeof b.priorityScore === "number"
+          typeof b.priorityScore ===
+          "number"
             ? b.priorityScore
             : -1;
 
-        if (priorityA !== priorityB) {
-          return priorityB - priorityA;
+        if (
+          priorityA !== priorityB
+        ) {
+          return (
+            priorityB -
+            priorityA
+          );
         }
 
-        return a.score - b.score;
+        return (
+          a.score -
+          b.score
+        );
       })
       .slice(0, 10);
 
@@ -289,6 +597,7 @@ function buildRecommendationGuardrails(assessment) {
     secondaryFallback,
     strongCategories,
     weakObservedSubcriteria,
+
     thresholds: {
       strongCategoryScore: 75,
       weakSubcriterionMaxScore: 3,
@@ -296,11 +605,16 @@ function buildRecommendationGuardrails(assessment) {
   };
 }
 
-function getBusinessMaturityScore(assessment) {
+function getBusinessMaturityScore(
+  assessment
+) {
   const maturity =
-    assessment.diagnostics?.businessMaturity;
+    assessment.diagnostics
+      ?.businessMaturity;
 
-  if (typeof maturity === "number") {
+  if (
+    typeof maturity === "number"
+  ) {
     return maturity;
   }
 
@@ -312,15 +626,20 @@ function getBusinessMaturityScore(assessment) {
       maturity.score,
       maturity.total,
       maturity.value,
-      maturity.businessMaturityScore,
+      maturity
+        .businessMaturityScore,
     ];
 
     const match =
-      candidates.find(value =>
-        typeof value === "number"
+      candidates.find(
+        value =>
+          typeof value ===
+          "number"
       );
 
-    if (typeof match === "number") {
+    if (
+      typeof match === "number"
+    ) {
       return match;
     }
   }
@@ -334,27 +653,39 @@ function buildStrategicDecisionContext({
   recommendationGuardrails,
 }) {
   const categories =
-    Array.isArray(assessment.categories)
+    Array.isArray(
+      assessment.categories
+    )
       ? assessment.categories
       : [];
 
   const primaryCategory =
-    categories.find(category =>
-      category.id ===
-      recommendationGuardrails.primaryCategoryId
+    categories.find(
+      category =>
+        category.id ===
+        recommendationGuardrails
+          .primaryCategoryId
     ) || null;
 
   const strategicText =
     [
-      recommendationGuardrails.primaryPriority,
-      assessment.biggestOpportunity,
-      assessment.freeRecommendation,
+      recommendationGuardrails
+        .primaryPriority,
+
+      assessment
+        .biggestOpportunity,
+
+      assessment
+        .freeRecommendation,
+
       primaryCategory,
     ]
       .map(value =>
         typeof value === "string"
           ? value
-          : JSON.stringify(value || {})
+          : JSON.stringify(
+              value || {}
+            )
       )
       .join(" ")
       .toLowerCase();
@@ -414,7 +745,8 @@ function buildStrategicDecisionContext({
       establishedByContext ||
       growthGoal ||
       (
-        typeof maturityScore === "number" &&
+        typeof maturityScore ===
+          "number" &&
         maturityScore >= 60
       )
     );
@@ -422,11 +754,15 @@ function buildStrategicDecisionContext({
   let supportBias =
     "No special support bias. Match the recommendation to the actual complexity of the work.";
 
-  if (highStakesStrategicDecision) {
+  if (
+    highStakesStrategicDecision
+  ) {
     supportBias =
       "Professional is strongly preferred for the foundational strategic decision. DIY may support research and preparation, and a freelancer may support execution after the strategic direction is established.";
   }
-  else if (positioningLed) {
+  else if (
+    positioningLed
+  ) {
     supportBias =
       "Treat this as a strategic decision, not merely a copywriting task. Prefer Professional when uncertainty or business consequences are meaningful; use DIY only when the positioning decision is already substantially clear.";
   }
@@ -438,6 +774,7 @@ function buildStrategicDecisionContext({
     growthGoal,
     highStakesStrategicDecision,
     supportBias,
+
     sequencingPrinciple:
       positioningLed
         ? "Strategy -> Expression -> Proof/Application. Fix Next should usually make the positioning usable in customer-facing messaging before adding unrelated secondary tactics."
@@ -621,20 +958,24 @@ const ACTION_PLAN_SCHEMA = {
       },
     },
 
-    fixFirst: PRIORITY_SCHEMA,
+    fixFirst:
+      PRIORITY_SCHEMA,
 
-    fixNext: PRIORITY_SCHEMA,
+    fixNext:
+      PRIORITY_SCHEMA,
 
     quickWins: {
       type: "array",
       minItems: 3,
       maxItems: 3,
-      items: QUICK_WIN_SCHEMA,
+      items:
+        QUICK_WIN_SCHEMA,
     },
 
     dontPrioritize: {
       type: "object",
-      additionalProperties: false,
+      additionalProperties:
+        false,
 
       required: [
         "title",
@@ -659,7 +1000,8 @@ const ACTION_PLAN_SCHEMA = {
 
     budgetGuidance: {
       type: "object",
-      additionalProperties: false,
+      additionalProperties:
+        false,
 
       required: [
         "recommendedPath",
@@ -705,7 +1047,8 @@ const ACTION_PLAN_SCHEMA = {
 
     roadmap: {
       type: "object",
-      additionalProperties: false,
+      additionalProperties:
+        false,
 
       required: [
         "days1to30",
@@ -736,11 +1079,16 @@ const ACTION_PLAN_SCHEMA = {
 ========================================================= */
 
 function extractOutputText(data) {
-  if (typeof data.output_text === "string") {
+  if (
+    typeof data.output_text ===
+    "string"
+  ) {
     return data.output_text.trim();
   }
 
-  if (!Array.isArray(data.output)) {
+  if (
+    !Array.isArray(data.output)
+  ) {
     return "";
   }
 
@@ -751,7 +1099,8 @@ function extractOutputText(data) {
         : []
     )
     .map(content =>
-      typeof content.text === "string"
+      typeof content.text ===
+        "string"
         ? content.text
         : ""
     )
@@ -1555,7 +1904,7 @@ exports.handler =
               ACTION_PLAN_VERSION,
 
             message:
-              "Brand Action Plan generator is ready. POST an existing Brand Rater assessment and business context.",
+              "Brand Action Plan generator is ready. POST a paid Stripe Checkout Session ID, an existing Brand Rater assessment, and business context.",
           }),
       };
     }
@@ -1584,15 +1933,38 @@ exports.handler =
       if (
         !process.env.OPENAI_API_KEY
       ) {
-        return {
-          statusCode: 500,
+        return jsonResponse(
+          500,
+          {
+            error:
+              "OPENAI_API_KEY is missing from Netlify.",
+          }
+        );
+      }
 
-          body:
-            JSON.stringify({
-              error:
-                "OPENAI_API_KEY is missing from Netlify.",
-            }),
-        };
+      if (
+        !process.env.STRIPE_SECRET_KEY
+      ) {
+        return jsonResponse(
+          500,
+          {
+            error:
+              "STRIPE_SECRET_KEY is missing from Netlify.",
+          }
+        );
+      }
+
+      if (
+        !process.env
+          .STRIPE_ACTION_PLAN_PRICE_ID
+      ) {
+        return jsonResponse(
+          500,
+          {
+            error:
+              "STRIPE_ACTION_PLAN_PRICE_ID is missing from Netlify.",
+          }
+        );
       }
 
       const validationError =
@@ -1601,16 +1973,30 @@ exports.handler =
         );
 
       if (validationError) {
-        return {
-          statusCode: 400,
-
-          body:
-            JSON.stringify({
-              error:
-                validationError,
-            }),
-        };
+        return jsonResponse(
+          400,
+          {
+            error:
+              validationError,
+          }
+        );
       }
+
+      /*
+        SECURITY GATE
+
+        Stripe is verified here, on the server,
+        BEFORE the OpenAI Action Plan request
+        is allowed to run.
+
+        The browser cannot bypass this by
+        calling this endpoint directly without
+        a valid paid Checkout Session.
+      */
+      const stripeSession =
+        await verifyPaidActionPlanSession(
+          body.sessionId
+        );
 
       const ip =
         getClientIp(event);
@@ -1618,15 +2004,13 @@ exports.handler =
       if (
         !checkRateLimit(ip)
       ) {
-        return {
-          statusCode: 429,
-
-          body:
-            JSON.stringify({
-              error:
-                "Too many Action Plan requests. Please try again later.",
-            }),
-        };
+        return jsonResponse(
+          429,
+          {
+            error:
+              "Too many Action Plan requests. Please try again later.",
+          }
+        );
       }
 
       const business =
@@ -1689,25 +2073,42 @@ exports.handler =
 
           generatorVersion:
             ACTION_PLAN_VERSION,
+
+          purchase: {
+            stripeSessionId:
+              stripeSession.id,
+
+            paymentStatus:
+              stripeSession
+                .paymentStatus,
+
+            livemode:
+              stripeSession
+                .livemode,
+
+            customerEmail:
+              stripeSession
+                .customerEmail,
+
+            amountTotal:
+              stripeSession
+                .amountTotal,
+
+            currency:
+              stripeSession
+                .currency,
+
+            priceId:
+              stripeSession
+                .priceId,
+          },
         },
       };
 
-      return {
-        statusCode: 200,
-
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          "Cache-Control":
-            "no-store",
-        },
-
-        body:
-          JSON.stringify(
-            result
-          ),
-      };
+      return jsonResponse(
+        200,
+        result
+      );
     }
     catch (error) {
       console.error(
@@ -1715,23 +2116,13 @@ exports.handler =
         error
       );
 
-      return {
-        statusCode: 500,
-
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          "Cache-Control":
-            "no-store",
-        },
-
-        body:
-          JSON.stringify({
-            error:
-              error.message ||
-              "Something went wrong generating the Brand Action Plan.",
-          }),
-      };
+      return jsonResponse(
+        error.statusCode || 500,
+        {
+          error:
+            error.message ||
+            "Something went wrong generating the Brand Action Plan.",
+        }
+      );
     }
   };
