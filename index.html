@@ -2351,6 +2351,9 @@
     const CHECKOUT_ENDPOINT =
       '/.netlify/functions/create-checkout-session';
 
+    const VERIFY_CHECKOUT_ENDPOINT =
+      '/.netlify/functions/verify-checkout-session';
+
     const form =
       document.getElementById('brand-rater-form');
 
@@ -2392,6 +2395,10 @@
     let latestResult = null;
     let latestBusiness = null;
     let turnstileToken = '';
+    let verifiedCheckoutSessionId =
+      sessionStorage.getItem(
+        'brandRaterVerifiedCheckoutSession'
+      ) || '';
 
     const MAX_FILE_SIZE =
       5 * 1024 * 1024;
@@ -3520,7 +3527,7 @@
         )
         ?.addEventListener(
           'click',
-          startActionPlanCheckout
+          handleActionPlanButtonClick
         );
 
       document
@@ -3537,6 +3544,250 @@
 
       submitButton.textContent =
         'Analyze my brand →';
+    }
+
+    function handleActionPlanButtonClick() {
+      if (verifiedCheckoutSessionId) {
+        generateActionPlan();
+        return;
+      }
+
+      startActionPlanCheckout();
+    }
+
+    function readCheckoutStorage() {
+      let business = null;
+      let assessment = null;
+
+      try {
+        business = JSON.parse(
+          sessionStorage.getItem(
+            'brandRaterBusiness'
+          ) || 'null'
+        );
+      }
+      catch {
+        business = null;
+      }
+
+      try {
+        assessment = JSON.parse(
+          sessionStorage.getItem(
+            'brandRaterAssessment'
+          ) || 'null'
+        );
+      }
+      catch {
+        assessment = null;
+      }
+
+      return {
+        business,
+        assessment
+      };
+    }
+
+    function restoreAssessmentAfterCheckout() {
+      const {
+        business,
+        assessment
+      } = readCheckoutStorage();
+
+      if (!business || !assessment) {
+        return false;
+      }
+
+      latestBusiness = business;
+      latestResult = assessment;
+
+      renderResultsPage(
+        assessment,
+        business
+      );
+
+      return true;
+    }
+
+    function cleanCheckoutUrl() {
+      const cleanUrl =
+        `${window.location.pathname}${window.location.hash || ''}`;
+
+      window.history.replaceState(
+        {},
+        document.title,
+        cleanUrl
+      );
+    }
+
+    function showCheckoutReturnStatus({
+      title,
+      message,
+      isError = false
+    }) {
+      const container =
+        document.getElementById(
+          'action-plan-results'
+        );
+
+      if (!container) {
+        return;
+      }
+
+      container.innerHTML = `
+        <section class="card ${isError ? 'action-plan-error' : 'action-plan-loading'}">
+          <p class="section-kicker">Brand Action Plan</p>
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(message)}</p>
+        </section>
+      `;
+
+      container.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+
+    async function verifyCheckoutSession(sessionId) {
+      const response =
+        await fetch(
+          VERIFY_CHECKOUT_ENDPOINT,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body: JSON.stringify({
+              sessionId
+            })
+          }
+        );
+
+      let verification;
+
+      try {
+        verification =
+          await response.json();
+      }
+      catch {
+        throw new Error(
+          `Payment verification received an invalid response (${response.status}).`
+        );
+      }
+
+      if (
+        !response.ok ||
+        !verification.verified
+      ) {
+        throw new Error(
+          verification.error ||
+          'We could not verify your payment.'
+        );
+      }
+
+      return verification;
+    }
+
+    async function handleCheckoutReturn() {
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      const checkoutState =
+        params.get('action_plan');
+
+      if (!checkoutState) {
+        return;
+      }
+
+      const restored =
+        restoreAssessmentAfterCheckout();
+
+      if (!restored) {
+        cleanCheckoutUrl();
+
+        alert(
+          'We returned from checkout, but this browser no longer has the Brand Rater assessment that started the purchase. Please run the assessment again.'
+        );
+
+        return;
+      }
+
+      if (checkoutState === 'cancelled') {
+        cleanCheckoutUrl();
+
+        showCheckoutReturnStatus({
+          title: 'Checkout cancelled',
+          message:
+            'No payment was completed. Your Brand Rater results are still here whenever you are ready.'
+        });
+
+        return;
+      }
+
+      if (checkoutState !== 'success') {
+        cleanCheckoutUrl();
+        return;
+      }
+
+      const sessionId =
+        params.get('session_id') || '';
+
+      if (!sessionId) {
+        cleanCheckoutUrl();
+
+        showCheckoutReturnStatus({
+          title: 'We could not verify the purchase.',
+          message:
+            'Stripe returned without a Checkout Session ID. No Action Plan has been generated.',
+          isError: true
+        });
+
+        return;
+      }
+
+      showCheckoutReturnStatus({
+        title: 'Payment received. Verifying your purchase...',
+        message:
+          'This should only take a moment. Once Stripe confirms the payment, we’ll build your personalized Brand Action Plan.'
+      });
+
+      try {
+        const verification =
+          await verifyCheckoutSession(
+            sessionId
+          );
+
+        verifiedCheckoutSessionId =
+          verification.session?.id ||
+          sessionId;
+
+        sessionStorage.setItem(
+          'brandRaterVerifiedCheckoutSession',
+          verifiedCheckoutSessionId
+        );
+
+        cleanCheckoutUrl();
+
+        await generateActionPlan();
+      }
+      catch (error) {
+        console.error(
+          'Checkout return verification error:',
+          error
+        );
+
+        cleanCheckoutUrl();
+
+        showCheckoutReturnStatus({
+          title: 'We could not verify the payment.',
+          message:
+            error.message ||
+            'Please contact Milky Minds Creative if you completed payment and continue to see this message.',
+          isError: true
+        });
+      }
     }
 
     async function startActionPlanCheckout() {
@@ -3964,6 +4215,19 @@
       latestResult = null;
       latestBusiness = null;
       turnstileToken = '';
+      verifiedCheckoutSessionId = '';
+
+      sessionStorage.removeItem(
+        'brandRaterVerifiedCheckoutSession'
+      );
+
+      sessionStorage.removeItem(
+        'brandRaterBusiness'
+      );
+
+      sessionStorage.removeItem(
+        'brandRaterAssessment'
+      );
 
       form.reset();
       fileInput.value = '';
@@ -4314,6 +4578,12 @@
       'submit',
       submitLeadForm
     );
+
+    /* =====================================================
+       STRIPE CHECKOUT RETURN
+    ====================================================== */
+
+    handleCheckoutReturn();
   </script>
 
 </body>
