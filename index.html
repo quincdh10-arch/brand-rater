@@ -3738,7 +3738,8 @@
         cleanCheckoutUrl();
 
         showCheckoutReturnStatus({
-          title: 'We could not verify the purchase.',
+          title:
+            'We could not verify the purchase.',
           message:
             'Stripe returned without a Checkout Session ID. No Action Plan has been generated.',
           isError: true
@@ -3748,7 +3749,8 @@
       }
 
       showCheckoutReturnStatus({
-        title: 'Payment received. Verifying your purchase...',
+        title:
+          'Payment received. Verifying your purchase...',
         message:
           'This should only take a moment. Once Stripe confirms the payment, we’ll build your personalized Brand Action Plan.'
       });
@@ -3781,7 +3783,8 @@
         cleanCheckoutUrl();
 
         showCheckoutReturnStatus({
-          title: 'We could not verify the payment.',
+          title:
+            'We could not verify the payment.',
           message:
             error.message ||
             'Please contact Milky Minds Creative if you completed payment and continue to see this message.',
@@ -3811,13 +3814,13 @@
         }
 
         /*
-          Temporary checkout-return storage.
+          Keep a temporary browser copy so the free
+          assessment can be restored visually when
+          Stripe redirects the customer back.
 
-          This keeps the current assessment available
-          when Stripe redirects the browser back to
-          Brand Rater. We will replace this with
-          server-side purchase persistence before
-          production launch.
+          This copy is NOT trusted for paid Action Plan
+          generation. The server-side purchase record
+          is now the source of truth.
         */
         sessionStorage.setItem(
           'brandRaterBusiness',
@@ -3843,7 +3846,13 @@
               body:
                 JSON.stringify({
                   product:
-                    'brand-action-plan'
+                    'brand-action-plan',
+
+                  business:
+                    latestBusiness,
+
+                  assessment:
+                    latestResult
                 })
             }
           );
@@ -3915,6 +3924,18 @@
         return;
       }
 
+      if (!verifiedCheckoutSessionId) {
+        showCheckoutReturnStatus({
+          title:
+            'Payment verification required',
+          message:
+            'Your purchase must be verified before the Brand Action Plan can be generated.',
+          isError: true
+        });
+
+        return;
+      }
+
       try {
         if (button) {
           button.disabled = true;
@@ -3930,29 +3951,42 @@
           </section>
         `;
 
+        /*
+          SECURITY:
+          Only the verified Stripe Checkout Session ID
+          is sent to the paid generator.
+
+          The generator retrieves the original business
+          context and assessment from the server-side
+          purchase record associated with this payment.
+
+          Browser-supplied assessment data is therefore
+          not trusted for paid report generation.
+        */
         const response =
           await fetch(
             ACTION_PLAN_ENDPOINT,
             {
               method: 'POST',
+
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type':
+                  'application/json'
               },
-              body: JSON.stringify({
-                sessionId:
-                  verifiedCheckoutSessionId,
-                business:
-                  latestBusiness,
-                assessment:
-                  latestResult
-              })
+
+              body:
+                JSON.stringify({
+                  sessionId:
+                    verifiedCheckoutSessionId
+                })
             }
           );
 
         let actionPlan;
 
         try {
-          actionPlan = await response.json();
+          actionPlan =
+            await response.json();
         }
         catch {
           throw new Error(
@@ -3961,6 +3995,17 @@
         }
 
         if (!response.ok) {
+          if (
+            response.status === 409 &&
+            actionPlan.status ===
+              'generating'
+          ) {
+            throw new Error(
+              actionPlan.message ||
+              'Your Brand Action Plan is already being generated. Please wait a moment and try again.'
+            );
+          }
+
           throw new Error(
             actionPlan.error ||
             'Something went wrong while generating your Action Plan.'
@@ -3968,32 +4013,48 @@
         }
 
         sessionStorage.setItem(
-          'brandActionPlan',
-          JSON.stringify(actionPlan)
+          'brandRaterActionPlan',
+          JSON.stringify(
+            actionPlan
+          )
         );
 
-        renderActionPlan(actionPlan);
+        renderActionPlan(
+          actionPlan
+        );
 
-        container.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
+        if (button) {
+          button.disabled = true;
+          button.textContent =
+            'Brand Action Plan unlocked';
+        }
       }
+
       catch (error) {
+        console.error(
+          'Brand Action Plan error:',
+          error
+        );
+
         container.innerHTML = `
           <section class="card action-plan-error">
             <p class="section-kicker">Brand Action Plan</p>
-            <h2>We couldn’t build your plan.</h2>
-            <p>${escapeHtml(error.message || 'Please try again.')}</p>
+            <h2>We couldn’t build your Action Plan.</h2>
+            <p>${escapeHtml(
+              error.message ||
+              'Please try again.'
+            )}</p>
           </section>
         `;
 
         if (button) {
           button.disabled = false;
-          button.textContent = 'Try Action Plan Again';
+          button.textContent =
+            'Try Again';
         }
       }
     }
+
 
     function renderActionPlan(plan) {
       const container =
