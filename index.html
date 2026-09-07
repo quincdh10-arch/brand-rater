@@ -3939,8 +3939,12 @@
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                business: latestBusiness,
-                assessment: latestResult
+                sessionId:
+                  verifiedCheckoutSessionId,
+                business:
+                  latestBusiness,
+                assessment:
+                  latestResult
               })
             }
           );
