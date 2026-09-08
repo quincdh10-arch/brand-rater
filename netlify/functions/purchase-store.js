@@ -5,25 +5,63 @@
   - Persist Brand Action Plan purchases using Netlify Blobs.
   - Keep assessment/business data on the server.
   - Allow Stripe Checkout sessions to reference a purchase_id.
-  - Support later payment verification, replay protection,
+  - Support payment verification, replay protection,
     and Action Plan persistence.
 
   Store:
   - brand-rater-purchases
+
+  Important:
+  - Brand Rater currently uses Netlify's Lambda-compatible
+    CommonJS Functions format.
+  - connectLambda(event) must run before getStore().
 */
 
 const PURCHASE_STORE_NAME =
   "brand-rater-purchases";
 
 /* =========================================================
+   BLOBS CONNECTION
+========================================================= */
+
+async function connectBlobs(
+  event
+) {
+  if (!event) {
+    throw new Error(
+      "The Netlify Function event is required to initialize Blobs."
+    );
+  }
+
+  const {
+    connectLambda,
+  } = await import(
+    "@netlify/blobs"
+  );
+
+  /*
+    Netlify Blobs does not automatically receive its
+    runtime context in Lambda compatibility mode.
+
+    connectLambda(event) extracts the Blobs credentials
+    Netlify attaches to the Function invocation.
+  */
+  connectLambda(
+    event
+  );
+}
+
+/* =========================================================
    STORE
 ========================================================= */
 
-async function getPurchaseStore() {
-  /*
-    Dynamic import keeps this helper compatible with the
-    existing CommonJS Netlify Functions used by Brand Rater.
-  */
+async function getPurchaseStore(
+  event
+) {
+  await connectBlobs(
+    event
+  );
+
   const {
     getStore,
   } = await import(
@@ -31,8 +69,9 @@ async function getPurchaseStore() {
   );
 
   /*
-    Strong consistency is useful here because our payment
-    flow may write a purchase and immediately read/update it.
+    Strong consistency is appropriate for purchases because
+    checkout, payment verification, and report generation may
+    write and then immediately read the same purchase.
   */
   return getStore({
     name:
@@ -58,7 +97,8 @@ function getPurchaseKey(
 ========================================================= */
 
 async function createPurchase(
-  purchase
+  purchase,
+  event
 ) {
   if (
     !purchase ||
@@ -70,7 +110,9 @@ async function createPurchase(
   }
 
   const store =
-    await getPurchaseStore();
+    await getPurchaseStore(
+      event
+    );
 
   const key =
     getPurchaseKey(
@@ -86,7 +128,10 @@ async function createPurchase(
       }
     );
 
-  if (!result.modified) {
+  if (
+    result &&
+    result.modified === false
+  ) {
     throw new Error(
       "A purchase with this ID already exists."
     );
@@ -100,33 +145,40 @@ async function createPurchase(
 ========================================================= */
 
 async function getPurchase(
-  purchaseId
+  purchaseId,
+  event
 ) {
   if (!purchaseId) {
     return null;
   }
 
   const store =
-    await getPurchaseStore();
+    await getPurchaseStore(
+      event
+    );
 
   return store.get(
     getPurchaseKey(
       purchaseId
     ),
     {
-      type: "json",
-      consistency: "strong",
+      type:
+        "json",
+
+      consistency:
+        "strong",
     }
   );
 }
 
 /* =========================================================
-   UPDATE
+   SAVE
 ========================================================= */
 
 async function savePurchase(
   purchaseId,
-  purchase
+  purchase,
+  event
 ) {
   if (!purchaseId) {
     throw new Error(
@@ -136,7 +188,8 @@ async function savePurchase(
 
   if (
     !purchase ||
-    typeof purchase !== "object"
+    typeof purchase !==
+      "object"
   ) {
     throw new Error(
       "A valid purchase record is required."
@@ -144,7 +197,9 @@ async function savePurchase(
   }
 
   const store =
-    await getPurchaseStore();
+    await getPurchaseStore(
+      event
+    );
 
   await store.setJSON(
     getPurchaseKey(
@@ -162,11 +217,13 @@ async function savePurchase(
 
 async function updatePurchase(
   purchaseId,
-  updates
+  updates,
+  event
 ) {
   const existing =
     await getPurchase(
-      purchaseId
+      purchaseId,
+      event
     );
 
   if (!existing) {
@@ -186,7 +243,8 @@ async function updatePurchase(
 
   await savePurchase(
     purchaseId,
-    updated
+    updated,
+    event
   );
 
   return updated;
