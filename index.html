@@ -3701,38 +3701,100 @@
         return;
       }
 
+      /*
+        If the original browser assessment still
+        exists, restore it so the customer sees the
+        free results above the paid Action Plan.
+
+        If it does NOT exist, that is okay.
+
+        The paid Action Plan now uses the server-side
+        purchase record as its source of truth.
+      */
       const restored =
         restoreAssessmentAfterCheckout();
 
       if (!restored) {
+        const intakeView =
+          document.getElementById(
+            'intake-view'
+          );
+
+        const resultsView =
+          document.getElementById(
+            'results-view'
+          );
+
+        const resultsMain =
+          document.getElementById(
+            'results-main'
+          );
+
+        if (
+          intakeView &&
+          resultsView &&
+          resultsMain
+        ) {
+          intakeView.style.display =
+            'none';
+
+          resultsView.style.display =
+            'block';
+
+          resultsMain.innerHTML = `
+            <section
+              id="action-plan-results"
+              class="action-plan-section"
+            >
+              <section class="card action-plan-loading">
+                <p class="section-kicker">
+                  Brand Action Plan
+                </p>
+
+                <h2>
+                  Restoring your purchase...
+                </h2>
+
+                <p>
+                  We’re securely retrieving the Brand Rater assessment connected to your payment.
+                </p>
+              </section>
+            </section>
+          `;
+        }
+      }
+
+      if (
+        checkoutState ===
+        'cancelled'
+      ) {
         cleanCheckoutUrl();
 
-        alert(
-          'We returned from checkout, but this browser no longer has the Brand Rater assessment that started the purchase. Please run the assessment again.'
-        );
+        if (restored) {
+          showCheckoutReturnStatus({
+            title:
+              'Checkout cancelled',
+
+            message:
+              'No payment was completed. Your Brand Rater results are still here whenever you are ready.'
+          });
+        }
 
         return;
       }
 
-      if (checkoutState === 'cancelled') {
-        cleanCheckoutUrl();
-
-        showCheckoutReturnStatus({
-          title: 'Checkout cancelled',
-          message:
-            'No payment was completed. Your Brand Rater results are still here whenever you are ready.'
-        });
-
-        return;
-      }
-
-      if (checkoutState !== 'success') {
+      if (
+        checkoutState !==
+        'success'
+      ) {
         cleanCheckoutUrl();
         return;
       }
 
       const sessionId =
-        params.get('session_id') || '';
+        params.get(
+          'session_id'
+        ) || '';
 
       if (!sessionId) {
         cleanCheckoutUrl();
@@ -3740,9 +3802,12 @@
         showCheckoutReturnStatus({
           title:
             'We could not verify the purchase.',
+
           message:
             'Stripe returned without a Checkout Session ID. No Action Plan has been generated.',
-          isError: true
+
+          isError:
+            true
         });
 
         return;
@@ -3751,8 +3816,9 @@
       showCheckoutReturnStatus({
         title:
           'Payment received. Verifying your purchase...',
+
         message:
-          'This should only take a moment. Once Stripe confirms the payment, we’ll build your personalized Brand Action Plan.'
+          'This should only take a moment. Once Stripe confirms the payment, we’ll retrieve your saved assessment and build your personalized Brand Action Plan.'
       });
 
       try {
@@ -3770,25 +3836,38 @@
           verifiedCheckoutSessionId
         );
 
+        /*
+          Clean the Stripe return parameters only
+          after payment verification succeeds.
+        */
         cleanCheckoutUrl();
 
         await generateActionPlan();
       }
+
       catch (error) {
         console.error(
           'Checkout return verification error:',
           error
         );
 
-        cleanCheckoutUrl();
+        /*
+          Keep the session_id in the URL when
+          recovery fails.
 
+          This makes it easier to retry the same
+          paid purchase without charging again.
+        */
         showCheckoutReturnStatus({
           title:
             'We could not verify the payment.',
+
           message:
             error.message ||
             'Please contact Milky Minds Creative if you completed payment and continue to see this message.',
-          isError: true
+
+          isError:
+            true
         });
       }
     }
@@ -3916,11 +3995,16 @@
           'action-plan-results'
         );
 
-      if (
-        !latestResult ||
-        !latestBusiness ||
-        !container
-      ) {
+      /*
+        Paid Action Plan generation no longer
+        requires latestResult or latestBusiness
+        to exist in browser memory.
+
+        The server retrieves both from the
+        purchase record connected to the
+        verified Stripe Checkout Session.
+      */
+      if (!container) {
         return;
       }
 
