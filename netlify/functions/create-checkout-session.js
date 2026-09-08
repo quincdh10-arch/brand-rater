@@ -3,7 +3,6 @@ const crypto =
 
 const {
   createPurchase,
-  savePurchase,
 } = require(
   "./purchase-store"
 );
@@ -301,7 +300,7 @@ exports.handler =
       }
 
       /* -----------------------------------------------------
-         NORMALIZE DATA
+         NORMALIZE INPUT
       ----------------------------------------------------- */
 
       const business =
@@ -319,97 +318,13 @@ exports.handler =
       const purchaseId =
         crypto.randomUUID();
 
-      const now =
-        new Date()
-          .toISOString();
-
-      /* -----------------------------------------------------
-         INITIAL PURCHASE RECORD
-      ----------------------------------------------------- */
-
-      const purchase = {
-        version:
-          "1.0.0",
-
-        purchaseId,
-
-        product:
-          "brand-action-plan",
-
-        status:
-          "pending",
-
-        createdAt:
-          now,
-
-        updatedAt:
-          now,
-
-        business,
-
-        assessment,
-
-        stripe: {
-          sessionId:
-            null,
-
-          paymentStatus:
-            null,
-
-          customerEmail:
-            null,
-
-          amountTotal:
-            null,
-
-          currency:
-            null,
-
-          livemode:
-            null,
-
-          priceId,
-        },
-
-        actionPlan:
-          null,
-
-        generation: {
-          startedAt:
-            null,
-
-          completedAt:
-            null,
-
-          error:
-            null,
-        },
-      };
-
-      /* -----------------------------------------------------
-         SAVE PURCHASE TO NETLIFY BLOBS
-
-         IMPORTANT:
-         Pass event so purchase-store.js can initialize
-         Netlify Blobs through connectLambda(event).
-      ----------------------------------------------------- */
-
-      await createPurchase(
-        purchase,
-        event
-      );
-
-      /* -----------------------------------------------------
-         SITE ORIGIN
-      ----------------------------------------------------- */
-
       const origin =
         getSiteOrigin(
           event
         );
 
       /* -----------------------------------------------------
-         STRIPE PARAMETERS
+         BUILD STRIPE CHECKOUT REQUEST
       ----------------------------------------------------- */
 
       const params =
@@ -456,8 +371,10 @@ exports.handler =
       );
 
       /*
-        This is the important link between Stripe
-        and the server-side Brand Rater purchase.
+        Stripe receives the server-generated purchase ID.
+        This links payment back to the exact assessment
+        that will be saved immediately after Checkout
+        Session creation succeeds.
       */
 
       params.append(
@@ -471,7 +388,7 @@ exports.handler =
       );
 
       /* -----------------------------------------------------
-         CREATE STRIPE CHECKOUT SESSION
+         CREATE STRIPE CHECKOUT SESSION FIRST
       ----------------------------------------------------- */
 
       const stripeResponse =
@@ -494,12 +411,25 @@ exports.handler =
           }
         );
 
-      const stripeData =
-        await stripeResponse
-          .json();
+      let stripeData;
+
+      try {
+        stripeData =
+          await stripeResponse
+            .json();
+      }
+      catch {
+        return jsonResponse(
+          502,
+          {
+            error:
+              "Stripe returned an invalid response.",
+          }
+        );
+      }
 
       /* -----------------------------------------------------
-         STRIPE FAILURE
+         STRIPE ERROR
       ----------------------------------------------------- */
 
       if (
@@ -508,27 +438,6 @@ exports.handler =
         console.error(
           "Stripe Checkout error:",
           stripeData
-        );
-
-        await savePurchase(
-          purchaseId,
-          {
-            ...purchase,
-
-            status:
-              "checkout_failed",
-
-            updatedAt:
-              new Date()
-                .toISOString(),
-
-            checkoutError:
-              stripeData
-                .error
-                ?.message ||
-              "Stripe Checkout creation failed.",
-          },
-          event
         );
 
         return jsonResponse(
@@ -544,31 +453,13 @@ exports.handler =
       }
 
       /* -----------------------------------------------------
-         INCOMPLETE STRIPE RESPONSE
+         VALIDATE STRIPE RESPONSE
       ----------------------------------------------------- */
 
       if (
-        !stripeData.url ||
-        !stripeData.id
+        !stripeData.id ||
+        !stripeData.url
       ) {
-        await savePurchase(
-          purchaseId,
-          {
-            ...purchase,
-
-            status:
-              "checkout_failed",
-
-            updatedAt:
-              new Date()
-                .toISOString(),
-
-            checkoutError:
-              "Stripe created an incomplete Checkout Session.",
-          },
-          event
-        );
-
         return jsonResponse(
           500,
           {
@@ -579,22 +470,39 @@ exports.handler =
       }
 
       /* -----------------------------------------------------
-         SAVE STRIPE SESSION TO PURCHASE
+         BUILD COMPLETE PURCHASE RECORD
+
+         This is now the FIRST Blob write.
+         There is no pending -> checkout_created overwrite.
       ----------------------------------------------------- */
 
-      const updatedPurchase = {
-        ...purchase,
+      const now =
+        new Date()
+          .toISOString();
+
+      const purchase = {
+        version:
+          "1.0.0",
+
+        purchaseId,
+
+        product:
+          "brand-action-plan",
 
         status:
           "checkout_created",
 
+        createdAt:
+          now,
+
         updatedAt:
-          new Date()
-            .toISOString(),
+          now,
+
+        business,
+
+        assessment,
 
         stripe: {
-          ...purchase.stripe,
-
           sessionId:
             stripeData.id,
 
@@ -602,6 +510,9 @@ exports.handler =
             stripeData
               .payment_status ||
             "unpaid",
+
+          customerEmail:
+            null,
 
           amountTotal:
             typeof stripeData
@@ -621,19 +532,58 @@ exports.handler =
               stripeData
                 .livemode
             ),
+
+          priceId,
+        },
+
+        actionPlan:
+          null,
+
+        generation: {
+          startedAt:
+            null,
+
+          completedAt:
+            null,
+
+          error:
+            null,
         },
       };
 
-      /*
-        IMPORTANT:
-        event must also be passed here.
-      */
+      /* -----------------------------------------------------
+         SAVE PURCHASE ONCE TO NETLIFY BLOBS
+      ----------------------------------------------------- */
 
-      await savePurchase(
-        purchaseId,
-        updatedPurchase,
-        event
-      );
+      try {
+        await createPurchase(
+          purchase,
+          event
+        );
+      }
+      catch (storageError) {
+        console.error(
+          "Purchase storage error:",
+          storageError
+        );
+
+        /*
+          Stripe Checkout exists, but we deliberately
+          do NOT send the customer into Checkout if the
+          server-side purchase cannot be saved.
+
+          That prevents a paid session from becoming
+          detached from its Brand Rater assessment.
+        */
+
+        return jsonResponse(
+          500,
+          {
+            error:
+              "We could not prepare your Brand Action Plan purchase. Please try again.",
+          }
+        );
+      }
 
       /* -----------------------------------------------------
          SUCCESS
