@@ -1,50 +1,30 @@
-const crypto =
-  require("crypto");
+/*
+  Brand Rater — Verify Stripe Checkout Session
+  ------------------------------------------------------------
+  Purpose:
+  - Verify that a Stripe Checkout Session was actually paid.
+  - Confirm the purchase used the expected Brand Action Plan price.
+  - Read purchase_id from Stripe metadata.
+  - Load the matching server-side purchase from Netlify Blobs.
+  - Confirm the Stripe Session belongs to that purchase.
+  - Mark the purchase as paid.
+
+  Environment variables:
+  - STRIPE_SECRET_KEY
+  - STRIPE_ACTION_PLAN_PRICE_ID
+*/
 
 const {
-  createPurchase,
+  getPurchase,
+  savePurchase,
 } = require(
   "./purchase-store"
 );
 
+
 /* =========================================================
-   HELPERS
+   RESPONSE HELPER
 ========================================================= */
-
-function getSiteOrigin(
-  event
-) {
-  const origin =
-    event.headers.origin ||
-    event.headers.Origin;
-
-  if (origin) {
-    return origin.replace(
-      /\/$/,
-      ""
-    );
-  }
-
-  const host =
-    event.headers[
-      "x-forwarded-host"
-    ] ||
-    event.headers.host;
-
-  const proto =
-    event.headers[
-      "x-forwarded-proto"
-    ] ||
-    "https";
-
-  if (host) {
-    return `${proto}://${host}`;
-  }
-
-  return (
-    "https://brandrater.netlify.app"
-  );
-}
 
 function jsonResponse(
   statusCode,
@@ -66,6 +46,11 @@ function jsonResponse(
   };
 }
 
+
+/* =========================================================
+   CLEAN STRING
+========================================================= */
+
 function cleanString(
   value
 ) {
@@ -74,106 +59,220 @@ function cleanString(
   ).trim();
 }
 
-function normalizeBusiness(
-  input
+
+/* =========================================================
+   STRIPE GET
+========================================================= */
+
+async function stripeGet(
+  path
 ) {
-  const business =
-    input &&
-    typeof input === "object"
-      ? input
-      : {};
+  const stripeSecretKey =
+    process.env
+      .STRIPE_SECRET_KEY;
 
-  return {
-    name:
-      cleanString(
-        business.name
-      ),
+  if (!stripeSecretKey) {
+    const error =
+      new Error(
+        "STRIPE_SECRET_KEY is missing from Netlify."
+      );
 
-    website:
-      cleanString(
-        business.website
-      ),
+    error.statusCode = 500;
 
-    description:
-      cleanString(
-        business.description
-      ),
+    throw error;
+  }
 
-    audience:
-      cleanString(
-        business.audience
-      ),
+  const response =
+    await fetch(
+      `https://api.stripe.com${path}`,
+      {
+        method:
+          "GET",
 
-    yearsInBusiness:
-      cleanString(
-        business.yearsInBusiness
-      ),
+        headers: {
+          Authorization:
+            `Bearer ${stripeSecretKey}`,
+        },
+      }
+    );
 
-    teamSize:
-      cleanString(
-        business.teamSize
-      ),
+  const data =
+    await response.json();
 
-    traction:
-      cleanString(
-        business.traction
-      ),
+  if (!response.ok) {
+    const error =
+      new Error(
+        data?.error?.message ||
+        "Stripe request failed."
+      );
 
-    brandConcern:
-      cleanString(
-        business.brandConcern
-      ),
+    error.statusCode =
+      response.status;
 
-    twelveMonthGoal:
-      cleanString(
-        business.twelveMonthGoal
-      ),
-  };
+    throw error;
+  }
+
+  return data;
 }
 
-function validateAssessment(
-  assessment
+
+/* =========================================================
+   VERIFY STRIPE SESSION
+========================================================= */
+
+async function verifyStripeSession(
+  sessionId
 ) {
-  if (
-    !assessment ||
-    typeof assessment !==
-      "object"
-  ) {
-    return (
-      "A completed Brand Rater assessment is required."
+  const priceId =
+    process.env
+      .STRIPE_ACTION_PLAN_PRICE_ID;
+
+  if (!priceId) {
+    const error =
+      new Error(
+        "STRIPE_ACTION_PLAN_PRICE_ID is missing from Netlify."
+      );
+
+    error.statusCode = 500;
+
+    throw error;
+  }
+
+  const cleanedSessionId =
+    cleanString(
+      sessionId
     );
+
+  if (!cleanedSessionId) {
+    const error =
+      new Error(
+        "A Stripe Checkout Session ID is required."
+      );
+
+    error.statusCode = 400;
+
+    throw error;
   }
 
   if (
-    !assessment.brandHealth ||
-    typeof assessment
-      .brandHealth
-      .score !== "number"
-  ) {
-    return (
-      "The assessment is missing Brand Health data."
-    );
-  }
-
-  if (
-    !Array.isArray(
-      assessment.categories
+    !cleanedSessionId.startsWith(
+      "cs_test_"
+    ) &&
+    !cleanedSessionId.startsWith(
+      "cs_live_"
     )
   ) {
-    return (
-      "The assessment is missing category scores."
-    );
+    const error =
+      new Error(
+        "The Stripe Checkout Session ID is invalid."
+      );
+
+    error.statusCode = 400;
+
+    throw error;
   }
+
+  const encodedId =
+    encodeURIComponent(
+      cleanedSessionId
+    );
+
+  const session =
+    await stripeGet(
+      `/v1/checkout/sessions/${encodedId}?expand[]=line_items`
+    );
+
+  /* -------------------------------------------------------
+     MODE
+  ------------------------------------------------------- */
 
   if (
-    !assessment.diagnostics
+    session.mode !==
+    "payment"
   ) {
-    return (
-      "The assessment is missing diagnostics."
-    );
+    const error =
+      new Error(
+        "This Checkout Session is not a one-time payment."
+      );
+
+    error.statusCode = 400;
+
+    throw error;
   }
 
-  return null;
+  /* -------------------------------------------------------
+     PAYMENT STATUS
+  ------------------------------------------------------- */
+
+  if (
+    session.payment_status !==
+    "paid"
+  ) {
+    const error =
+      new Error(
+        "Payment has not been completed."
+      );
+
+    error.statusCode = 402;
+
+    throw error;
+  }
+
+  /* -------------------------------------------------------
+     PRICE ID
+  ------------------------------------------------------- */
+
+  const lineItems =
+    session.line_items?.data ||
+    [];
+
+  const matchingItem =
+    lineItems.find(
+      (item) =>
+        item?.price?.id ===
+          priceId &&
+        Number(
+          item?.quantity || 0
+        ) >= 1
+    );
+
+  if (!matchingItem) {
+    const error =
+      new Error(
+        "This payment does not match the Brand Action Plan."
+      );
+
+    error.statusCode = 403;
+
+    throw error;
+  }
+
+  /* -------------------------------------------------------
+     PURCHASE ID
+  ------------------------------------------------------- */
+
+  const purchaseId =
+    cleanString(
+      session.metadata
+        ?.purchase_id
+    );
+
+  if (!purchaseId) {
+    const error =
+      new Error(
+        "This Stripe payment is missing its Brand Rater purchase ID."
+      );
+
+    error.statusCode = 400;
+
+    throw error;
+  }
+
+  return {
+    session,
+    purchaseId,
+    priceId,
+  };
 }
 
 
@@ -203,41 +302,7 @@ exports.handler =
 
     try {
       /* -----------------------------------------------------
-         ENVIRONMENT
-      ----------------------------------------------------- */
-
-      const stripeSecretKey =
-        process.env
-          .STRIPE_SECRET_KEY;
-
-      const priceId =
-        process.env
-          .STRIPE_ACTION_PLAN_PRICE_ID;
-
-      if (
-        !stripeSecretKey
-      ) {
-        return jsonResponse(
-          500,
-          {
-            error:
-              "STRIPE_SECRET_KEY is missing from Netlify.",
-          }
-        );
-      }
-
-      if (!priceId) {
-        return jsonResponse(
-          500,
-          {
-            error:
-              "STRIPE_ACTION_PLAN_PRICE_ID is missing from Netlify.",
-          }
-        );
-      }
-
-      /* -----------------------------------------------------
-         REQUEST BODY
+         BODY
       ----------------------------------------------------- */
 
       let body;
@@ -259,331 +324,222 @@ exports.handler =
         );
       }
 
-      /* -----------------------------------------------------
-         PRODUCT
-      ----------------------------------------------------- */
-
-      if (
+      const sessionId =
         cleanString(
-          body.product
-        ) !==
-        "brand-action-plan"
-      ) {
-        return jsonResponse(
-          400,
-          {
-            error:
-              "Invalid product.",
-          }
+          body.sessionId
         );
-      }
 
       /* -----------------------------------------------------
-         VALIDATE ASSESSMENT
+         VERIFY STRIPE
       ----------------------------------------------------- */
 
-      const validationError =
-        validateAssessment(
-          body.assessment
+      const {
+        session,
+        purchaseId,
+        priceId,
+      } =
+        await verifyStripeSession(
+          sessionId
         );
-
-      if (
-        validationError
-      ) {
-        return jsonResponse(
-          400,
-          {
-            error:
-              validationError,
-          }
-        );
-      }
 
       /* -----------------------------------------------------
-         NORMALIZE INPUT
+         LOAD PURCHASE
+
+         IMPORTANT:
+         Pass event so purchase-store.js can initialize
+         Netlify Blobs with connectLambda(event).
       ----------------------------------------------------- */
 
-      const business =
-        normalizeBusiness(
-          body.business
-        );
-
-      const assessment =
-        body.assessment;
-
-      /* -----------------------------------------------------
-         CREATE PURCHASE ID
-      ----------------------------------------------------- */
-
-      const purchaseId =
-        crypto.randomUUID();
-
-      const origin =
-        getSiteOrigin(
+      const purchase =
+        await getPurchase(
+          purchaseId,
           event
         );
 
-      /* -----------------------------------------------------
-         BUILD STRIPE CHECKOUT REQUEST
-      ----------------------------------------------------- */
-
-      const params =
-        new URLSearchParams();
-
-      params.append(
-        "mode",
-        "payment"
-      );
-
-      params.append(
-        "line_items[0][price]",
-        priceId
-      );
-
-      params.append(
-        "line_items[0][quantity]",
-        "1"
-      );
-
-      params.append(
-        "success_url",
-        `${origin}/?action_plan=success&session_id={CHECKOUT_SESSION_ID}`
-      );
-
-      params.append(
-        "cancel_url",
-        `${origin}/?action_plan=cancelled`
-      );
-
-      params.append(
-        "customer_creation",
-        "always"
-      );
-
-      params.append(
-        "billing_address_collection",
-        "auto"
-      );
-
-      params.append(
-        "payment_intent_data[description]",
-        "Brand Action Plan"
-      );
-
-      /*
-        Stripe receives the server-generated purchase ID.
-        This links payment back to the exact assessment
-        that will be saved immediately after Checkout
-        Session creation succeeds.
-      */
-
-      params.append(
-        "metadata[purchase_id]",
-        purchaseId
-      );
-
-      params.append(
-        "payment_intent_data[metadata][purchase_id]",
-        purchaseId
-      );
-
-      /* -----------------------------------------------------
-         CREATE STRIPE CHECKOUT SESSION FIRST
-      ----------------------------------------------------- */
-
-      const stripeResponse =
-        await fetch(
-          "https://api.stripe.com/v1/checkout/sessions",
-          {
-            method:
-              "POST",
-
-            headers: {
-              Authorization:
-                `Bearer ${stripeSecretKey}`,
-
-              "Content-Type":
-                "application/x-www-form-urlencoded",
-            },
-
-            body:
-              params.toString(),
-          }
-        );
-
-      let stripeData;
-
-      try {
-        stripeData =
-          await stripeResponse
-            .json();
-      }
-      catch {
+      if (!purchase) {
         return jsonResponse(
-          502,
+          404,
           {
             error:
-              "Stripe returned an invalid response.",
+              "The Brand Rater purchase record could not be found.",
           }
         );
       }
 
       /* -----------------------------------------------------
-         STRIPE ERROR
+         VERIFY PRODUCT
       ----------------------------------------------------- */
 
       if (
-        !stripeResponse.ok
+        purchase.product !==
+        "brand-action-plan"
       ) {
-        console.error(
-          "Stripe Checkout error:",
-          stripeData
-        );
-
         return jsonResponse(
-          stripeResponse.status,
+          403,
           {
             error:
-              stripeData
-                .error
-                ?.message ||
-              "Stripe could not create the Checkout Session.",
+              "This purchase is not for a Brand Action Plan.",
           }
         );
       }
 
       /* -----------------------------------------------------
-         VALIDATE STRIPE RESPONSE
+         VERIFY SESSION OWNERSHIP
       ----------------------------------------------------- */
 
+      const storedSessionId =
+        cleanString(
+          purchase.stripe
+            ?.sessionId
+        );
+
       if (
-        !stripeData.id ||
-        !stripeData.url
+        !storedSessionId
       ) {
         return jsonResponse(
-          500,
+          409,
           {
             error:
-              "Stripe created an incomplete Checkout Session.",
+              "The purchase does not have a Stripe Checkout Session attached.",
+          }
+        );
+      }
+
+      if (
+        storedSessionId !==
+        session.id
+      ) {
+        return jsonResponse(
+          403,
+          {
+            error:
+              "This Stripe Checkout Session does not belong to this purchase.",
           }
         );
       }
 
       /* -----------------------------------------------------
-         BUILD COMPLETE PURCHASE RECORD
+         VERIFY STORED PRICE
+      ----------------------------------------------------- */
 
-         This is now the FIRST Blob write.
-         There is no pending -> checkout_created overwrite.
+      const storedPriceId =
+        cleanString(
+          purchase.stripe
+            ?.priceId
+        );
+
+      if (
+        storedPriceId &&
+        storedPriceId !==
+          priceId
+      ) {
+        return jsonResponse(
+          403,
+          {
+            error:
+              "The purchase Price ID does not match the current Brand Action Plan.",
+          }
+        );
+      }
+
+      /* -----------------------------------------------------
+         CUSTOMER EMAIL
+      ----------------------------------------------------- */
+
+      const customerEmail =
+        cleanString(
+          session.customer_details
+            ?.email ||
+          session.customer_email
+        ) || null;
+
+      /* -----------------------------------------------------
+         PRESERVE LATER STATES
+      ----------------------------------------------------- */
+
+      const protectedStatuses =
+        new Set([
+          "generating",
+          "completed",
+        ]);
+
+      const nextStatus =
+        protectedStatuses.has(
+          purchase.status
+        )
+          ? purchase.status
+          : "paid";
+
+      /* -----------------------------------------------------
+         UPDATE PURCHASE
       ----------------------------------------------------- */
 
       const now =
         new Date()
           .toISOString();
 
-      const purchase = {
-        version:
-          "1.0.0",
-
-        purchaseId,
-
-        product:
-          "brand-action-plan",
+      const updatedPurchase = {
+        ...purchase,
 
         status:
-          "checkout_created",
-
-        createdAt:
-          now,
+          nextStatus,
 
         updatedAt:
           now,
 
-        business,
-
-        assessment,
+        paidAt:
+          purchase.paidAt ||
+          now,
 
         stripe: {
+          ...purchase.stripe,
+
           sessionId:
-            stripeData.id,
+            session.id,
 
           paymentStatus:
-            stripeData
-              .payment_status ||
-            "unpaid",
+            session
+              .payment_status,
 
-          customerEmail:
-            null,
+          customerEmail,
 
           amountTotal:
-            typeof stripeData
+            typeof session
               .amount_total ===
               "number"
-              ? stripeData
+              ? session
                   .amount_total
-              : null,
+              : purchase.stripe
+                  ?.amountTotal ??
+                null,
 
           currency:
-            stripeData
-              .currency ||
+            session.currency ||
+            purchase.stripe
+              ?.currency ||
             null,
 
           livemode:
             Boolean(
-              stripeData
-                .livemode
+              session.livemode
             ),
 
           priceId,
         },
-
-        actionPlan:
-          null,
-
-        generation: {
-          startedAt:
-            null,
-
-          completedAt:
-            null,
-
-          error:
-            null,
-        },
       };
 
       /* -----------------------------------------------------
-         SAVE PURCHASE ONCE TO NETLIFY BLOBS
+         SAVE PURCHASE
+
+         IMPORTANT:
+         Pass event here too.
       ----------------------------------------------------- */
 
-      try {
-        await createPurchase(
-          purchase,
-          event
-        );
-      }
-      catch (storageError) {
-        console.error(
-          "Purchase storage error:",
-          storageError
-        );
-
-        /*
-          Stripe Checkout exists, but we deliberately
-          do NOT send the customer into Checkout if the
-          server-side purchase cannot be saved.
-
-          That prevents a paid session from becoming
-          detached from its Brand Rater assessment.
-        */
-
-        return jsonResponse(
-          500,
-          {
-            error:
-              "We could not prepare your Brand Action Plan purchase. Please try again.",
-          }
-        );
-      }
+      await savePurchase(
+        purchaseId,
+        updatedPurchase,
+        event
+      );
 
       /* -----------------------------------------------------
          SUCCESS
@@ -592,23 +548,52 @@ exports.handler =
       return jsonResponse(
         200,
         {
-          success:
+          verified:
             true,
 
           purchaseId,
 
-          sessionId:
-            stripeData.id,
+          purchaseStatus:
+            updatedPurchase
+              .status,
 
-          checkoutUrl:
-            stripeData.url,
+          session: {
+            id:
+              session.id,
+
+            paymentStatus:
+              session
+                .payment_status,
+
+            status:
+              session.status ||
+              null,
+
+            livemode:
+              Boolean(
+                session.livemode
+              ),
+
+            customerEmail,
+
+            amountTotal:
+              session
+                .amount_total ??
+              null,
+
+            currency:
+              session.currency ||
+              null,
+
+            priceId,
+          },
         }
       );
     }
 
     catch (error) {
       console.error(
-        "Create Checkout Session error:",
+        "Verify Checkout Session error:",
         error
       );
 
@@ -618,7 +603,7 @@ exports.handler =
         {
           error:
             error.message ||
-            "Something went wrong creating the checkout.",
+            "Something went wrong verifying the payment.",
         }
       );
     }
