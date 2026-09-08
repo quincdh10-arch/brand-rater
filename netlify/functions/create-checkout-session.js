@@ -8,25 +8,13 @@ const {
   "./purchase-store"
 );
 
-/*
-  Brand Rater — Stripe Checkout Session
-  ------------------------------------------------------------
-  Purpose:
-  - Create a persistent Brand Action Plan purchase.
-  - Save the original business + assessment server-side.
-  - Create a Stripe-hosted Checkout Session.
-  - Associate Stripe with the server-side purchase_id.
-
-  Environment variables:
-  - STRIPE_SECRET_KEY
-  - STRIPE_ACTION_PLAN_PRICE_ID
-*/
-
 /* =========================================================
    HELPERS
 ========================================================= */
 
-function getSiteOrigin(event) {
+function getSiteOrigin(
+  event
+) {
   const origin =
     event.headers.origin ||
     event.headers.Origin;
@@ -79,7 +67,9 @@ function jsonResponse(
   };
 }
 
-function cleanString(value) {
+function cleanString(
+  value
+) {
   return String(
     value || ""
   ).trim();
@@ -187,12 +177,17 @@ function validateAssessment(
   return null;
 }
 
+
 /* =========================================================
    HANDLER
 ========================================================= */
 
 exports.handler =
   async function (event) {
+
+    /* -------------------------------------------------------
+       METHOD
+    ------------------------------------------------------- */
 
     if (
       event.httpMethod !==
@@ -208,9 +203,9 @@ exports.handler =
     }
 
     try {
-      /* -----------------------------------------------
+      /* -----------------------------------------------------
          ENVIRONMENT
-      ------------------------------------------------ */
+      ----------------------------------------------------- */
 
       const stripeSecretKey =
         process.env
@@ -242,9 +237,9 @@ exports.handler =
         );
       }
 
-      /* -----------------------------------------------
+      /* -----------------------------------------------------
          REQUEST BODY
-      ------------------------------------------------ */
+      ----------------------------------------------------- */
 
       let body;
 
@@ -265,6 +260,29 @@ exports.handler =
         );
       }
 
+      /* -----------------------------------------------------
+         PRODUCT
+      ----------------------------------------------------- */
+
+      if (
+        cleanString(
+          body.product
+        ) !==
+        "brand-action-plan"
+      ) {
+        return jsonResponse(
+          400,
+          {
+            error:
+              "Invalid product.",
+          }
+        );
+      }
+
+      /* -----------------------------------------------------
+         VALIDATE ASSESSMENT
+      ----------------------------------------------------- */
+
       const validationError =
         validateAssessment(
           body.assessment
@@ -282,6 +300,10 @@ exports.handler =
         );
       }
 
+      /* -----------------------------------------------------
+         NORMALIZE DATA
+      ----------------------------------------------------- */
+
       const business =
         normalizeBusiness(
           body.business
@@ -290,9 +312,9 @@ exports.handler =
       const assessment =
         body.assessment;
 
-      /* -----------------------------------------------
+      /* -----------------------------------------------------
          CREATE PURCHASE ID
-      ------------------------------------------------ */
+      ----------------------------------------------------- */
 
       const purchaseId =
         crypto.randomUUID();
@@ -301,13 +323,10 @@ exports.handler =
         new Date()
           .toISOString();
 
-      /*
-        This becomes the source of truth for the purchase.
+      /* -----------------------------------------------------
+         INITIAL PURCHASE RECORD
+      ----------------------------------------------------- */
 
-        After this point, the Action Plan generator will
-        eventually load business + assessment from this
-        record instead of trusting browser-supplied data.
-      */
       const purchase = {
         version:
           "1.0.0",
@@ -367,22 +386,31 @@ exports.handler =
         },
       };
 
-      /* -----------------------------------------------
-         SAVE BEFORE STRIPE
-      ------------------------------------------------ */
+      /* -----------------------------------------------------
+         SAVE PURCHASE TO NETLIFY BLOBS
+
+         IMPORTANT:
+         Pass event so purchase-store.js can initialize
+         Netlify Blobs through connectLambda(event).
+      ----------------------------------------------------- */
 
       await createPurchase(
-        purchase
+        purchase,
+        event
       );
 
-      /* -----------------------------------------------
-         CREATE STRIPE CHECKOUT
-      ------------------------------------------------ */
+      /* -----------------------------------------------------
+         SITE ORIGIN
+      ----------------------------------------------------- */
 
       const origin =
         getSiteOrigin(
           event
         );
+
+      /* -----------------------------------------------------
+         STRIPE PARAMETERS
+      ----------------------------------------------------- */
 
       const params =
         new URLSearchParams();
@@ -428,28 +456,23 @@ exports.handler =
       );
 
       /*
-        Stripe Checkout Session metadata.
-
-        This is the critical connection between the
-        Stripe purchase and the server-side Brand Rater
-        purchase record.
+        This is the important link between Stripe
+        and the server-side Brand Rater purchase.
       */
+
       params.append(
         "metadata[purchase_id]",
         purchaseId
       );
 
-      /*
-        Also attach the purchase ID to the PaymentIntent.
-
-        This is useful later for webhook-based fulfillment,
-        support, reconciliation, and Stripe dashboard
-        troubleshooting.
-      */
       params.append(
         "payment_intent_data[metadata][purchase_id]",
         purchaseId
       );
+
+      /* -----------------------------------------------------
+         CREATE STRIPE CHECKOUT SESSION
+      ----------------------------------------------------- */
 
       const stripeResponse =
         await fetch(
@@ -475,9 +498,9 @@ exports.handler =
         await stripeResponse
           .json();
 
-      /* -----------------------------------------------
-         STRIPE ERROR
-      ------------------------------------------------ */
+      /* -----------------------------------------------------
+         STRIPE FAILURE
+      ----------------------------------------------------- */
 
       if (
         !stripeResponse.ok
@@ -487,10 +510,6 @@ exports.handler =
           stripeData
         );
 
-        /*
-          Preserve the purchase for troubleshooting rather
-          than silently losing the failed checkout attempt.
-        */
         await savePurchase(
           purchaseId,
           {
@@ -508,7 +527,8 @@ exports.handler =
                 .error
                 ?.message ||
               "Stripe Checkout creation failed.",
-          }
+          },
+          event
         );
 
         return jsonResponse(
@@ -522,6 +542,10 @@ exports.handler =
           }
         );
       }
+
+      /* -----------------------------------------------------
+         INCOMPLETE STRIPE RESPONSE
+      ----------------------------------------------------- */
 
       if (
         !stripeData.url ||
@@ -541,7 +565,8 @@ exports.handler =
 
             checkoutError:
               "Stripe created an incomplete Checkout Session.",
-          }
+          },
+          event
         );
 
         return jsonResponse(
@@ -553,9 +578,9 @@ exports.handler =
         );
       }
 
-      /* -----------------------------------------------
-         SAVE STRIPE SESSION
-      ------------------------------------------------ */
+      /* -----------------------------------------------------
+         SAVE STRIPE SESSION TO PURCHASE
+      ----------------------------------------------------- */
 
       const updatedPurchase = {
         ...purchase,
@@ -599,14 +624,20 @@ exports.handler =
         },
       };
 
+      /*
+        IMPORTANT:
+        event must also be passed here.
+      */
+
       await savePurchase(
         purchaseId,
-        updatedPurchase
+        updatedPurchase,
+        event
       );
 
-      /* -----------------------------------------------
-         RESPONSE
-      ------------------------------------------------ */
+      /* -----------------------------------------------------
+         SUCCESS
+      ----------------------------------------------------- */
 
       return jsonResponse(
         200,
@@ -624,6 +655,7 @@ exports.handler =
         }
       );
     }
+
     catch (error) {
       console.error(
         "Create Checkout Session error:",
@@ -631,6 +663,7 @@ exports.handler =
       );
 
       return jsonResponse(
+        error.statusCode ||
         500,
         {
           error:
