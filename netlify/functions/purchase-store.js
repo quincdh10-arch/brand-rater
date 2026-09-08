@@ -15,6 +15,8 @@
   - Brand Rater currently uses Netlify's Lambda-compatible
     CommonJS Functions format.
   - connectLambda(event) must run before getStore().
+  - This Lambda-compatible environment uses the default
+    eventually-consistent Blobs read path.
 */
 
 const PURCHASE_STORE_NAME =
@@ -40,11 +42,8 @@ async function connectBlobs(
   );
 
   /*
-    Netlify Blobs does not automatically receive its
-    runtime context in Lambda compatibility mode.
-
-    connectLambda(event) extracts the Blobs credentials
-    Netlify attaches to the Function invocation.
+    Lambda compatibility mode requires the Netlify
+    invocation event to initialize Blobs access.
   */
   connectLambda(
     event
@@ -69,17 +68,17 @@ async function getPurchaseStore(
   );
 
   /*
-    Strong consistency is appropriate for purchases because
-    checkout, payment verification, and report generation may
-    write and then immediately read the same purchase.
-  */
-  return getStore({
-    name:
-      PURCHASE_STORE_NAME,
+    Do NOT request strong consistency here.
 
-    consistency:
-      "strong",
-  });
+    Lambda-compatible Blobs access does not provide
+    the uncachedEdgeURL required for strong reads.
+
+    Netlify Blobs therefore uses its default
+    eventually-consistent read model.
+  */
+  return getStore(
+    PURCHASE_STORE_NAME
+  );
 }
 
 /* =========================================================
@@ -157,6 +156,9 @@ async function getPurchase(
       event
     );
 
+  /*
+    No strong consistency option here.
+  */
   return store.get(
     getPurchaseKey(
       purchaseId
@@ -164,9 +166,6 @@ async function getPurchase(
     {
       type:
         "json",
-
-      consistency:
-        "strong",
     }
   );
 }
