@@ -1,5 +1,12 @@
 const rateLimitStore = new Map();
 
+const {
+  getPurchase,
+  savePurchase,
+} = require(
+  "./purchase-store"
+);
+
 /*
   Brand Rater V2 — Brand Action Plan Generator
   ------------------------------------------------------------
@@ -1882,34 +1889,41 @@ Return only the structured JSON required by the supplied schema.
 exports.handler =
   async function (event) {
 
+    /*
+      Readiness response.
+
+      Action Plan generation itself
+      must always use POST.
+    */
     if (
       event.httpMethod !== "POST"
     ) {
-      return {
-        statusCode: 200,
+      return jsonResponse(
+        200,
+        {
+          success:
+            true,
 
-        headers: {
-          "Content-Type":
-            "application/json",
+          version:
+            ACTION_PLAN_VERSION,
 
-          "Cache-Control":
-            "no-store",
-        },
-
-        body:
-          JSON.stringify({
-            success: true,
-
-            version:
-              ACTION_PLAN_VERSION,
-
-            message:
-              "Brand Action Plan generator is ready. POST a paid Stripe Checkout Session ID, an existing Brand Rater assessment, and business context.",
-          }),
-      };
+          message:
+            "Brand Action Plan generator is ready. POST a paid Stripe Checkout Session ID.",
+        }
+      );
     }
 
+    let activePurchaseId =
+      null;
+
+    let activePurchase =
+      null;
+
     try {
+      /* =====================================================
+         REQUEST BODY
+      ===================================================== */
+
       let body;
 
       try {
@@ -1919,19 +1933,22 @@ exports.handler =
           );
       }
       catch {
-        return {
-          statusCode: 400,
-
-          body:
-            JSON.stringify({
-              error:
-                "The request body was not valid JSON.",
-            }),
-        };
+        return jsonResponse(
+          400,
+          {
+            error:
+              "The request body was not valid JSON.",
+          }
+        );
       }
 
+      /* =====================================================
+         ENVIRONMENT
+      ===================================================== */
+
       if (
-        !process.env.OPENAI_API_KEY
+        !process.env
+          .OPENAI_API_KEY
       ) {
         return jsonResponse(
           500,
@@ -1943,7 +1960,8 @@ exports.handler =
       }
 
       if (
-        !process.env.STRIPE_SECRET_KEY
+        !process.env
+          .STRIPE_SECRET_KEY
       ) {
         return jsonResponse(
           500,
@@ -1967,9 +1985,271 @@ exports.handler =
         );
       }
 
+      /* =====================================================
+         SESSION ID
+      ===================================================== */
+
+      const sessionId =
+        cleanString(
+          body.sessionId
+        );
+
+      if (!sessionId) {
+        return jsonResponse(
+          400,
+          {
+            error:
+              "A Stripe Checkout Session ID is required.",
+          }
+        );
+      }
+
+      /* =====================================================
+         VERIFY STRIPE PAYMENT
+
+         Stripe remains the authoritative source
+         for whether the customer actually paid.
+      ===================================================== */
+
+      const stripeSession =
+        await verifyPaidActionPlanSession(
+          sessionId
+        );
+
+      /* =====================================================
+         RETRIEVE STRIPE SESSION METADATA
+
+         verifyPaidActionPlanSession confirms
+         payment and price.
+
+         We now retrieve the Checkout Session
+         so we can obtain metadata.purchase_id.
+      ===================================================== */
+
+      const encodedSessionId =
+        encodeURIComponent(
+          sessionId
+        );
+
+      const fullStripeSession =
+        await stripeGet(
+          `/v1/checkout/sessions/${encodedSessionId}`
+        );
+
+      const purchaseId =
+        cleanString(
+          fullStripeSession
+            ?.metadata
+            ?.purchase_id
+        );
+
+      if (!purchaseId) {
+        return jsonResponse(
+          400,
+          {
+            error:
+              "This Stripe payment is missing its Brand Rater purchase ID.",
+          }
+        );
+      }
+
+      activePurchaseId =
+        purchaseId;
+
+      /* =====================================================
+         LOAD SERVER-SIDE PURCHASE
+
+         IMPORTANT:
+         event is passed so purchase-store.js
+         can initialize Netlify Blobs using
+         connectLambda(event).
+      ===================================================== */
+
+      const purchase =
+        await getPurchase(
+          purchaseId,
+          event
+        );
+
+      activePurchase =
+        purchase;
+
+      if (!purchase) {
+        return jsonResponse(
+          404,
+          {
+            error:
+              "The Brand Rater purchase record could not be found.",
+          }
+        );
+      }
+
+      /* =====================================================
+         VERIFY PRODUCT
+      ===================================================== */
+
+      if (
+        purchase.product !==
+        "brand-action-plan"
+      ) {
+        return jsonResponse(
+          403,
+          {
+            error:
+              "This purchase is not for a Brand Action Plan.",
+          }
+        );
+      }
+
+      /* =====================================================
+         VERIFY STRIPE SESSION OWNERSHIP
+
+         A paid Stripe Session may only unlock
+         the purchase that originally created it.
+      ===================================================== */
+
+      const storedSessionId =
+        cleanString(
+          purchase.stripe
+            ?.sessionId
+        );
+
+      if (!storedSessionId) {
+        return jsonResponse(
+          409,
+          {
+            error:
+              "The purchase does not have a Stripe Checkout Session attached.",
+          }
+        );
+      }
+
+      if (
+        storedSessionId !==
+        stripeSession.id
+      ) {
+        return jsonResponse(
+          403,
+          {
+            error:
+              "This Stripe Checkout Session does not belong to this Brand Rater purchase.",
+          }
+        );
+      }
+
+      /* =====================================================
+         VERIFY STORED PRICE
+      ===================================================== */
+
+      const expectedPriceId =
+        process.env
+          .STRIPE_ACTION_PLAN_PRICE_ID;
+
+      const storedPriceId =
+        cleanString(
+          purchase.stripe
+            ?.priceId
+        );
+
+      if (
+        storedPriceId &&
+        storedPriceId !==
+          expectedPriceId
+      ) {
+        return jsonResponse(
+          403,
+          {
+            error:
+              "The stored purchase does not match the current Brand Action Plan price.",
+          }
+        );
+      }
+
+      /* =====================================================
+         COMPLETED PURCHASE
+
+         If this purchase already has an Action
+         Plan, return the stored report.
+
+         Do NOT call OpenAI again.
+      ===================================================== */
+
+      if (
+        purchase.status ===
+          "completed" &&
+        purchase.actionPlan
+      ) {
+        return jsonResponse(
+          200,
+          purchase.actionPlan
+        );
+      }
+
+      /* =====================================================
+         GENERATION ALREADY RUNNING
+
+         This protects against obvious duplicate
+         requests such as double-clicks.
+
+         A stale generation lock is allowed to
+         recover after 10 minutes.
+      ===================================================== */
+
+      if (
+        purchase.status ===
+        "generating"
+      ) {
+        const startedAt =
+          purchase.generation
+            ?.startedAt
+            ? Date.parse(
+                purchase
+                  .generation
+                  .startedAt
+              )
+            : NaN;
+
+        const generationAge =
+          Number.isFinite(
+            startedAt
+          )
+            ? Date.now() -
+              startedAt
+            : 0;
+
+        const staleAfterMs =
+          10 * 60 * 1000;
+
+        if (
+          generationAge <
+          staleAfterMs
+        ) {
+          return jsonResponse(
+            409,
+            {
+              error:
+                "Your Brand Action Plan is already being generated. Please wait a moment and try again.",
+            }
+          );
+        }
+      }
+
+      /* =====================================================
+         VALIDATE STORED ASSESSMENT
+
+         IMPORTANT SECURITY CHANGE:
+
+         We no longer trust an assessment sent
+         from the browser.
+
+         The Action Plan is generated ONLY from
+         the assessment stored when Checkout was
+         created.
+      ===================================================== */
+
       const validationError =
         validateAssessment(
-          body.assessment
+          purchase.assessment
         );
 
       if (validationError) {
@@ -1982,24 +2262,18 @@ exports.handler =
         );
       }
 
-      /*
-        SECURITY GATE
+      /* =====================================================
+         RATE LIMIT
 
-        Stripe is verified here, on the server,
-        BEFORE the OpenAI Action Plan request
-        is allowed to run.
-
-        The browser cannot bypass this by
-        calling this endpoint directly without
-        a valid paid Checkout Session.
-      */
-      const stripeSession =
-        await verifyPaidActionPlanSession(
-          body.sessionId
-        );
+         Do this after returning already-completed
+         reports so viewing a purchased report does
+         not unnecessarily consume generation quota.
+      ===================================================== */
 
       const ip =
-        getClientIp(event);
+        getClientIp(
+          event
+        );
 
       if (
         !checkRateLimit(ip)
@@ -2013,15 +2287,110 @@ exports.handler =
         );
       }
 
+      /* =====================================================
+         SERVER-SIDE BUSINESS + ASSESSMENT
+
+         Nothing here comes from body.business or
+         body.assessment anymore.
+      ===================================================== */
+
       const business =
         normalizeBusiness(
-          body.business
+          purchase.business
         );
 
       const assessment =
         compactAssessment(
-          body.assessment
+          purchase.assessment
         );
+
+      /* =====================================================
+         MARK PURCHASE AS GENERATING
+      ===================================================== */
+
+      const generationStartedAt =
+        new Date()
+          .toISOString();
+
+      const generatingPurchase = {
+        ...purchase,
+
+        status:
+          "generating",
+
+        updatedAt:
+          generationStartedAt,
+
+        paidAt:
+          purchase.paidAt ||
+          generationStartedAt,
+
+        stripe: {
+          ...purchase.stripe,
+
+          sessionId:
+            stripeSession.id,
+
+          paymentStatus:
+            stripeSession
+              .paymentStatus,
+
+          customerEmail:
+            stripeSession
+              .customerEmail,
+
+          amountTotal:
+            stripeSession
+              .amountTotal,
+
+          currency:
+            stripeSession
+              .currency,
+
+          livemode:
+            stripeSession
+              .livemode,
+
+          priceId:
+            stripeSession
+              .priceId,
+        },
+
+        generation: {
+          ...(purchase.generation ||
+            {}),
+
+          startedAt:
+            generationStartedAt,
+
+          completedAt:
+            null,
+
+          error:
+            null,
+        },
+      };
+
+      /*
+        IMPORTANT:
+        Pass event into savePurchase().
+      */
+
+      await savePurchase(
+        purchaseId,
+        generatingPurchase,
+        event
+      );
+
+      activePurchase =
+        generatingPurchase;
+
+      /* =====================================================
+         GENERATE ACTION PLAN
+
+         This is the ONLY OpenAI generation call
+         in the paid flow.
+      ===================================================== */
 
       const generated =
         await generateActionPlan({
@@ -2029,13 +2398,19 @@ exports.handler =
           assessment,
         });
 
+      /* =====================================================
+         BUILD FINAL ACTION PLAN
+      ===================================================== */
+
+      const generatedAt =
+        new Date()
+          .toISOString();
+
       const result = {
         version:
           ACTION_PLAN_VERSION,
 
-        generatedAt:
-          new Date()
-            .toISOString(),
+        generatedAt,
 
         sourceAssessment: {
           scoringVersion:
@@ -2043,13 +2418,16 @@ exports.handler =
             "2.0.0",
 
           brandHealth:
-            assessment.brandHealth,
+            assessment
+              .brandHealth,
 
           brandPattern:
-            assessment.brandPattern,
+            assessment
+              .brandPattern,
 
           brandGap:
-            assessment.brandGap,
+            assessment
+              .brandGap,
         },
 
         business: {
@@ -2075,6 +2453,8 @@ exports.handler =
             ACTION_PLAN_VERSION,
 
           purchase: {
+            purchaseId,
+
             stripeSessionId:
               stripeSession.id,
 
@@ -2105,19 +2485,134 @@ exports.handler =
         },
       };
 
+      /* =====================================================
+         SAVE COMPLETED ACTION PLAN
+
+         The generated report is now attached to
+         the purchase record.
+
+         Future requests can return this exact
+         report instead of generating another one.
+      ===================================================== */
+
+      const completedPurchase = {
+        ...generatingPurchase,
+
+        status:
+          "completed",
+
+        updatedAt:
+          generatedAt,
+
+        actionPlan:
+          result,
+
+        generation: {
+          ...(generatingPurchase
+            .generation || {}),
+
+          completedAt:
+            generatedAt,
+
+          error:
+            null,
+        },
+      };
+
+      /*
+        IMPORTANT:
+        Pass event into savePurchase().
+      */
+
+      await savePurchase(
+        purchaseId,
+        completedPurchase,
+        event
+      );
+
+      activePurchase =
+        completedPurchase;
+
+      /* =====================================================
+         SUCCESS
+      ===================================================== */
+
       return jsonResponse(
         200,
         result
       );
     }
+
     catch (error) {
       console.error(
         "Brand Action Plan error:",
         error
       );
 
+      /* =====================================================
+         GENERATION FAILURE RECOVERY
+
+         If generation began but failed, return the
+         purchase to "paid" so the customer can
+         retry instead of becoming permanently
+         stuck in "generating".
+
+         We deliberately do NOT remove the purchase
+         or payment record.
+      ===================================================== */
+
+      if (
+        activePurchaseId &&
+        activePurchase &&
+        activePurchase.status ===
+          "generating"
+      ) {
+        try {
+          const failureTime =
+            new Date()
+              .toISOString();
+
+          await savePurchase(
+            activePurchaseId,
+            {
+              ...activePurchase,
+
+              status:
+                "paid",
+
+              updatedAt:
+                failureTime,
+
+              generation: {
+                ...(activePurchase
+                  .generation || {}),
+
+                completedAt:
+                  null,
+
+                error:
+                  cleanString(
+                    error.message
+                  ) ||
+                  "Action Plan generation failed.",
+              },
+            },
+            event
+          );
+        }
+        catch (
+          purchaseSaveError
+        ) {
+          console.error(
+            "Could not save Action Plan generation failure:",
+            purchaseSaveError
+          );
+        }
+      }
+
       return jsonResponse(
-        error.statusCode || 500,
+        error.statusCode ||
+        500,
         {
           error:
             error.message ||
