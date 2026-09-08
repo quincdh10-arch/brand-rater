@@ -1654,6 +1654,90 @@
       text-transform: uppercase;
     }
 
+    .action-plan-next-step {
+  padding: clamp(32px, 5vw, 52px);
+  margin: 48px 0 24px;
+  border-radius: var(--radius-xl);
+}
+
+.action-plan-next-step h2 {
+  max-width: 720px;
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.next-step-offer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-top: 32px;
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(30, 102, 165, 0.06);
+}
+
+.next-step-label {
+  margin: 0 0 8px;
+  color: var(--milky-blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.next-step-offer h3 {
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.next-step-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--body-text);
+}
+
+.next-step-list li {
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.implementation-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-top: 16px;
+  padding: 24px 28px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.implementation-cta p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--body-text);
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  .next-step-offer,
+  .implementation-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .next-step-offer .primary-btn,
+  .implementation-cta .secondary-btn {
+    width: 100%;
+  }
+}  
     @media (max-width: 800px) {
       .action-plan-priority-grid,
       .quick-win-grid,
@@ -2404,7 +2488,7 @@
       5 * 1024 * 1024;
 
     const MAX_TOTAL_SIZE =
-      8 * 1024 * 1024;
+      4 * 1024 * 1024;
 
     const LAST_SUBMISSION_KEY =
       'brand_rater_last_submission';
@@ -4333,10 +4417,63 @@
           </section>
 
           <section class="card action-plan-close">
-            <p class="section-kicker">Final guidance</p>
-            <p class="action-plan-lead">${escapeHtml(plan.closingAdvice || '')}</p>
-          </section>
-        </section>
+  <p class="section-kicker">Final guidance</p>
+  <p class="action-plan-lead">${escapeHtml(plan.closingAdvice || '')}</p>
+</section>
+
+<section class="card action-plan-next-step">
+  <p class="section-kicker">Take the next step</p>
+  <h2>Ready to put your plan into action?</h2>
+
+  <p class="action-plan-lead">
+    Your Brand Action Plan shows what deserves your attention.
+    A Brand Clarity Session helps turn those priorities into a
+    focused strategy built around your business.
+  </p>
+
+  <div class="next-step-offer">
+    <div>
+      <p class="next-step-label">Brand Clarity Session</p>
+      <h3>$149 · 60-minute strategy session</h3>
+
+      <ul class="next-step-list">
+        <li>Review your highest-priority opportunities</li>
+        <li>Define what to tackle first</li>
+        <li>Clarify what you can DIY vs. where professional help makes sense</li>
+        <li>Leave with clear next steps for your brand</li>
+      </ul>
+    </div>
+
+    <a
+      class="primary-btn"
+      href="https://calendly.com/milkymindscreative/brand-clarity-session"
+      target="_blank"
+      rel="noopener"
+    >
+      Book a Brand Clarity Session →
+    </a>
+  </div>
+
+  <div class="implementation-cta">
+    <div>
+      <p class="next-step-label">Need help with implementation?</p>
+      <p>
+        Milky Minds Creative can help turn your recommendations into
+        real-world improvements—from brand systems and messaging to
+        websites and visual identity.
+      </p>
+    </div>
+
+    <a
+      class="secondary-btn"
+      href="https://www.milkymindscreative.com/contact"
+      target="_blank"
+      rel="noopener"
+    >
+      Work With Milky Minds →
+    </a>
+  </div>
+</section>
       `;
     }
 
