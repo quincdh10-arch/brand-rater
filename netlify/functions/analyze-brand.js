@@ -2114,15 +2114,239 @@ function choosePriority(
   );
 }
 
+/* One free growth priority; the paid plan keeps the full sequence. */
+
+const GROWTH_OUTCOME_BY_CATEGORY = {
+  clarity: "UNDERSTAND → ACT",
+  credibility: "TRUST → ACT",
+  consistency: "TRUST",
+  distinctiveness: "ATTRACT → UNDERSTAND",
+  visualExecution: "ATTRACT → UNDERSTAND",
+};
+
+const CONVERSION_IMPACT_BY_CRITERION = {
+  offerClarity: 5,
+  audienceClarity: 4,
+  valueProposition: 5,
+  messagingHierarchy: 4,
+  ctaClarity: 5,
+  professionalPresentation: 3,
+  trustEvidence: 5,
+  expertiseAuthority: 4,
+  maturityAlignment: 3,
+  purchaseConfidence: 5,
+  visualIdentityConsistency: 2,
+  typographyColorConsistency: 2,
+  imageryConsistency: 2,
+  messagingVoiceConsistency: 3,
+  crossChannelConsistency: 3,
+  positioningDifferentiation: 5,
+  visualDistinctiveness: 3,
+  messagingDistinctiveness: 4,
+  brandPersonality: 2,
+  ownableElements: 2,
+  identityQuality: 3,
+  typography: 3,
+  color: 2,
+  layoutHierarchy: 4,
+  imageryCraft: 3,
+};
+
+const FOUNDATION_BY_CATEGORY = {
+  clarity: 5,
+  credibility: 4,
+  consistency: 4,
+  distinctiveness: 4,
+  visualExecution: 3,
+};
+
+const ACTION_BY_CATEGORY = {
+  clarity:
+    "Clarify the core offer, customer benefit, and primary next step, then make that message prominent across the highest-traffic customer touchpoints.",
+
+  credibility:
+    "Strengthen the most visible trust signals with relevant proof, expertise, and a more confidence-building presentation near key decisions.",
+
+  consistency:
+    "Define repeatable rules for typography, color, imagery, messaging, and layout, then apply them across the primary customer touchpoints.",
+
+  distinctiveness:
+    "Sharpen the brand's positioning and translate it into more recognizable messaging and visual elements customers can associate with this business.",
+
+  visualExecution:
+    "Improve hierarchy, readability, and visual direction so the most important message and next action are easier to notice and understand.",
+};
+
+const KPI_BY_CATEGORY = {
+  clarity: {
+    label: "Track customer action",
+    metric:
+      "Contact-form completion, consultation bookings, product-page conversion, or CTA click-through rate",
+  },
+
+  credibility: {
+    label: "Track purchase confidence",
+    metric:
+      "Qualified inquiries, sales-call conversion, checkout completion, or lead-to-customer rate",
+  },
+
+  consistency: {
+    label: "Track recognition and engagement",
+    metric:
+      "Returning visitors, direct traffic, branded search, or engagement across repeated campaigns",
+  },
+
+  distinctiveness: {
+    label: "Track customer preference",
+    metric:
+      "Branded search, campaign engagement, qualified inquiries, or win/loss reasons from sales conversations",
+  },
+
+  visualExecution: {
+    label: "Track engagement and action",
+    metric:
+      "CTA click-through rate, scroll depth, bounce rate, or conversion on the improved touchpoint",
+  },
+};
+
+function clampPriorityFactor(value) {
+  return Math.max(
+    1,
+    Math.min(
+      5,
+      Math.round(value)
+    )
+  );
+}
+
 function buildGrowthOpportunity({
   priority,
   business,
   submittedAssets,
 }) {
-  // Growth Opportunity function contents
-}
+  const severity =
+    clampPriorityFactor(
+      5 - (priority.score || 0)
+    );
 
-/* Existing function continues here */
+  const customerImpact =
+    clampPriorityFactor(
+      severity * 0.65 +
+      (
+        priority.businessRelevance ||
+        0.5
+      ) * 2.2
+    );
+
+  const conversionImpact =
+    clampPriorityFactor(
+      CONVERSION_IMPACT_BY_CRITERION[
+        priority.id
+      ] || 3
+    );
+
+  const reach =
+    clampPriorityFactor(
+      Math.min(
+        submittedAssets || 1,
+        4
+      ) +
+      (
+        priority.id ===
+          "crossChannelConsistency" ||
+        priority.categoryId ===
+          "clarity"
+          ? 1
+          : 0
+      )
+    );
+
+  const foundation =
+    clampPriorityFactor(
+      FOUNDATION_BY_CATEGORY[
+        priority.categoryId
+      ] || 3
+    );
+
+  const businessPriorityScore =
+    Number(
+      (
+        customerImpact * 0.30 +
+        conversionImpact * 0.25 +
+        severity * 0.20 +
+        reach * 0.15 +
+        foundation * 0.10
+      ).toFixed(1)
+    );
+
+  const priorityLabel =
+    businessPriorityScore >= 4
+      ? "FIX FIRST"
+      : businessPriorityScore >= 3
+        ? "HIGH OPPORTUNITY"
+        : "BUILD ON";
+
+  const categoryId =
+    priority.categoryId ||
+    "clarity";
+
+  return {
+    rank: 1,
+
+    label:
+      "Your #1 Growth Opportunity",
+
+    priorityLabel,
+
+    title:
+      priority.name,
+
+    customerJourney:
+      GROWTH_OUTCOME_BY_CATEGORY[
+        categoryId
+      ] ||
+      "UNDERSTAND → ACT",
+
+    businessPriorityScore,
+
+    scoringScale: 5,
+
+    factors: {
+      customerImpact,
+      conversionImpact,
+      severity,
+      reach,
+      foundation,
+    },
+
+    evidence:
+      priority.evidence ||
+      "The submitted materials indicate this is the most important customer-facing issue to address first.",
+
+    businessImpact:
+      priority.businessImpact ||
+      "Addressing this issue could reduce customer hesitation and improve the brand's ability to support the business goal.",
+
+    recommendedAction:
+      ACTION_BY_CATEGORY[
+        categoryId
+      ] ||
+      ACTION_BY_CATEGORY.clarity,
+
+    successMeasure:
+      KPI_BY_CATEGORY[
+        categoryId
+      ] ||
+      KPI_BY_CATEGORY.clarity,
+
+    goalContext:
+      business.twelveMonthGoal ||
+      "",
+
+    disclaimer:
+      "This identifies conversion potential, not a guaranteed sales result. Compare the selected KPI before and after implementation.",
+  };
+}
 function chooseStrongestSignal(
   categories
 ) {
