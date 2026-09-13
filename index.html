@@ -1073,6 +1073,14 @@
       line-height: 1.5;
     }
 
+    .priority-meta { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 24px; }
+    .priority-pill { display:inline-flex; align-items:center; min-height:34px; padding:7px 12px; border:1px solid rgba(255,255,255,.18); border-radius:999px; background:rgba(255,255,255,.08); color:white; font-size:12px; line-height:1; font-weight:800; letter-spacing:.055em; text-transform:uppercase; }
+    .growth-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:28px; }
+    .growth-detail { padding:20px; border:1px solid rgba(255,255,255,.14); border-radius:16px; background:rgba(255,255,255,.055); }
+    .growth-detail strong { display:block; margin-bottom:8px; color:white; font-size:14px; }
+    .growth-detail p { font-size:14px; }
+    .growth-disclaimer { margin-top:18px !important; font-size:12px !important; opacity:.76; }
+
     .action-preview {
       margin-top: 28px;
       padding: 26px;
@@ -1331,6 +1339,10 @@
       }
 
       .locked-list {
+        grid-template-columns: 1fr;
+      }
+
+      .growth-details {
         grid-template-columns: 1fr;
       }
     }
@@ -3142,6 +3154,8 @@
           raw.freeRecommendation ||
           raw.topPriority ||
           null,
+        growthOpportunity:
+          raw.growthOpportunity || null,
         actionPlanPreview:
           raw.actionPlanPreview || null,
         raw
@@ -3320,6 +3334,9 @@
       const recommendation =
         result.freeRecommendation || {};
 
+      const growth =
+        result.growthOpportunity || null;
+
       const title =
         recommendation.title ||
         recommendation.action ||
@@ -3343,20 +3360,51 @@
         </button>
       `;
 
+      const growthDetails = growth
+        ? `
+          <div class="priority-meta">
+            <span class="priority-pill">${escapeHtml(growth.priorityLabel || 'Fix First')}</span>
+            <span class="priority-pill">${escapeHtml(growth.customerJourney || 'Understand → Act')}</span>
+            <span class="priority-pill">Business Priority ${escapeHtml(growth.businessPriorityScore || '—')}/5</span>
+          </div>
+
+          <h2>${escapeHtml(growth.title || title)}</h2>
+          <p>${escapeHtml(growth.businessImpact || copy)}</p>
+
+          <div class="growth-details">
+            <div class="growth-detail">
+              <strong>What we found</strong>
+              <p>${escapeHtml(growth.evidence || '')}</p>
+            </div>
+            <div class="growth-detail">
+              <strong>Recommended action</strong>
+              <p>${escapeHtml(growth.recommendedAction || '')}</p>
+            </div>
+            <div class="growth-detail">
+              <strong>${escapeHtml(growth.successMeasure?.label || 'What to measure')}</strong>
+              <p>${escapeHtml(growth.successMeasure?.metric || '')}</p>
+            </div>
+            <div class="growth-detail">
+              <strong>What the complete plan adds</strong>
+              <p>Your next priorities, implementation sequence, budget path, and 90-day roadmap.</p>
+            </div>
+          </div>
+
+          <p class="growth-disclaimer">${escapeHtml(growth.disclaimer || '')}</p>
+        `
+        : `
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(copy)}</p>
+        `;
+
       return `
         <section class="card priority-card">
 
           <p class="section-kicker">
-            Your first move
+            ${escapeHtml(growth?.label || 'Your first move')}
           </p>
 
-          <h2>
-            ${escapeHtml(title)}
-          </h2>
-
-          <p>
-            ${escapeHtml(copy)}
-          </p>
+          ${growthDetails}
 
           <div class="action-preview">
 
