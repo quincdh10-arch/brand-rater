@@ -2339,6 +2339,8 @@ function buildGrowthOpportunity({
       ] ||
       KPI_BY_CATEGORY.clarity,
 
+    solutionPaths,
+
     goalContext:
       business.twelveMonthGoal ||
       "",
