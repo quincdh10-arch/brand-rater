@@ -2290,6 +2290,15 @@ function buildGrowthOpportunity({
     priority.categoryId ||
     "clarity";
 
+  const solutionPaths =
+    SOLUTION_PATHS_BY_CRITERION[
+      priority.id
+    ] ||
+    SOLUTION_PATHS_BY_CATEGORY[
+      categoryId
+    ] ||
+    SOLUTION_PATHS_BY_CATEGORY.clarity;
+
   return {
     rank: 1,
 
