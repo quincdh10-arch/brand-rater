@@ -42,7 +42,7 @@ const IMAGE_DETAIL =
     ? process.env.OPENAI_IMAGE_DETAIL
     : "low";
 
-const SCORING_VERSION = "2.0.0";
+const SCORING_VERSION = "2.1.0";
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -2114,6 +2114,15 @@ function choosePriority(
   );
 }
 
+function buildGrowthOpportunity({
+  priority,
+  business,
+  submittedAssets,
+}) {
+  // Growth Opportunity function contents
+}
+
+/* Existing function continues here */
 function chooseStrongestSignal(
   categories
 ) {
@@ -2808,12 +2817,21 @@ exports.handler =
           business
         );
 
-      const strongest =
-        chooseStrongestSignal(
-          categories
-        );
+const strongest =
+  chooseStrongestSignal(
+    categories
+  );
 
-      const narrative =
+const growthOpportunity =
+  buildGrowthOpportunity({
+    priority,
+    business,
+
+    submittedAssets:
+      images.length,
+  });
+
+const narrative =
         buildLocalNarrative({
           business,
           brandHealth,
@@ -2905,11 +2923,13 @@ exports.handler =
                 .slice(0, 3)
             : [],
 
-        freeRecommendation:
-          narrative
-            .freeRecommendation,
+freeRecommendation:
+  narrative
+    .freeRecommendation,
 
-        actionPlanPreview: {
+growthOpportunity,
+
+actionPlanPreview: {
           available:
             false,
 
