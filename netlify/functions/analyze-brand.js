@@ -3041,21 +3041,21 @@ exports.handler =
           business
         );
 
-const strongest =
-  chooseStrongestSignal(
-    categories
-  );
+      const strongest =
+        chooseStrongestSignal(
+          categories
+        );
 
-const growthOpportunity =
-  buildGrowthOpportunity({
-    priority,
-    business,
+      const growthOpportunity =
+        buildGrowthOpportunity({
+          priority,
+          business,
 
-    submittedAssets:
-      images.length,
-  });
+          submittedAssets:
+            images.length,
+        });
 
-const narrative =
+      const narrative =
         buildLocalNarrative({
           business,
           brandHealth,
@@ -3147,13 +3147,13 @@ const narrative =
                 .slice(0, 3)
             : [],
 
-freeRecommendation:
-  narrative
-    .freeRecommendation,
+        freeRecommendation:
+          narrative
+            .freeRecommendation,
 
-growthOpportunity,
+        growthOpportunity,
 
-actionPlanPreview: {
+        actionPlanPreview: {
           available:
             false,
 
