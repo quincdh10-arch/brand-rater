@@ -2178,15 +2178,984 @@ const ACTION_BY_CATEGORY = {
 };
 
 const KPI_BY_CATEGORY = {
-  // Existing code
+  clarity: {
+    label: "Track customer action",
+    metric:
+      "Contact-form completion, consultation bookings, product-page conversion, or CTA click-through rate",
+  },
+
+  credibility: {
+    label: "Track purchase confidence",
+    metric:
+      "Qualified inquiries, sales-call conversion, checkout completion, or lead-to-customer rate",
+  },
+
+  consistency: {
+    label: "Track recognition and engagement",
+    metric:
+      "Returning visitors, direct traffic, branded search, or engagement across repeated campaigns",
+  },
+
+  distinctiveness: {
+    label: "Track customer preference",
+    metric:
+      "Branded search, campaign engagement, qualified inquiries, or win/loss reasons from sales conversations",
+  },
+
+  visualExecution: {
+    label: "Track engagement and action",
+    metric:
+      "CTA click-through rate, scroll depth, bounce rate, or conversion on the improved touchpoint",
+  },
 };
 
+const MILKY_MINDS_CONTACT_URL =
+  "https://www.milkymindscreative.com/contact";
+
+function createSolutionPaths({
+  diyTitle,
+  diyDescription,
+  diySteps,
+  guidanceService,
+  guidancePrice,
+  guidanceDescription,
+  doneForYouService,
+  doneForYouDescription,
+}) {
+  return {
+    diy: {
+      title:
+        diyTitle,
+
+      description:
+        diyDescription,
+
+      steps:
+        diySteps,
+    },
+
+    guidance: {
+      title:
+        "Work through it with Milky Minds",
+
+      service:
+        guidanceService,
+
+      description:
+        guidanceDescription,
+
+      price:
+        guidancePrice,
+
+      ctaLabel:
+        `Explore ${guidanceService}`,
+
+      ctaUrl:
+        MILKY_MINDS_CONTACT_URL,
+    },
+
+    doneForYou: {
+      title:
+        "Have Milky Minds build the solution",
+
+      service:
+        doneForYouService,
+
+      description:
+        doneForYouDescription,
+
+      ctaLabel:
+        "Discuss Your Project",
+
+      ctaUrl:
+        MILKY_MINDS_CONTACT_URL,
+    },
+  };
+}
+
+/*
+  Category-level fallbacks are used only when Brand Rater
+  receives an unfamiliar or missing criterion ID.
+*/
 const SOLUTION_PATHS_BY_CATEGORY = {
-  // Fallback solution paths
+  clarity:
+    createSolutionPaths({
+      diyTitle:
+        "Simplify the primary message",
+
+      diyDescription:
+        "Focus the most important customer-facing touchpoint on one audience, one primary benefit, and one clear next step.",
+
+      diySteps: [
+        "Identify the primary customer",
+        "State the main offer in plain language",
+        "Lead with the most important customer benefit",
+        "Use one clear primary call to action",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Work with Milky Minds to clarify the offer, audience, value proposition, and strongest next step.",
+
+      doneForYouService:
+        "Brand Strategy & Messaging",
+
+      doneForYouDescription:
+        "Milky Minds develops the positioning, value proposition, messaging hierarchy, and customer-facing message system.",
+    }),
+
+  credibility:
+    createSolutionPaths({
+      diyTitle:
+        "Strengthen visible trust signals",
+
+      diyDescription:
+        "Add the most relevant proof near the places where customers are deciding whether to contact or purchase.",
+
+      diySteps: [
+        "Collect testimonials, reviews, or client results",
+        "Choose proof relevant to the primary offer",
+        "Add credentials or experience where appropriate",
+        "Place trust signals near important decisions",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Identify which credibility gaps matter most and determine the strongest proof to present.",
+
+      doneForYouService:
+        "Brand Strategy & Creative Implementation",
+
+      doneForYouDescription:
+        "Milky Minds strengthens trust through messaging, proof presentation, visual design, and customer-facing collateral.",
+    }),
+
+  consistency:
+    createSolutionPaths({
+      diyTitle:
+        "Create a basic brand consistency checklist",
+
+      diyDescription:
+        "Document the colors, type styles, imagery, messaging, and layouts that should remain consistent.",
+
+      diySteps: [
+        "Select the approved logo versions",
+        "Document primary colors and typography",
+        "Define an imagery and voice direction",
+        "Review primary touchpoints against the checklist",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Get focused guidance on the inconsistencies creating the most visible brand drift.",
+
+      doneForYouService:
+        "Visual Identity System & Brand Guidelines",
+
+      doneForYouDescription:
+        "Milky Minds creates a repeatable identity system and practical guidelines for consistent execution.",
+    }),
+
+  distinctiveness:
+    createSolutionPaths({
+      diyTitle:
+        "Define why customers should remember you",
+
+      diyDescription:
+        "Identify the strongest difference between the business and the alternatives customers are considering.",
+
+      diySteps: [
+        "List the closest customer alternatives",
+        "Identify what your business does differently",
+        "Connect that difference to a customer benefit",
+        "Repeat that idea across messaging and visuals",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify the brand’s strongest position, differentiators, and opportunities to become more memorable.",
+
+      doneForYouService:
+        "Brand Strategy & Visual Identity",
+
+      doneForYouDescription:
+        "Milky Minds develops a distinctive position and translates it into a recognizable verbal and visual system.",
+    }),
+
+  visualExecution:
+    createSolutionPaths({
+      diyTitle:
+        "Improve the most important customer touchpoint",
+
+      diyDescription:
+        "Start with the asset customers see most often and improve its hierarchy, readability, spacing, and visual focus.",
+
+      diySteps: [
+        "Identify the most important message",
+        "Reduce unnecessary visual competition",
+        "Create a clearer type hierarchy",
+        "Make the primary action easy to find",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Get focused feedback on the visual issues having the greatest effect on clarity and perceived quality.",
+
+      doneForYouService:
+        "Visual Identity & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds redesigns the identity or customer-facing assets to create a clearer, more polished experience.",
+    }),
 };
 
+/*
+  Criterion-specific solutions override the category fallbacks.
+*/
 const SOLUTION_PATHS_BY_CRITERION = {
-  // All 25 criterion-specific solution paths
+  offerClarity:
+    createSolutionPaths({
+      diyTitle:
+        "Rewrite the primary offer statement",
+
+      diyDescription:
+        "Describe exactly what the business provides using language a new customer can understand immediately.",
+
+      diySteps: [
+        "Name the primary product or service",
+        "Remove internal terminology and vague claims",
+        "State who the offer is designed for",
+        "Test whether someone can understand it in five seconds",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify the offer and determine the strongest way to present it to prospective customers.",
+
+      doneForYouService:
+        "Brand Messaging Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops clear offer messaging and applies it across the primary customer touchpoints.",
+    }),
+
+  audienceClarity:
+    createSolutionPaths({
+      diyTitle:
+        "Name the primary audience",
+
+      diyDescription:
+        "Make it easier for the right customer to recognize that the offer was created for them.",
+
+      diySteps: [
+        "Choose one primary customer group",
+        "Identify that customer’s main need",
+        "Use language familiar to that audience",
+        "Show situations or imagery they recognize",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Define the highest-priority audience and clarify how the brand should speak to them.",
+
+      doneForYouService:
+        "Audience & Messaging Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops audience positioning, messaging pillars, and customer-facing language.",
+    }),
+
+  valueProposition:
+    createSolutionPaths({
+      diyTitle:
+        "Write a focused value proposition",
+
+      diyDescription:
+        "Explain the meaningful result customers receive rather than only naming the product or service.",
+
+      diySteps: [
+        "Identify the customer’s primary problem",
+        "Name the outcome the offer creates",
+        "Add the most meaningful differentiator",
+        "Condense the idea into one clear statement",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Develop a clearer value proposition that connects the offer to what customers care about.",
+
+      doneForYouService:
+        "Brand Strategy & Messaging",
+
+      doneForYouDescription:
+        "Milky Minds develops the positioning, value proposition, and supporting messaging system.",
+    }),
+
+  messagingHierarchy:
+    createSolutionPaths({
+      diyTitle:
+        "Prioritize the message",
+
+      diyDescription:
+        "Organize information in the order customers need it instead of giving every message equal emphasis.",
+
+      diySteps: [
+        "Choose one primary headline",
+        "Support it with one concise explanation",
+        "Move secondary details lower",
+        "End with one clear next step",
+      ],
+
+      guidanceService:
+        "Website First Impression",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where the current messaging hierarchy creates confusion or slows comprehension.",
+
+      doneForYouService:
+        "Website UX & Messaging Design",
+
+      doneForYouDescription:
+        "Milky Minds restructures the message and page hierarchy to guide customers toward action.",
+    }),
+
+  ctaClarity:
+    createSolutionPaths({
+      diyTitle:
+        "Choose one primary call to action",
+
+      diyDescription:
+        "Make the desired next step specific, visible, and consistent across the customer journey.",
+
+      diySteps: [
+        "Choose the most valuable customer action",
+        "Use direct action-oriented language",
+        "Give the primary CTA visual priority",
+        "Repeat it at relevant decision points",
+      ],
+
+      guidanceService:
+        "Website First Impression",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Review the current conversion path and identify where the call to action becomes unclear.",
+
+      doneForYouService:
+        "Website UX & Conversion Design",
+
+      doneForYouDescription:
+        "Milky Minds improves CTA language, hierarchy, placement, and the surrounding conversion experience.",
+    }),
+
+  professionalPresentation:
+    createSolutionPaths({
+      diyTitle:
+        "Audit the most visible quality issues",
+
+      diyDescription:
+        "Correct the execution problems most likely to affect the customer’s first impression.",
+
+      diySteps: [
+        "Check alignment, spacing, and image quality",
+        "Remove outdated or conflicting elements",
+        "Standardize primary design treatments",
+        "Review the experience on mobile",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify the visual issues most responsible for making the brand feel less polished.",
+
+      doneForYouService:
+        "Visual Identity & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds refines or redesigns the customer-facing system to better reflect the quality of the business.",
+    }),
+
+  trustEvidence:
+    createSolutionPaths({
+      diyTitle:
+        "Add proof near customer decisions",
+
+      diyDescription:
+        "Present credible evidence that reduces uncertainty about the business and its ability to deliver.",
+
+      diySteps: [
+        "Collect relevant testimonials or reviews",
+        "Choose specific results or examples",
+        "Add credentials when they affect the decision",
+        "Place proof near the offer and CTA",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Determine which trust signals will be most persuasive for the audience and offer.",
+
+      doneForYouService:
+        "Credibility Messaging & Design",
+
+      doneForYouDescription:
+        "Milky Minds organizes and presents testimonials, results, credentials, and case studies across key touchpoints.",
+    }),
+
+  expertiseAuthority:
+    createSolutionPaths({
+      diyTitle:
+        "Make expertise visible",
+
+      diyDescription:
+        "Show customers the knowledge, experience, or perspective supporting the offer.",
+
+      diySteps: [
+        "Identify the most relevant expertise",
+        "Replace broad claims with specific evidence",
+        "Share a useful point of view",
+        "Connect experience to customer outcomes",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify how the brand can communicate authority without relying on generic claims.",
+
+      doneForYouService:
+        "Authority Positioning & Content Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops authority messaging and a branded content direction that makes expertise more visible.",
+    }),
+
+  maturityAlignment:
+    SOLUTION_PATHS_BY_CATEGORY.credibility,
+
+  purchaseConfidence:
+    createSolutionPaths({
+      diyTitle:
+        "Reduce the biggest source of hesitation",
+
+      diyDescription:
+        "Identify the unanswered question most likely to stop a customer from taking the next step.",
+
+      diySteps: [
+        "List common customer objections",
+        "Answer the most important objection",
+        "Clarify the process or expected outcome",
+        "Add proof near the next action",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Identify the trust and communication gaps creating avoidable purchase hesitation.",
+
+      doneForYouService:
+        "Customer Journey & Conversion Design",
+
+      doneForYouDescription:
+        "Milky Minds improves messaging, proof, hierarchy, and conversion touchpoints to build greater confidence.",
+    }),
+
+  visualIdentityConsistency:
+    SOLUTION_PATHS_BY_CATEGORY.consistency,
+
+  typographyColorConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Standardize typography and color",
+
+      diyDescription:
+        "Reduce visual variation by documenting a small set of approved styles and uses.",
+
+      diySteps: [
+        "Choose approved brand colors",
+        "Choose primary and secondary typefaces",
+        "Define headline and body styles",
+        "Remove unapproved variations",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify the typography and color inconsistencies creating the most visible fragmentation.",
+
+      doneForYouService:
+        "Visual Identity System",
+
+      doneForYouDescription:
+        "Milky Minds develops a cohesive color and typography system with practical usage rules.",
+    }),
+
+  imageryConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Create an imagery checklist",
+
+      diyDescription:
+        "Define the qualities every photograph, illustration, or graphic should share.",
+
+      diySteps: [
+        "Choose the intended visual mood",
+        "Define subject and composition preferences",
+        "Standardize cropping and image treatment",
+        "Remove images that conflict with the direction",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Clarify which imagery choices support the brand and which ones create inconsistency.",
+
+      doneForYouService:
+        "Art Direction & Brand Imagery",
+
+      doneForYouDescription:
+        "Milky Minds establishes a recognizable imagery direction and applies it across customer touchpoints.",
+    }),
+
+  messagingVoiceConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Define three voice rules",
+
+      diyDescription:
+        "Create simple rules that make the brand sound like the same business across every channel.",
+
+      diySteps: [
+        "Choose three specific voice traits",
+        "Define what each trait sounds like",
+        "Document words or tones to avoid",
+        "Rewrite one key message using the rules",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Define a more consistent voice and messaging direction for the brand.",
+
+      doneForYouService:
+        "Brand Voice & Messaging System",
+
+      doneForYouDescription:
+        "Milky Minds creates verbal identity guidelines, messaging pillars, and practical examples.",
+    }),
+
+  crossChannelConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Review every primary touchpoint together",
+
+      diyDescription:
+        "Compare the website, social media, email, and sales materials as one connected customer experience.",
+
+      diySteps: [
+        "Collect the primary customer touchpoints",
+        "Identify conflicting visual treatments",
+        "Identify conflicting messages or CTAs",
+        "Standardize the highest-impact differences",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where the brand changes most noticeably between customer channels.",
+
+      doneForYouService:
+        "Brand Guidelines & Cross-Channel System",
+
+      doneForYouDescription:
+        "Milky Minds creates and applies a unified system across web, social, email, and marketing collateral.",
+    }),
+
+  positioningDifferentiation:
+    createSolutionPaths({
+      diyTitle:
+        "Define one meaningful differentiator",
+
+      diyDescription:
+        "Focus on a difference customers value rather than relying on broad claims such as quality or service.",
+
+      diySteps: [
+        "List the closest customer alternatives",
+        "Identify a meaningful difference",
+        "Connect it to a customer benefit",
+        "Make it prominent in the primary message",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify the strongest competitive position and the reasons customers should choose the brand.",
+
+      doneForYouService:
+        "Brand Positioning Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops the positioning, differentiators, value proposition, and supporting message system.",
+    }),
+
+  visualDistinctiveness:
+    createSolutionPaths({
+      diyTitle:
+        "Reduce category-default design choices",
+
+      diyDescription:
+        "Identify the visual decisions that make the brand resemble competitors and replace one with something more recognizable.",
+
+      diySteps: [
+        "Review several close competitors",
+        "List repeated category conventions",
+        "Choose one convention to move beyond",
+        "Create a repeatable alternative",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where the visual identity feels generic and where distinctiveness can be strengthened.",
+
+      doneForYouService:
+        "Distinctive Visual Identity",
+
+      doneForYouDescription:
+        "Milky Minds creates a more recognizable identity system built around ownable visual decisions.",
+    }),
+
+  messagingDistinctiveness:
+    createSolutionPaths({
+      diyTitle:
+        "Replace generic claims with a specific point of view",
+
+      diyDescription:
+        "Use language that reflects the business’s actual philosophy, method, audience, or advantage.",
+
+      diySteps: [
+        "Highlight generic phrases",
+        "Identify the specific proof behind each claim",
+        "Add the brand’s point of view",
+        "Rewrite the primary message",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Develop a more differentiated verbal direction based on the brand’s real strengths.",
+
+      doneForYouService:
+        "Brand Messaging & Verbal Identity",
+
+      doneForYouDescription:
+        "Milky Minds creates distinctive positioning, messaging pillars, voice, and customer-facing copy direction.",
+    }),
+
+  brandPersonality:
+    createSolutionPaths({
+      diyTitle:
+        "Define three specific personality traits",
+
+      diyDescription:
+        "Choose traits that can guide real visual and verbal decisions rather than broad words such as professional.",
+
+      diySteps: [
+        "Choose three distinctive traits",
+        "Define what each trait means",
+        "Translate each trait into visual behavior",
+        "Translate each trait into voice behavior",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Define a usable brand personality that supports the audience, position, and customer experience.",
+
+      doneForYouService:
+        "Brand Strategy & Creative Direction",
+
+      doneForYouDescription:
+        "Milky Minds builds a distinctive personality and translates it into visual and verbal direction.",
+    }),
+
+  ownableElements:
+    createSolutionPaths({
+      diyTitle:
+        "Choose one repeatable brand element",
+
+      diyDescription:
+        "Create a verbal or visual device customers can repeatedly associate with the business.",
+
+      diySteps: [
+        "Review current recurring elements",
+        "Choose the most recognizable candidate",
+        "Define how it should be used",
+        "Repeat it consistently across key channels",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify which current elements have the greatest potential to become recognizable brand assets.",
+
+      doneForYouService:
+        "Visual Identity System",
+
+      doneForYouDescription:
+        "Milky Minds develops ownable graphic devices, messaging elements, and rules for consistent use.",
+    }),
+
+  identityQuality:
+    createSolutionPaths({
+      diyTitle:
+        "Test the identity in real situations",
+
+      diyDescription:
+        "Evaluate whether the logo and identity remain clear, useful, and recognizable across common applications.",
+
+      diySteps: [
+        "Test the logo at small sizes",
+        "Test it in one color",
+        "Review legibility and spacing",
+        "Check performance across primary applications",
+      ],
+
+      guidanceService:
+        "Logo Scorecard",
+
+      guidancePrice:
+        "$29",
+
+      guidanceDescription:
+        "Get a focused evaluation of the logo’s clarity, distinctiveness, flexibility, and execution.",
+
+      doneForYouService:
+        "Logo & Visual Identity Design",
+
+      doneForYouDescription:
+        "Milky Minds refines or redesigns the identity and builds a practical system around it.",
+    }),
+
+  typography:
+    createSolutionPaths({
+      diyTitle:
+        "Simplify the type system",
+
+      diyDescription:
+        "Use fewer styles and establish a clearer relationship between headlines, supporting text, and body copy.",
+
+      diySteps: [
+        "Choose one primary type family",
+        "Define headline and body styles",
+        "Improve size and spacing contrast",
+        "Remove unnecessary variations",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify the typography issues affecting readability, hierarchy, and consistency.",
+
+      doneForYouService:
+        "Typography & Visual Identity System",
+
+      doneForYouDescription:
+        "Milky Minds develops an intentional type system with repeatable hierarchy and usage rules.",
+    }),
+
+  color:
+    createSolutionPaths({
+      diyTitle:
+        "Clarify the role of each brand color",
+
+      diyDescription:
+        "Assign specific jobs to the primary, secondary, background, and action colors.",
+
+      diySteps: [
+        "Identify the primary brand color",
+        "Choose supporting and neutral colors",
+        "Check text contrast",
+        "Use action colors consistently",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Review the palette for consistency, hierarchy, appropriateness, and accessibility.",
+
+      doneForYouService:
+        "Color System & Visual Identity",
+
+      doneForYouDescription:
+        "Milky Minds develops a strategic, accessible color system with practical usage guidance.",
+    }),
+
+  layoutHierarchy:
+    createSolutionPaths({
+      diyTitle:
+        "Create one clear visual path",
+
+      diyDescription:
+        "Use scale, spacing, and grouping to guide customers from the primary message to the next action.",
+
+      diySteps: [
+        "Choose the most important element",
+        "Reduce competition around it",
+        "Group related information",
+        "Create a clear path to the CTA",
+      ],
+
+      guidanceService:
+        "Website First Impression",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where layout and hierarchy make the customer experience harder to scan or understand.",
+
+      doneForYouService:
+        "Website UX & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds redesigns the layout system to improve comprehension, engagement, and action.",
+    }),
+
+  imageryCraft:
+    createSolutionPaths({
+      diyTitle:
+        "Improve image selection and treatment",
+
+      diyDescription:
+        "Use imagery that feels intentional, relevant to the audience, and consistent with the brand’s quality.",
+
+      diySteps: [
+        "Remove low-quality or irrelevant images",
+        "Choose a consistent visual direction",
+        "Standardize cropping and treatment",
+        "Check image quality across devices",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify which image choices weaken perceived quality or create an inconsistent visual story.",
+
+      doneForYouService:
+        "Art Direction & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds develops the imagery direction and applies it across branded customer touchpoints.",
+    }),
 };
 
 function clampPriorityFactor(value) {
