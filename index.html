@@ -1081,6 +1081,25 @@
     .growth-detail p { font-size:14px; }
     .growth-disclaimer { margin-top:18px !important; font-size:12px !important; opacity:.76; }
 
+    .improvement-preview { margin-top:36px; padding:26px; border:1px solid rgba(255,255,255,.16); border-radius:20px; background:rgba(255,255,255,.045); }
+    .improvement-preview-header { margin-bottom:18px; }
+    .improvement-preview-kicker { margin:0 0 8px !important; color:var(--starlight-yellow) !important; font-size:11px !important; line-height:1 !important; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .improvement-preview-title { margin:0; color:white; font-size:24px; line-height:1.15; letter-spacing:-.025em; }
+    .preview-comparison { display:grid; grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr); align-items:stretch; gap:14px; }
+    .preview-panel { min-width:0; padding:22px; border:1px solid rgba(255,255,255,.14); border-radius:18px; background:rgba(255,255,255,.05); }
+    .preview-panel.is-improved { border-color:rgba(255,216,92,.55); background:rgba(255,216,92,.09); }
+    .preview-panel-label { margin:0 0 18px !important; color:rgba(249,250,251,.62) !important; font-size:11px !important; line-height:1 !important; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .preview-panel.is-improved .preview-panel-label { color:var(--starlight-yellow) !important; }
+    .preview-mock-headline { margin:0 0 10px; color:white; font-size:clamp(21px,2.3vw,29px); line-height:1.08; letter-spacing:-.035em; }
+    .preview-mock-copy { min-height:63px; margin:0 0 17px !important; color:rgba(249,250,251,.73) !important; font-size:14px !important; line-height:1.5 !important; }
+    .preview-mock-cta { width:fit-content; display:inline-flex; align-items:center; min-height:36px; padding:8px 13px; border:1px solid rgba(255,255,255,.2); border-radius:999px; color:white; font-size:12px; line-height:1.2; font-weight:800; }
+    .preview-panel.is-improved .preview-mock-cta { border-color:var(--starlight-yellow); background:var(--starlight-yellow); color:var(--galaxy-navy); }
+    .preview-signal-list { display:grid; gap:8px; margin:18px 0 0; padding:16px 0 0; border-top:1px solid rgba(255,255,255,.12); list-style:none; }
+    .preview-signal-list li { position:relative; padding-left:17px; color:rgba(249,250,251,.74); font-size:12px; line-height:1.4; }
+    .preview-signal-list li::before { content:"•"; position:absolute; left:2px; color:var(--starlight-yellow); font-weight:800; }
+    .preview-arrow { display:flex; align-items:center; justify-content:center; color:var(--starlight-yellow); font-size:25px; font-weight:800; }
+    .preview-disclaimer { margin:16px 0 0 !important; color:rgba(249,250,251,.58) !important; font-size:11px !important; line-height:1.45 !important; }
+
     .solution-paths-heading { margin:36px 0 16px; color:white; font-size:22px; line-height:1.15; }
     .solution-paths-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
     .solution-path-card { display:flex; flex-direction:column; min-width:0; padding:22px; border:1px solid rgba(255,255,255,.14); border-radius:18px; background:rgba(255,255,255,.055); }
@@ -1363,6 +1382,15 @@
 
       .solution-paths-grid {
         grid-template-columns: 1fr;
+      }
+
+      .preview-comparison {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-arrow {
+        min-height: 20px;
+        transform: rotate(90deg);
       }
     }
 
@@ -3348,7 +3376,60 @@
         </section>
       `;
     }
-renderSolutionPaths()
+    function renderSolutionPreview(preview) {
+      if (!preview) {
+        return '';
+      }
+
+      const renderPanel = (panel, variant) => {
+        if (!panel) {
+          return '';
+        }
+
+        const signals = Array.isArray(panel.signals)
+          ? panel.signals.slice(0, 3).map(signal => `
+              <li>${escapeHtml(signal)}</li>
+            `).join('')
+          : '';
+
+        return `
+          <article class="preview-panel ${variant === 'improved' ? 'is-improved' : ''}">
+            <p class="preview-panel-label">
+              ${escapeHtml(panel.label || (variant === 'improved' ? 'Improved direction' : 'Current pattern'))}
+            </p>
+            <h4 class="preview-mock-headline">${escapeHtml(panel.headline || '')}</h4>
+            <p class="preview-mock-copy">${escapeHtml(panel.supportingText || '')}</p>
+            ${panel.cta ? `<span class="preview-mock-cta">${escapeHtml(panel.cta)}</span>` : ''}
+            ${signals ? `<ul class="preview-signal-list">${signals}</ul>` : ''}
+          </article>
+        `;
+      };
+
+      const currentPanel = renderPanel(preview.current, 'current');
+      const improvedPanel = renderPanel(preview.improved, 'improved');
+
+      if (!currentPanel && !improvedPanel) {
+        return '';
+      }
+
+      return `
+        <section class="improvement-preview" aria-label="Solution preview">
+          <div class="improvement-preview-header">
+            <p class="improvement-preview-kicker">${escapeHtml(preview.label || 'Improvement Preview')}</p>
+            <h3 class="improvement-preview-title">${escapeHtml(preview.title || 'See what a stronger direction could look like')}</h3>
+          </div>
+
+          <div class="preview-comparison">
+            ${currentPanel}
+            <div class="preview-arrow" aria-hidden="true">→</div>
+            ${improvedPanel}
+          </div>
+
+          ${preview.disclaimer ? `<p class="preview-disclaimer">${escapeHtml(preview.disclaimer)}</p>` : ''}
+        </section>
+      `;
+    }
+
     function renderSolutionPaths(paths) {
       if (!paths) {
         return '';
@@ -3476,6 +3557,9 @@ renderSolutionPaths()
               <p>Your next priorities, implementation sequence, budget path, and 90-day roadmap.</p>
             </div>
           </div>
+          ${renderSolutionPreview(
+            growth.solutionPreview
+          )}
           ${renderSolutionPaths(
             growth.solutionPaths
           )}
