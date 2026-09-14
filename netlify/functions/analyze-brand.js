@@ -2178,35 +2178,15 @@ const ACTION_BY_CATEGORY = {
 };
 
 const KPI_BY_CATEGORY = {
-  clarity: {
-    label: "Track customer action",
-    metric:
-      "Contact-form completion, consultation bookings, product-page conversion, or CTA click-through rate",
-  },
+  // Existing code
+};
 
-  credibility: {
-    label: "Track purchase confidence",
-    metric:
-      "Qualified inquiries, sales-call conversion, checkout completion, or lead-to-customer rate",
-  },
+const SOLUTION_PATHS_BY_CATEGORY = {
+  // Fallback solution paths
+};
 
-  consistency: {
-    label: "Track recognition and engagement",
-    metric:
-      "Returning visitors, direct traffic, branded search, or engagement across repeated campaigns",
-  },
-
-  distinctiveness: {
-    label: "Track customer preference",
-    metric:
-      "Branded search, campaign engagement, qualified inquiries, or win/loss reasons from sales conversations",
-  },
-
-  visualExecution: {
-    label: "Track engagement and action",
-    metric:
-      "CTA click-through rate, scroll depth, bounce rate, or conversion on the improved touchpoint",
-  },
+const SOLUTION_PATHS_BY_CRITERION = {
+  // All 25 criterion-specific solution paths
 };
 
 function clampPriorityFactor(value) {
