@@ -1186,6 +1186,35 @@
       text-align: center;
     }
 
+    .rerate-banner { display:none; margin:0 0 22px; padding:18px; border:1px solid rgba(30,102,165,.18); border-radius:16px; background:rgba(30,102,165,.06); }
+    .rerate-banner.is-visible { display:block; }
+    .rerate-banner strong { display:block; margin-bottom:6px; color:var(--galaxy-navy); font-size:16px; }
+    .rerate-banner p { margin:0 0 13px; color:var(--body-text); font-size:13px; line-height:1.45; }
+    .rerate-banner button { min-height:40px; padding:9px 15px; border:0; border-radius:999px; background:var(--milky-blue); color:white; font-weight:800; cursor:pointer; }
+
+    .comparison-card { margin-bottom:24px; padding:clamp(28px,4vw,46px); background:var(--galaxy-navy); color:white; border:0; }
+    .comparison-card .section-kicker { color:var(--starlight-yellow); }
+    .comparison-card h2 { margin:0 0 10px; color:white; font-size:clamp(32px,4vw,48px); line-height:1; letter-spacing:-.045em; }
+    .comparison-card > p { margin:0; color:rgba(249,250,251,.76); line-height:1.5; }
+    .comparison-overall { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:14px; margin:28px 0; }
+    .comparison-score { padding:20px; border:1px solid rgba(255,255,255,.14); border-radius:16px; background:rgba(255,255,255,.06); text-align:center; }
+    .comparison-score span { display:block; margin-bottom:7px; color:rgba(249,250,251,.62); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .comparison-score strong { font-size:38px; line-height:1; }
+    .comparison-score.is-change strong { color:var(--starlight-yellow); }
+    .comparison-arrow { color:var(--starlight-yellow); font-size:25px; font-weight:800; }
+    .comparison-table { width:100%; border-collapse:collapse; }
+    .comparison-table th, .comparison-table td { padding:13px 10px; border-top:1px solid rgba(255,255,255,.13); text-align:right; }
+    .comparison-table th:first-child, .comparison-table td:first-child { text-align:left; }
+    .comparison-table th { color:rgba(249,250,251,.58); font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
+    .comparison-table td { color:white; font-size:14px; }
+    .comparison-change-positive { color:#86efac !important; font-weight:800; }
+    .comparison-change-negative { color:#fca5a5 !important; font-weight:800; }
+    .comparison-highlights { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:22px; }
+    .comparison-highlight { padding:17px; border-radius:14px; background:rgba(255,255,255,.07); }
+    .comparison-highlight span { display:block; margin-bottom:5px; color:rgba(249,250,251,.58); font-size:11px; font-weight:800; text-transform:uppercase; }
+    .comparison-highlight strong { color:white; }
+    .comparison-note { margin-top:18px !important; font-size:11px !important; color:rgba(249,250,251,.55) !important; }
+
     /* =========================================================
        MODAL
     ========================================================= */
@@ -1382,6 +1411,19 @@
 
       .solution-paths-grid {
         grid-template-columns: 1fr;
+      }
+
+      .comparison-overall {
+        grid-template-columns: 1fr;
+      }
+
+      .comparison-arrow {
+        transform:rotate(90deg);
+        text-align:center;
+      }
+
+      .comparison-highlights {
+        grid-template-columns:1fr;
       }
 
       .preview-comparison {
@@ -1880,6 +1922,12 @@
             <div class="progress-track" aria-hidden="true">
               <div class="progress-fill" id="progress-fill"></div>
             </div>
+          </div>
+
+          <div class="rerate-banner" id="rerate-banner">
+            <strong id="rerate-banner-title">A saved baseline is available.</strong>
+            <p>Upload the improved brand materials to measure what changed.</p>
+            <button id="resume-rerate-btn" type="button">Re-Rate this brand →</button>
           </div>
 
           <form id="brand-rater-form" novalidate>
@@ -2537,11 +2585,21 @@
     const saveSuccess =
       document.getElementById('save-success');
 
+    const rerateBanner =
+      document.getElementById('rerate-banner');
+
+    const resumeRerateButton =
+      document.getElementById('resume-rerate-btn');
+
+    const RERATE_REFERENCE_KEY =
+      'brand_rater_rerate_reference';
+
     let currentStep = 1;
     let uploadedFiles = [];
     let latestResult = null;
     let latestBusiness = null;
     let turnstileToken = '';
+    let activeReRateReference = null;
     let verifiedCheckoutSessionId =
       sessionStorage.getItem(
         'brandRaterVerifiedCheckoutSession'
@@ -2555,6 +2613,88 @@
 
     const LAST_SUBMISSION_KEY =
       'brand_rater_last_submission';
+
+    function readReRateReference() {
+      try {
+        const reference = JSON.parse(
+          localStorage.getItem(
+            RERATE_REFERENCE_KEY
+          ) || 'null'
+        );
+
+        return (
+          reference?.assessmentId &&
+          reference?.accessToken
+        )
+          ? reference
+          : null;
+      }
+      catch {
+        return null;
+      }
+    }
+
+    function refreshReRateBanner() {
+      const reference =
+        readReRateReference();
+
+      rerateBanner?.classList.toggle(
+        'is-visible',
+        Boolean(reference) &&
+        !activeReRateReference
+      );
+
+      const title =
+        document.getElementById(
+          'rerate-banner-title'
+        );
+
+      if (title && reference?.brandName) {
+        title.textContent =
+          `${reference.brandName} has a saved baseline.`;
+      }
+    }
+
+    function beginReRate(reference) {
+      if (!reference) {
+        return;
+      }
+
+      activeReRateReference =
+        reference;
+
+      restartBrandRater(true);
+
+      rerateBanner?.classList.add(
+        'is-visible'
+      );
+
+      const title =
+        document.getElementById(
+          'rerate-banner-title'
+        );
+
+      if (title) {
+        title.textContent =
+          `Re-Rating ${reference.brandName || 'your brand'}`;
+      }
+
+      if (resumeRerateButton) {
+        resumeRerateButton.textContent =
+          'Re-Rate mode active';
+        resumeRerateButton.disabled =
+          true;
+      }
+    }
+
+    resumeRerateButton?.addEventListener(
+      'click',
+      () => beginReRate(
+        readReRateReference()
+      )
+    );
+
+    refreshReRateBanner();
 
     /* =====================================================
        TURNSTILE
@@ -3078,7 +3218,11 @@
                     business,
                     context:
                       legacyContext,
-                    turnstileToken
+                    turnstileToken,
+                    baselineAssessmentId:
+                      activeReRateReference?.assessmentId || '',
+                    baselineAccessToken:
+                      activeReRateReference?.accessToken || ''
                   })
               }
             );
@@ -3099,6 +3243,25 @@
             throw new Error(
               result.error ||
               'Something went wrong while analyzing your brand.'
+            );
+          }
+
+          if (
+            result.assessmentMeta?.assessmentId &&
+            result.assessmentMeta?.reRateAccessToken
+          ) {
+            localStorage.setItem(
+              RERATE_REFERENCE_KEY,
+              JSON.stringify({
+                assessmentId:
+                  result.assessmentMeta.assessmentId,
+                accessToken:
+                  result.assessmentMeta.reRateAccessToken,
+                createdAt:
+                  result.assessmentMeta.createdAt,
+                brandName:
+                  business.name || 'Your brand'
+              })
             );
           }
 
@@ -3614,6 +3777,85 @@
       `;
     }
 
+    function renderComparison(comparison) {
+      if (!comparison?.overall) {
+        return '';
+      }
+
+      const formatChange = value => {
+        const number = Number(value) || 0;
+        return `${number > 0 ? '+' : ''}${number}`;
+      };
+
+      const rows = Array.isArray(comparison.categories)
+        ? comparison.categories.map(category => {
+            const change = Number(category.change) || 0;
+            const changeClass = change > 0
+              ? 'comparison-change-positive'
+              : change < 0
+                ? 'comparison-change-negative'
+                : '';
+
+            return `
+              <tr>
+                <td>${escapeHtml(category.name)}</td>
+                <td>${escapeHtml(category.before)}</td>
+                <td>${escapeHtml(category.after)}</td>
+                <td class="${changeClass}">${escapeHtml(formatChange(change))}</td>
+              </tr>
+            `;
+          }).join('')
+        : '';
+
+      const overallChange =
+        Number(comparison.overall.change) || 0;
+
+      return `
+        <section class="card comparison-card">
+          <p class="section-kicker">Your Brand Transformation</p>
+          <h2>${escapeHtml(comparison.summary || 'See what changed')}</h2>
+          <p>Before-and-after results using ${comparison.methodologyMatched ? 'the same scoring methodology.' : 'different scoring versions; review the comparison carefully.'}</p>
+
+          <div class="comparison-overall">
+            <div class="comparison-score">
+              <span>Before</span>
+              <strong>${escapeHtml(comparison.overall.before)}</strong>
+            </div>
+            <div class="comparison-arrow" aria-hidden="true">→</div>
+            <div class="comparison-score">
+              <span>After</span>
+              <strong>${escapeHtml(comparison.overall.after)}</strong>
+            </div>
+            <div class="comparison-arrow" aria-hidden="true">=</div>
+            <div class="comparison-score is-change">
+              <span>Change</span>
+              <strong>${escapeHtml(formatChange(overallChange))}</strong>
+            </div>
+          </div>
+
+          ${rows ? `
+            <table class="comparison-table">
+              <thead><tr><th>Category</th><th>Before</th><th>After</th><th>Change</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          ` : ''}
+
+          <div class="comparison-highlights">
+            <div class="comparison-highlight">
+              <span>Biggest improvement</span>
+              <strong>${escapeHtml(comparison.biggestImprovement?.name || 'No category change')} ${comparison.biggestImprovement ? `(${escapeHtml(formatChange(comparison.biggestImprovement.change))})` : ''}</strong>
+            </div>
+            <div class="comparison-highlight">
+              <span>Remaining opportunity</span>
+              <strong>${escapeHtml(comparison.remainingOpportunity?.name || 'Continue monitoring')} ${comparison.remainingOpportunity ? `(${escapeHtml(comparison.remainingOpportunity.after)}/100)` : ''}</strong>
+            </div>
+          </div>
+
+          <p class="comparison-note">${escapeHtml(comparison.disclaimer || '')}</p>
+        </section>
+      `;
+    }
+
     function renderResultsPage(rawResult, business) {
       latestResult =
         rawResult;
@@ -3693,6 +3935,8 @@
           </div>
 
         </section>
+
+        ${renderComparison(rawResult.comparison)}
 
         ${diagnosticCards}
 
@@ -3801,6 +4045,16 @@
         <div id="action-plan-results"></div>
 
         <div class="restart-wrap">
+          ${rawResult.assessmentMeta?.reRateAccessToken ? `
+            <button
+              class="primary-btn"
+              id="rerate-btn"
+              type="button"
+            >
+              Re-Rate Your Brand
+            </button>
+          ` : ''}
+
           <button
             class="secondary-btn"
             id="restart-btn"
@@ -3842,11 +4096,29 @@
 
       document
         .getElementById(
+          'rerate-btn'
+        )
+        ?.addEventListener(
+          'click',
+          () => beginReRate({
+            assessmentId:
+              rawResult.assessmentMeta.assessmentId,
+            accessToken:
+              rawResult.assessmentMeta.reRateAccessToken,
+            createdAt:
+              rawResult.assessmentMeta.createdAt,
+            brandName:
+              business?.name || 'Your brand'
+          })
+        );
+
+      document
+        .getElementById(
           'restart-btn'
         )
         ?.addEventListener(
           'click',
-          restartBrandRater
+          () => restartBrandRater(false)
         );
 
       submitButton.disabled =
@@ -4703,7 +4975,7 @@
       `;
     }
 
-    function restartBrandRater() {
+    function restartBrandRater(preserveReRate = false) {
       const intakeView =
         document.getElementById(
           'intake-view'
@@ -4729,6 +5001,10 @@
       turnstileToken = '';
       verifiedCheckoutSessionId = '';
 
+      if (!preserveReRate) {
+        activeReRateReference = null;
+      }
+
       sessionStorage.removeItem(
         'brandRaterVerifiedCheckoutSession'
       );
@@ -4751,7 +5027,21 @@
         false;
 
       submitButton.textContent =
-        'Analyze my brand →';
+        activeReRateReference
+          ? 'Re-Rate my brand →'
+          : 'Analyze my brand →';
+
+      if (resumeRerateButton) {
+        resumeRerateButton.disabled =
+          Boolean(activeReRateReference);
+
+        resumeRerateButton.textContent =
+          activeReRateReference
+            ? 'Re-Rate mode active'
+            : 'Re-Rate this brand →';
+      }
+
+      refreshReRateBanner();
 
       try {
         if (window.turnstile) {
