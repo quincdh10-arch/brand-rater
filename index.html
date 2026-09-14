@@ -1346,7 +1346,9 @@
         grid-template-columns: 1fr;
       }
     }
-
+.solution-paths-grid {
+  grid-template-columns: 1fr;
+}
     @media (max-width: 700px) {
       .site-nav {
         min-height: 70px;
@@ -3329,7 +3331,7 @@
         </section>
       `;
     }
-
+renderSolutionPaths()
     function renderPriority(result) {
       const recommendation =
         result.freeRecommendation || {};
@@ -3389,7 +3391,9 @@
               <p>Your next priorities, implementation sequence, budget path, and 90-day roadmap.</p>
             </div>
           </div>
-
+          ${renderSolutionPaths(
+            growth.solutionPaths
+          )}
           <p class="growth-disclaimer">${escapeHtml(growth.disclaimer || '')}</p>
         `
         : `
