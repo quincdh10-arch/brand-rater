@@ -2474,6 +2474,10 @@
     <input type="text" name="brand_gap_score" />
     <input type="text" name="brand_gap_level" />
 
+    <input type="text" name="assessment_id" />
+    <input type="text" name="assessment_created_at" />
+    <input type="text" name="baseline_saved" />
+
     <textarea name="category_scores"></textarea>
     <textarea name="top_priority"></textarea>
     <textarea name="full_result_json"></textarea>
@@ -2900,6 +2904,7 @@
             resolve({
               name: file.name,
               type: file.type,
+              size: file.size,
               dataUrl: reader.result
             });
           };
@@ -5003,6 +5008,23 @@
       payload.append(
         'brand_gap_level',
         normalized.gap?.level ?? ''
+      );
+
+      payload.append(
+        'assessment_id',
+        latestResult?.assessmentMeta?.assessmentId || ''
+      );
+
+      payload.append(
+        'assessment_created_at',
+        latestResult?.assessmentMeta?.createdAt || ''
+      );
+
+      payload.append(
+        'baseline_saved',
+        latestResult?.assessmentMeta?.baselineSaved
+          ? 'yes'
+          : 'no'
       );
 
       payload.append(
