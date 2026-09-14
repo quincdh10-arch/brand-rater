@@ -1,5 +1,13 @@
 const rateLimitStore = new Map();
 
+const {
+  randomUUID,
+} = require("crypto");
+
+const {
+  createAssessment,
+} = require("./assessment-store");
+
 /*
   Brand Rater V2
   ------------------------------------------------------------
@@ -4444,6 +4452,34 @@ exports.handler =
           strongest,
         });
 
+      const assessmentId =
+        randomUUID();
+
+      const createdAt =
+        new Date().toISOString();
+
+      const submittedAssetMetadata =
+        images.map((image, index) => ({
+          assetNumber:
+            index + 1,
+
+          name:
+            String(
+              image.name ||
+              `Brand asset ${index + 1}`
+            ).slice(0, 180),
+
+          type:
+            String(
+              image.type || ""
+            ).slice(0, 80),
+
+          sizeBytes:
+            getImageSize(
+              image.dataUrl
+            ),
+        }));
+
       const result = {
         version:
           SCORING_VERSION,
@@ -4546,6 +4582,10 @@ exports.handler =
         },
 
         assessmentMeta: {
+          assessmentId,
+
+          createdAt,
+
           scoringVersion:
             SCORING_VERSION,
 
@@ -4563,6 +4603,9 @@ exports.handler =
 
           submittedAssets:
             images.length,
+
+          baselineSaved:
+            false,
         },
 
         /*
@@ -4579,6 +4622,70 @@ exports.handler =
             strongest
           ),
       };
+
+      result.assessmentMeta
+        .baselineSaved = true;
+
+      const baseline = {
+        assessmentId,
+        recordType:
+          "brand-health-baseline",
+        status:
+          "baseline",
+        createdAt,
+        updatedAt:
+          createdAt,
+        scoringVersion:
+          SCORING_VERSION,
+        business,
+        submittedAssets:
+          submittedAssetMetadata,
+
+        scores: {
+          overall:
+            result.brandHealth,
+          categories:
+            result.categories,
+          brandGap:
+            result.brandGap,
+        },
+
+        identifiedIssues: {
+          biggestOpportunity:
+            result.biggestOpportunity,
+          evidence:
+            result.evidence,
+          diagnostics:
+            result.diagnostics,
+        },
+
+        recommendations: {
+          freeRecommendation:
+            result.freeRecommendation,
+          growthOpportunity:
+            result.growthOpportunity,
+        },
+
+        assessment:
+          result,
+      };
+
+      try {
+        await createAssessment(
+          baseline,
+          event
+        );
+
+      }
+      catch (storageError) {
+        result.assessmentMeta
+          .baselineSaved = false;
+
+        console.error(
+          "Brand Rater baseline storage error:",
+          storageError
+        );
+      }
 
       return {
         statusCode: 200,
