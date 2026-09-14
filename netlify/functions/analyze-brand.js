@@ -1,11 +1,15 @@
 const rateLimitStore = new Map();
 
 const {
+  createHash,
+  randomBytes,
   randomUUID,
+  timingSafeEqual,
 } = require("crypto");
 
 const {
   createAssessment,
+  getAssessment,
 } = require("./assessment-store");
 
 /*
@@ -55,6 +59,83 @@ const SCORING_VERSION = "2.1.0";
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 4 * 1024 * 1024;
+
+function hashAccessToken(token) {
+  return createHash("sha256")
+    .update(String(token || ""))
+    .digest("hex");
+}
+
+function accessTokenMatches(token, expectedHash) {
+  const supplied = Buffer.from(hashAccessToken(token), "hex");
+  const expected = Buffer.from(String(expectedHash || ""), "hex");
+
+  return (
+    supplied.length === expected.length &&
+    timingSafeEqual(supplied, expected)
+  );
+}
+
+function buildAssessmentComparison(baseline, currentResult) {
+  const beforeOverall = Number(
+    baseline?.scores?.overall?.score ??
+    baseline?.assessment?.brandHealth?.score ??
+    0
+  );
+  const afterOverall = Number(currentResult?.brandHealth?.score ?? 0);
+  const beforeCategories =
+    baseline?.scores?.categories ||
+    baseline?.assessment?.categories ||
+    [];
+  const afterCategories = currentResult?.categories || [];
+
+  const categoryChanges = afterCategories.map(after => {
+    const match = beforeCategories.find(before =>
+      String(before.id || before.name || "").toLowerCase() ===
+      String(after.id || after.name || "").toLowerCase()
+    );
+    const beforeScore = Number(match?.score ?? 0);
+    const afterScore = Number(after?.score ?? 0);
+
+    return {
+      id: after.id || match?.id || "",
+      name: after.name || match?.name || "Category",
+      before: beforeScore,
+      after: afterScore,
+      change: afterScore - beforeScore,
+    };
+  });
+
+  const biggestImprovement =
+    [...categoryChanges].sort((a, b) => b.change - a.change)[0] || null;
+  const remainingOpportunity =
+    [...categoryChanges].sort((a, b) => a.after - b.after)[0] || null;
+
+  return {
+    baselineAssessmentId: baseline.assessmentId,
+    baselineCreatedAt: baseline.createdAt,
+    currentCreatedAt: currentResult.assessmentMeta.createdAt,
+    methodologyMatched: baseline.scoringVersion === SCORING_VERSION,
+    baselineScoringVersion: baseline.scoringVersion || "unknown",
+    currentScoringVersion: SCORING_VERSION,
+    overall: {
+      before: beforeOverall,
+      after: afterOverall,
+      change: afterOverall - beforeOverall,
+    },
+    categories: categoryChanges,
+    biggestImprovement,
+    remainingOpportunity,
+    summary:
+      afterOverall > beforeOverall
+        ? `Brand Health improved by ${afterOverall - beforeOverall} points.`
+        : afterOverall < beforeOverall
+          ? `Brand Health changed by ${afterOverall - beforeOverall} points.`
+          : "Brand Health remained at the baseline score.",
+    disclaimer:
+      "This comparison measures changes in Brand Health using the Brand Rater methodology. It does not by itself prove a change in sales or revenue.",
+  };
+}
 
 /* =========================================================
    RUBRIC
@@ -4177,6 +4258,8 @@ exports.handler =
         images,
         context,
         turnstileToken,
+        baselineAssessmentId,
+        baselineAccessToken,
       } = body;
 
       const business =
@@ -4331,6 +4414,41 @@ exports.handler =
         };
       }
 
+      let originalBaseline = null;
+
+      if (baselineAssessmentId || baselineAccessToken) {
+        if (!baselineAssessmentId || !baselineAccessToken) {
+          return {
+            statusCode: 400,
+            body: JSON.stringify({
+              error:
+                "Both the baseline assessment ID and private access token are required for a re-rate.",
+            }),
+          };
+        }
+
+        originalBaseline = await getAssessment(
+          String(baselineAssessmentId),
+          event
+        );
+
+        if (
+          !originalBaseline ||
+          !accessTokenMatches(
+            baselineAccessToken,
+            originalBaseline.accessTokenHash
+          )
+        ) {
+          return {
+            statusCode: 403,
+            body: JSON.stringify({
+              error:
+                "The private Re-Rate reference is invalid or no longer available.",
+            }),
+          };
+        }
+      }
+
       /*
         The model sees the images only during the evidence-analysis pass.
         High detail is intentional because typography, hierarchy, and
@@ -4457,6 +4575,9 @@ exports.handler =
 
       const createdAt =
         new Date().toISOString();
+
+      const reRateAccessToken =
+        randomBytes(32).toString("hex");
 
       const submittedAssetMetadata =
         images.map((image, index) => ({
@@ -4623,6 +4744,14 @@ exports.handler =
           ),
       };
 
+      if (originalBaseline) {
+        result.comparison =
+          buildAssessmentComparison(
+            originalBaseline,
+            result
+          );
+      }
+
       result.assessmentMeta
         .baselineSaved = true;
 
@@ -4637,6 +4766,12 @@ exports.handler =
           createdAt,
         scoringVersion:
           SCORING_VERSION,
+        accessTokenHash:
+          hashAccessToken(
+            reRateAccessToken
+          ),
+        parentBaselineAssessmentId:
+          originalBaseline?.assessmentId || null,
         business,
         submittedAssets:
           submittedAssetMetadata,
@@ -4666,8 +4801,13 @@ exports.handler =
             result.growthOpportunity,
         },
 
+        comparison:
+          result.comparison || null,
+
         assessment:
-          result,
+          JSON.parse(
+            JSON.stringify(result)
+          ),
       };
 
       try {
@@ -4675,6 +4815,10 @@ exports.handler =
           baseline,
           event
         );
+
+        result.assessmentMeta
+          .reRateAccessToken =
+            reRateAccessToken;
 
       }
       catch (storageError) {
