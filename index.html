@@ -1081,6 +1081,21 @@
     .growth-detail p { font-size:14px; }
     .growth-disclaimer { margin-top:18px !important; font-size:12px !important; opacity:.76; }
 
+    .solution-paths-heading { margin:36px 0 16px; color:white; font-size:22px; line-height:1.15; }
+    .solution-paths-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .solution-path-card { display:flex; flex-direction:column; min-width:0; padding:22px; border:1px solid rgba(255,255,255,.14); border-radius:18px; background:rgba(255,255,255,.055); }
+    .solution-path-card.is-featured { border-color:rgba(255,216,92,.55); background:rgba(255,216,92,.09); }
+    .solution-path-label { margin:0 0 12px; color:var(--starlight-yellow); font-size:11px; line-height:1; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .solution-path-card h3 { margin:0 0 10px; color:white; font-size:21px; line-height:1.12; letter-spacing:-.025em; }
+    .solution-path-card > p:not(.solution-path-label) { margin:0 0 16px; color:rgba(249,250,251,.75); font-size:14px; line-height:1.5; }
+    .solution-steps { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+    .solution-steps li { position:relative; padding-left:18px; color:rgba(249,250,251,.82); font-size:13px; line-height:1.4; }
+    .solution-steps li::before { content:"✓"; position:absolute; left:0; color:var(--starlight-yellow); font-weight:800; }
+    .solution-service { margin-top:auto !important; padding-top:4px; color:white !important; font-weight:800; }
+    .solution-price { display:inline-block; margin-left:5px; color:var(--starlight-yellow); }
+    .solution-link { min-height:44px; display:inline-flex; align-items:center; justify-content:center; margin-top:18px; padding:11px 16px; border-radius:999px; background:white; color:var(--galaxy-navy); font-size:13px; line-height:1.2; font-weight:800; text-align:center; text-decoration:none; }
+    .solution-link:hover { background:var(--starlight-yellow); }
+
     .action-preview {
       margin-top: 28px;
       padding: 26px;
@@ -1345,10 +1360,12 @@
       .growth-details {
         grid-template-columns: 1fr;
       }
+
+      .solution-paths-grid {
+        grid-template-columns: 1fr;
+      }
     }
-.solution-paths-grid {
-  grid-template-columns: 1fr;
-}
+
     @media (max-width: 700px) {
       .site-nav {
         min-height: 70px;
@@ -3332,6 +3349,74 @@
       `;
     }
 renderSolutionPaths()
+    function renderSolutionPaths(paths) {
+      if (!paths) {
+        return '';
+      }
+
+      const diy = paths.diy || null;
+      const guidance = paths.guidance || null;
+      const doneForYou = paths.doneForYou || null;
+
+      const diySteps = Array.isArray(diy?.steps)
+        ? diy.steps.slice(0, 4).map(step => `
+            <li>${escapeHtml(step)}</li>
+          `).join('')
+        : '';
+
+      const guidancePrice = guidance?.price
+        ? `<span class="solution-price">${escapeHtml(guidance.price)}</span>`
+        : '';
+
+      return `
+        <h3 class="solution-paths-heading">
+          Choose how you want to move forward
+        </h3>
+
+        <div class="solution-paths-grid">
+          ${diy ? `
+            <article class="solution-path-card">
+              <p class="solution-path-label">DIY</p>
+              <h3>${escapeHtml(diy.title || 'Start it yourself')}</h3>
+              <p>${escapeHtml(diy.description || '')}</p>
+              ${diySteps ? `<ul class="solution-steps">${diySteps}</ul>` : ''}
+            </article>
+          ` : ''}
+
+          ${guidance ? `
+            <article class="solution-path-card">
+              <p class="solution-path-label">Get Guidance</p>
+              <h3>${escapeHtml(guidance.title || 'Work through it with Milky Minds')}</h3>
+              <p>${escapeHtml(guidance.description || '')}</p>
+              <p class="solution-service">
+                ${escapeHtml(guidance.service || '')}
+                ${guidancePrice}
+              </p>
+              ${guidance.ctaUrl ? `
+                <a class="solution-link" href="${escapeHtml(guidance.ctaUrl)}" target="_blank" rel="noopener noreferrer">
+                  ${escapeHtml(guidance.ctaLabel || 'Explore this option')}
+                </a>
+              ` : ''}
+            </article>
+          ` : ''}
+
+          ${doneForYou ? `
+            <article class="solution-path-card is-featured">
+              <p class="solution-path-label">Have Milky Minds Fix It</p>
+              <h3>${escapeHtml(doneForYou.title || 'Have Milky Minds build the solution')}</h3>
+              <p>${escapeHtml(doneForYou.description || '')}</p>
+              <p class="solution-service">${escapeHtml(doneForYou.service || '')}</p>
+              ${doneForYou.ctaUrl ? `
+                <a class="solution-link" href="${escapeHtml(doneForYou.ctaUrl)}" target="_blank" rel="noopener noreferrer">
+                  ${escapeHtml(doneForYou.ctaLabel || 'Discuss your project')}
+                </a>
+              ` : ''}
+            </article>
+          ` : ''}
+        </div>
+      `;
+    }
+
     function renderPriority(result) {
       const recommendation =
         result.freeRecommendation || {};
