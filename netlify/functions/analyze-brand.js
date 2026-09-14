@@ -3158,6 +3158,409 @@ const SOLUTION_PATHS_BY_CRITERION = {
     }),
 };
 
+const SOLUTION_PREVIEW_TEMPLATES = {
+  messaging: {
+    type:
+      "messaging",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Make the message easier to understand",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "A broad or unclear message",
+
+      supportingText:
+        "Several ideas compete for attention, making the main value harder to understand.",
+
+      cta:
+        "Multiple next steps",
+
+      signals: [
+        "Offer is difficult to identify",
+        "Customer benefit is buried",
+        "Audience relevance is unclear",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "One clear customer outcome",
+
+      supportingText:
+        "The offer, intended customer, and primary benefit are presented in the order customers need them.",
+
+      cta:
+        "One primary action",
+
+      signals: [
+        "Clear offer",
+        "Relevant customer benefit",
+        "Focused next step",
+      ],
+    },
+
+    disclaimer:
+      "This is an illustrative direction, not finished copy or a completed redesign.",
+  },
+
+  hierarchy: {
+    type:
+      "hierarchy",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Create a clearer path through the content",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Everything competes for attention",
+
+      supportingText:
+        "Similar sizes, weights, colors, or buttons make it difficult to know what should be viewed first.",
+
+      cta:
+        "Competing actions",
+
+      signals: [
+        "Weak reading order",
+        "Important information blends in",
+        "Several elements demand attention",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "One intentional reading order",
+
+      supportingText:
+        "Scale, spacing, grouping, and contrast guide customers from the main message to the desired action.",
+
+      cta:
+        "Clear primary action",
+
+      signals: [
+        "Visible headline priority",
+        "Grouped supporting information",
+        "Easy-to-find CTA",
+      ],
+    },
+
+    disclaimer:
+      "This preview demonstrates hierarchy principles, not a finished page design.",
+  },
+
+  trust: {
+    type:
+      "trust",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Support the promise with visible proof",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "A strong claim without enough support",
+
+      supportingText:
+        "Customers are asked to trust the business without seeing enough evidence near the decision.",
+
+      cta:
+        "Act without reassurance",
+
+      signals: [
+        "Limited visible proof",
+        "Expertise is not demonstrated",
+        "Questions remain unanswered",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "A clear promise supported by proof",
+
+      supportingText:
+        "Relevant testimonials, results, credentials, or examples reduce uncertainty before the next action.",
+
+      cta:
+        "Act with greater confidence",
+
+      signals: [
+        "Relevant customer proof",
+        "Visible expertise",
+        "Reduced purchase hesitation",
+      ],
+    },
+
+    disclaimer:
+      "The proof shown in a finished solution must come from verified business information.",
+  },
+
+  consistency: {
+    type:
+      "consistency",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Turn disconnected choices into one system",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Different rules across touchpoints",
+
+      supportingText:
+        "Typography, colors, imagery, messaging, or layouts change depending on where customers encounter the brand.",
+
+      cta:
+        "Inconsistent treatments",
+
+      signals: [
+        "Several visual styles",
+        "Changing voice or message",
+        "Touchpoints feel disconnected",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "One recognizable brand system",
+
+      supportingText:
+        "A defined set of visual and verbal rules creates continuity across the customer experience.",
+
+      cta:
+        "Consistent treatment",
+
+      signals: [
+        "Repeatable typography",
+        "Defined color and imagery",
+        "Connected customer touchpoints",
+      ],
+    },
+
+    disclaimer:
+      "This preview demonstrates system consistency, not a proposed final visual identity.",
+  },
+
+  distinctiveness: {
+    type:
+      "distinctiveness",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Move from category-generic to recognizable",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Familiar category language and visuals",
+
+      supportingText:
+        "The brand communicates the type of business but offers few elements customers can associate specifically with it.",
+
+      cta:
+        "A familiar experience",
+
+      signals: [
+        "Generic value claims",
+        "Common category visuals",
+        "Limited memorable elements",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "A specific position customers can remember",
+
+      supportingText:
+        "A meaningful differentiator is expressed through recognizable messaging, personality, and visual behavior.",
+
+      cta:
+        "A more ownable experience",
+
+      signals: [
+        "Clear differentiator",
+        "Recognizable personality",
+        "Repeatable brand elements",
+      ],
+    },
+
+    disclaimer:
+      "This is an illustrative strategic direction, not a finished identity concept.",
+  },
+
+  visualQuality: {
+    type:
+      "visual-quality",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Make the execution feel more intentional",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Unrefined visual decisions",
+
+      supportingText:
+        "Inconsistent spacing, type, imagery, color, or finishing details reduce clarity and perceived quality.",
+
+      cta:
+        "Uneven visual emphasis",
+
+      signals: [
+        "Inconsistent spacing",
+        "Weak visual hierarchy",
+        "Uneven image or type treatment",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "A clearer and more polished system",
+
+      supportingText:
+        "Intentional hierarchy, spacing, typography, imagery, and color better reflect the quality of the business.",
+
+      cta:
+        "Focused visual emphasis",
+
+      signals: [
+        "Consistent spacing",
+        "Clear hierarchy",
+        "Intentional finishing details",
+      ],
+    },
+
+    disclaimer:
+      "This preview demonstrates the intended improvement, not a finished visual redesign.",
+  },
+};
+
+const PREVIEW_TYPE_BY_CRITERION = {
+  offerClarity:
+    "messaging",
+
+  audienceClarity:
+    "messaging",
+
+  valueProposition:
+    "messaging",
+
+  messagingHierarchy:
+    "hierarchy",
+
+  ctaClarity:
+    "hierarchy",
+
+  professionalPresentation:
+    "visualQuality",
+
+  trustEvidence:
+    "trust",
+
+  expertiseAuthority:
+    "trust",
+
+  maturityAlignment:
+    "visualQuality",
+
+  purchaseConfidence:
+    "trust",
+
+  visualIdentityConsistency:
+    "consistency",
+
+  typographyColorConsistency:
+    "consistency",
+
+  imageryConsistency:
+    "consistency",
+
+  messagingVoiceConsistency:
+    "consistency",
+
+  crossChannelConsistency:
+    "consistency",
+
+  positioningDifferentiation:
+    "distinctiveness",
+
+  visualDistinctiveness:
+    "distinctiveness",
+
+  messagingDistinctiveness:
+    "distinctiveness",
+
+  brandPersonality:
+    "distinctiveness",
+
+  ownableElements:
+    "distinctiveness",
+
+  identityQuality:
+    "visualQuality",
+
+  typography:
+    "hierarchy",
+
+  color:
+    "consistency",
+
+  layoutHierarchy:
+    "hierarchy",
+
+  imageryCraft:
+    "visualQuality",
+};
+
 function clampPriorityFactor(value) {
   return Math.max(
     1,
@@ -3248,6 +3651,18 @@ function buildGrowthOpportunity({
     ] ||
     SOLUTION_PATHS_BY_CATEGORY.clarity;
 
+  const previewType =
+    PREVIEW_TYPE_BY_CRITERION[
+      priority.id
+    ] ||
+    "messaging";
+
+  const solutionPreview =
+    SOLUTION_PREVIEW_TEMPLATES[
+      previewType
+    ] ||
+    SOLUTION_PREVIEW_TEMPLATES.messaging;
+
   return {
     rank: 1,
 
@@ -3298,6 +3713,8 @@ function buildGrowthOpportunity({
       KPI_BY_CATEGORY.clarity,
 
     solutionPaths,
+
+    solutionPreview,
 
     goalContext:
       business.twelveMonthGoal ||
