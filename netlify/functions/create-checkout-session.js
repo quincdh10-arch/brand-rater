@@ -1,25 +1,36 @@
 /*
-  Brand Rater — Verify Stripe Checkout Session
+  Brand Rater — Create Stripe Checkout Session
   ------------------------------------------------------------
   Purpose:
-  - Verify that a Stripe Checkout Session was actually paid.
-  - Confirm the purchase used the expected Brand Action Plan price.
-  - Read purchase_id from Stripe metadata.
-  - Load the matching server-side purchase from Netlify Blobs.
-  - Confirm the Stripe Session belongs to that purchase.
-  - Mark the purchase as paid.
+  - Validate the Brand Action Plan checkout request.
+  - Save the original assessment and business context on the server.
+  - Create a one-time Stripe Checkout Session.
+  - Attach purchase_id metadata for secure verification after payment.
 
   Environment variables:
   - STRIPE_SECRET_KEY
   - STRIPE_ACTION_PLAN_PRICE_ID
+  - BRAND_RATER_SITE_URL (recommended)
 */
 
 const {
-  getPurchase,
+  randomUUID,
+} = require(
+  "crypto"
+);
+
+const {
+  createPurchase,
   savePurchase,
 } = require(
   "./purchase-store"
 );
+
+const PRODUCT_ID =
+  "brand-action-plan";
+
+const DEFAULT_SITE_URL =
+  "https://rate.milkymindscreative.com";
 
 
 /* =========================================================
@@ -48,7 +59,7 @@ function jsonResponse(
 
 
 /* =========================================================
-   CLEAN STRING
+   HELPERS
 ========================================================= */
 
 function cleanString(
@@ -59,13 +70,51 @@ function cleanString(
   ).trim();
 }
 
+function cleanSiteUrl(
+  value
+) {
+  const fallback =
+    DEFAULT_SITE_URL;
+
+  try {
+    const url =
+      new URL(
+        cleanString(value) ||
+        fallback
+      );
+
+    if (
+      url.protocol !== "https:" &&
+      url.protocol !== "http:"
+    ) {
+      return fallback;
+    }
+
+    return url.origin;
+  }
+  catch {
+    return fallback;
+  }
+}
+
+function isPlainObject(
+  value
+) {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
+
 
 /* =========================================================
-   STRIPE GET
+   STRIPE POST
 ========================================================= */
 
-async function stripeGet(
-  path
+async function stripePost(
+  path,
+  parameters
 ) {
   const stripeSecretKey =
     process.env
@@ -87,27 +136,52 @@ async function stripeGet(
       `https://api.stripe.com${path}`,
       {
         method:
-          "GET",
+          "POST",
 
         headers: {
           Authorization:
             `Bearer ${stripeSecretKey}`,
+
+          "Content-Type":
+            "application/x-www-form-urlencoded",
         },
+
+        body:
+          new URLSearchParams(
+            parameters
+          ),
       }
     );
 
-  const data =
-    await response.json();
+  let data;
+
+  try {
+    data =
+      await response.json();
+  }
+  catch {
+    const error =
+      new Error(
+        `Stripe returned an invalid response (${response.status}).`
+      );
+
+    error.statusCode = 502;
+
+    throw error;
+  }
 
   if (!response.ok) {
     const error =
       new Error(
         data?.error?.message ||
-        "Stripe request failed."
+        "Stripe could not create the Checkout Session."
       );
 
     error.statusCode =
-      response.status;
+      response.status >= 400 &&
+      response.status < 500
+        ? 400
+        : 502;
 
     throw error;
   }
@@ -117,175 +191,11 @@ async function stripeGet(
 
 
 /* =========================================================
-   VERIFY STRIPE SESSION
-========================================================= */
-
-async function verifyStripeSession(
-  sessionId
-) {
-  const priceId =
-    process.env
-      .STRIPE_ACTION_PLAN_PRICE_ID;
-
-  if (!priceId) {
-    const error =
-      new Error(
-        "STRIPE_ACTION_PLAN_PRICE_ID is missing from Netlify."
-      );
-
-    error.statusCode = 500;
-
-    throw error;
-  }
-
-  const cleanedSessionId =
-    cleanString(
-      sessionId
-    );
-
-  if (!cleanedSessionId) {
-    const error =
-      new Error(
-        "A Stripe Checkout Session ID is required."
-      );
-
-    error.statusCode = 400;
-
-    throw error;
-  }
-
-  if (
-    !cleanedSessionId.startsWith(
-      "cs_test_"
-    ) &&
-    !cleanedSessionId.startsWith(
-      "cs_live_"
-    )
-  ) {
-    const error =
-      new Error(
-        "The Stripe Checkout Session ID is invalid."
-      );
-
-    error.statusCode = 400;
-
-    throw error;
-  }
-
-  const encodedId =
-    encodeURIComponent(
-      cleanedSessionId
-    );
-
-  const session =
-    await stripeGet(
-      `/v1/checkout/sessions/${encodedId}?expand[]=line_items`
-    );
-
-  /* -------------------------------------------------------
-     MODE
-  ------------------------------------------------------- */
-
-  if (
-    session.mode !==
-    "payment"
-  ) {
-    const error =
-      new Error(
-        "This Checkout Session is not a one-time payment."
-      );
-
-    error.statusCode = 400;
-
-    throw error;
-  }
-
-  /* -------------------------------------------------------
-     PAYMENT STATUS
-  ------------------------------------------------------- */
-
-  if (
-    session.payment_status !==
-    "paid"
-  ) {
-    const error =
-      new Error(
-        "Payment has not been completed."
-      );
-
-    error.statusCode = 402;
-
-    throw error;
-  }
-
-  /* -------------------------------------------------------
-     PRICE ID
-  ------------------------------------------------------- */
-
-  const lineItems =
-    session.line_items?.data ||
-    [];
-
-  const matchingItem =
-    lineItems.find(
-      (item) =>
-        item?.price?.id ===
-          priceId &&
-        Number(
-          item?.quantity || 0
-        ) >= 1
-    );
-
-  if (!matchingItem) {
-    const error =
-      new Error(
-        "This payment does not match the Brand Action Plan."
-      );
-
-    error.statusCode = 403;
-
-    throw error;
-  }
-
-  /* -------------------------------------------------------
-     PURCHASE ID
-  ------------------------------------------------------- */
-
-  const purchaseId =
-    cleanString(
-      session.metadata
-        ?.purchase_id
-    );
-
-  if (!purchaseId) {
-    const error =
-      new Error(
-        "This Stripe payment is missing its Brand Rater purchase ID."
-      );
-
-    error.statusCode = 400;
-
-    throw error;
-  }
-
-  return {
-    session,
-    purchaseId,
-    priceId,
-  };
-}
-
-
-/* =========================================================
    HANDLER
 ========================================================= */
 
 exports.handler =
   async function (event) {
-
-    /* -------------------------------------------------------
-       METHOD
-    ------------------------------------------------------- */
 
     if (
       event.httpMethod !==
@@ -301,10 +211,6 @@ exports.handler =
     }
 
     try {
-      /* -----------------------------------------------------
-         BODY
-      ----------------------------------------------------- */
-
       let body;
 
       try {
@@ -324,216 +230,193 @@ exports.handler =
         );
       }
 
-      const sessionId =
+      const product =
         cleanString(
-          body.sessionId
-        );
-
-      /* -----------------------------------------------------
-         VERIFY STRIPE
-      ----------------------------------------------------- */
-
-      const {
-        session,
-        purchaseId,
-        priceId,
-      } =
-        await verifyStripeSession(
-          sessionId
-        );
-
-      /* -----------------------------------------------------
-         LOAD PURCHASE
-
-         IMPORTANT:
-         Pass event so purchase-store.js can initialize
-         Netlify Blobs with connectLambda(event).
-      ----------------------------------------------------- */
-
-      const purchase =
-        await getPurchase(
-          purchaseId,
-          event
-        );
-
-      if (!purchase) {
-        return jsonResponse(
-          404,
-          {
-            error:
-              "The Brand Rater purchase record could not be found.",
-          }
-        );
-      }
-
-      /* -----------------------------------------------------
-         VERIFY PRODUCT
-      ----------------------------------------------------- */
-
-      if (
-        purchase.product !==
-        "brand-action-plan"
-      ) {
-        return jsonResponse(
-          403,
-          {
-            error:
-              "This purchase is not for a Brand Action Plan.",
-          }
-        );
-      }
-
-      /* -----------------------------------------------------
-         VERIFY SESSION OWNERSHIP
-      ----------------------------------------------------- */
-
-      const storedSessionId =
-        cleanString(
-          purchase.stripe
-            ?.sessionId
+          body.product
         );
 
       if (
-        !storedSessionId
+        product !==
+        PRODUCT_ID
       ) {
         return jsonResponse(
-          409,
+          400,
           {
             error:
-              "The purchase does not have a Stripe Checkout Session attached.",
+              "The requested product is invalid.",
           }
         );
       }
 
       if (
-        storedSessionId !==
-        session.id
-      ) {
-        return jsonResponse(
-          403,
-          {
-            error:
-              "This Stripe Checkout Session does not belong to this purchase.",
-          }
-        );
-      }
-
-      /* -----------------------------------------------------
-         VERIFY STORED PRICE
-      ----------------------------------------------------- */
-
-      const storedPriceId =
-        cleanString(
-          purchase.stripe
-            ?.priceId
-        );
-
-      if (
-        storedPriceId &&
-        storedPriceId !==
-          priceId
-      ) {
-        return jsonResponse(
-          403,
-          {
-            error:
-              "The purchase Price ID does not match the current Brand Action Plan.",
-          }
-        );
-      }
-
-      /* -----------------------------------------------------
-         CUSTOMER EMAIL
-      ----------------------------------------------------- */
-
-      const customerEmail =
-        cleanString(
-          session.customer_details
-            ?.email ||
-          session.customer_email
-        ) || null;
-
-      /* -----------------------------------------------------
-         PRESERVE LATER STATES
-      ----------------------------------------------------- */
-
-      const protectedStatuses =
-        new Set([
-          "generating",
-          "completed",
-        ]);
-
-      const nextStatus =
-        protectedStatuses.has(
-          purchase.status
+        !isPlainObject(
+          body.business
+        ) ||
+        !isPlainObject(
+          body.assessment
         )
-          ? purchase.status
-          : "paid";
+      ) {
+        return jsonResponse(
+          400,
+          {
+            error:
+              "A valid business and Brand Rater assessment are required."
+          }
+        );
+      }
 
-      /* -----------------------------------------------------
-         UPDATE PURCHASE
-      ----------------------------------------------------- */
+      const priceId =
+        cleanString(
+          process.env
+            .STRIPE_ACTION_PLAN_PRICE_ID
+        );
+
+      if (!priceId) {
+        return jsonResponse(
+          500,
+          {
+            error:
+              "STRIPE_ACTION_PLAN_PRICE_ID is missing from Netlify."
+          }
+        );
+      }
+
+      const siteUrl =
+        cleanSiteUrl(
+          process.env
+            .BRAND_RATER_SITE_URL
+        );
+
+      const purchaseId =
+        randomUUID();
 
       const now =
         new Date()
           .toISOString();
 
-      const updatedPurchase = {
-        ...purchase,
+      const purchase = {
+        purchaseId,
+
+        product:
+          PRODUCT_ID,
 
         status:
-          nextStatus,
+          "checkout_pending",
+
+        createdAt:
+          now,
 
         updatedAt:
           now,
 
-        paidAt:
-          purchase.paidAt ||
-          now,
+        business:
+          body.business,
+
+        assessment:
+          body.assessment,
+
+        stripe: {
+          sessionId:
+            null,
+
+          priceId,
+
+          paymentStatus:
+            "unpaid",
+        },
+      };
+
+      /*
+        Save the assessment before redirecting to Stripe.
+        The browser will not be trusted as the source of the
+        paid Action Plan after checkout.
+      */
+      await createPurchase(
+        purchase,
+        event
+      );
+
+      const successUrl =
+        `${siteUrl}/?action_plan=success&session_id={CHECKOUT_SESSION_ID}`;
+
+      const cancelUrl =
+        `${siteUrl}/?action_plan=cancelled`;
+
+      const stripeSession =
+        await stripePost(
+          "/v1/checkout/sessions",
+          {
+            mode:
+              "payment",
+
+            "line_items[0][price]":
+              priceId,
+
+            "line_items[0][quantity]":
+              "1",
+
+            success_url:
+              successUrl,
+
+            cancel_url:
+              cancelUrl,
+
+            client_reference_id:
+              purchaseId,
+
+            "metadata[purchase_id]":
+              purchaseId,
+
+            "metadata[product]":
+              PRODUCT_ID,
+
+            "payment_intent_data[metadata][purchase_id]":
+              purchaseId,
+
+            "payment_intent_data[metadata][product]":
+              PRODUCT_ID,
+          }
+        );
+
+      if (
+        !stripeSession?.id ||
+        !stripeSession?.url
+      ) {
+        const error =
+          new Error(
+            "Stripe did not return a valid Checkout Session."
+          );
+
+        error.statusCode = 502;
+
+        throw error;
+      }
+
+      const updatedPurchase = {
+        ...purchase,
+
+        updatedAt:
+          new Date()
+            .toISOString(),
 
         stripe: {
           ...purchase.stripe,
 
           sessionId:
-            session.id,
+            stripeSession.id,
 
           paymentStatus:
-            session
-              .payment_status,
-
-          customerEmail,
-
-          amountTotal:
-            typeof session
-              .amount_total ===
-              "number"
-              ? session
-                  .amount_total
-              : purchase.stripe
-                  ?.amountTotal ??
-                null,
-
-          currency:
-            session.currency ||
-            purchase.stripe
-              ?.currency ||
-            null,
+            stripeSession
+              .payment_status ||
+            "unpaid",
 
           livemode:
             Boolean(
-              session.livemode
+              stripeSession
+                .livemode
             ),
-
-          priceId,
         },
       };
-
-      /* -----------------------------------------------------
-         SAVE PURCHASE
-
-         IMPORTANT:
-         Pass event here too.
-      ----------------------------------------------------- */
 
       await savePurchase(
         purchaseId,
@@ -541,59 +424,23 @@ exports.handler =
         event
       );
 
-      /* -----------------------------------------------------
-         SUCCESS
-      ----------------------------------------------------- */
-
       return jsonResponse(
         200,
         {
-          verified:
-            true,
+          checkoutUrl:
+            stripeSession.url,
+
+          sessionId:
+            stripeSession.id,
 
           purchaseId,
-
-          purchaseStatus:
-            updatedPurchase
-              .status,
-
-          session: {
-            id:
-              session.id,
-
-            paymentStatus:
-              session
-                .payment_status,
-
-            status:
-              session.status ||
-              null,
-
-            livemode:
-              Boolean(
-                session.livemode
-              ),
-
-            customerEmail,
-
-            amountTotal:
-              session
-                .amount_total ??
-              null,
-
-            currency:
-              session.currency ||
-              null,
-
-            priceId,
-          },
         }
       );
     }
 
     catch (error) {
       console.error(
-        "Verify Checkout Session error:",
+        "Create Checkout Session error:",
         error
       );
 
@@ -603,7 +450,7 @@ exports.handler =
         {
           error:
             error.message ||
-            "Something went wrong verifying the payment.",
+            "Something went wrong starting checkout."
         }
       );
     }
