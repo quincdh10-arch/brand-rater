@@ -2299,7 +2299,10 @@ const KPI_BY_CATEGORY = {
 };
 
 const MILKY_MINDS_CONTACT_URL =
-  "https://www.milkymindscreative.com/contact";
+  "https://www.milkymindscreative.com/free-brand-consultation";
+
+const MILKY_MINDS_CLARITY_SESSION_URL =
+  "https://calendly.com/milkymindscreative/brand-clarity-session";
 
 function createSolutionPaths({
   diyTitle,
@@ -2340,7 +2343,7 @@ function createSolutionPaths({
         `Explore ${guidanceService}`,
 
       ctaUrl:
-        MILKY_MINDS_CONTACT_URL,
+        MILKY_MINDS_CLARITY_SESSION_URL,
     },
 
     doneForYou: {
