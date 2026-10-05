@@ -1,0 +1,4613 @@
+/*
+  Brand Rater Enterprise
+  rate-engine.js
+  ------------------------------------------------------------
+  Production Rate engine — async architecture v1.0
+
+  Reusable Brand Health analysis engine.
+
+  This file is NOT a Netlify HTTP endpoint.
+  HTTP validation, Turnstile, job creation, uploads,
+  assessment persistence, Re-Rate token validation, and
+  polling live in the async orchestration functions.
+
+  Scoring methodology intentionally remains Brand Rater V2
+  scoring version 2.1.0 during the architecture migration.
+
+  Environment variables:
+  - OPENAI_API_KEY
+  - OPENAI_ANALYSIS_MODEL (optional)
+  - OPENAI_IMAGE_DETAIL (optional: low | high | auto)
+*/
+
+const ANALYSIS_MODEL =
+  process.env.OPENAI_ANALYSIS_MODEL ||
+  "gpt-4.1-mini";
+
+const IMAGE_DETAIL =
+  ["low", "high", "auto"].includes(
+    process.env.OPENAI_IMAGE_DETAIL
+  )
+    ? process.env.OPENAI_IMAGE_DETAIL
+    : "low";
+
+const SCORING_VERSION =
+  "2.1.0";
+
+const RATE_ARCHITECTURE_VERSION =
+  "1.0.0";
+
+const MIN_IMAGES = 1;
+const MAX_IMAGES = 5;
+
+/*
+  Async uploads remove the old combined-request bottleneck.
+  Each asset is limited individually and the engine still
+  enforces a total upper bound as a final safeguard.
+*/
+const MAX_IMAGE_BYTES =
+  4 * 1024 * 1024;
+
+const MAX_TOTAL_IMAGE_BYTES =
+  MAX_IMAGES *
+  MAX_IMAGE_BYTES;
+
+
+/* =========================================================
+   CORE HELPERS
+========================================================= */
+
+function clamp(
+  value,
+  min,
+  max
+) {
+  return Math.min(
+    max,
+    Math.max(
+      min,
+      Number(value) || 0
+    )
+  );
+}
+
+
+function round(
+  value
+) {
+  return Math.round(
+    Number(value) || 0
+  );
+}
+
+
+function getImageSize(
+  dataUrl
+) {
+  const base64 =
+    String(
+      dataUrl || ""
+    )
+      .split(",")[1] ||
+    "";
+
+  return Math.ceil(
+    (
+      base64.length *
+      3
+    ) / 4
+  );
+}
+
+
+function isAllowedImage(
+  image
+) {
+  const allowedTypes =
+    new Set([
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ]);
+
+  return (
+    image &&
+    allowedTypes.has(
+      image.type
+    ) &&
+    typeof image.dataUrl ===
+      "string" &&
+    image.dataUrl.startsWith(
+      "data:image/"
+    )
+  );
+}
+
+
+function normalizeBusiness(
+  input,
+  legacyContext = ""
+) {
+  const business =
+    input &&
+    typeof input ===
+      "object"
+      ? input
+      : {};
+
+  return {
+    name:
+      String(
+        business.name || ""
+      ).trim(),
+
+    website:
+      String(
+        business.website || ""
+      ).trim(),
+
+    description:
+      String(
+        business.description ||
+        legacyContext ||
+        ""
+      ).trim(),
+
+    audience:
+      String(
+        business.audience || ""
+      ).trim(),
+
+    yearsInBusiness:
+      String(
+        business.yearsInBusiness || ""
+      ).trim(),
+
+    teamSize:
+      String(
+        business.teamSize || ""
+      ).trim(),
+
+    traction:
+      String(
+        business.traction || ""
+      ).trim(),
+
+    brandConcern:
+      String(
+        business.brandConcern || ""
+      ).trim(),
+
+    twelveMonthGoal:
+      String(
+        business.twelveMonthGoal || ""
+      ).trim(),
+  };
+}
+
+
+function buildAssessmentComparison(
+  baseline,
+  currentResult
+) {
+  const beforeOverall =
+    Number(
+      baseline?.scores?.overall?.score ??
+      baseline?.assessment?.brandHealth?.score ??
+      0
+    );
+
+  const afterOverall =
+    Number(
+      currentResult?.brandHealth?.score ??
+      0
+    );
+
+  const beforeCategories =
+    baseline?.scores?.categories ||
+    baseline?.assessment?.categories ||
+    [];
+
+  const afterCategories =
+    currentResult?.categories ||
+    [];
+
+  const categoryChanges =
+    afterCategories.map(
+      after => {
+        const match =
+          beforeCategories.find(
+            before =>
+              String(
+                before.id ||
+                before.name ||
+                ""
+              ).toLowerCase() ===
+              String(
+                after.id ||
+                after.name ||
+                ""
+              ).toLowerCase()
+          );
+
+        const beforeScore =
+          Number(
+            match?.score ??
+            0
+          );
+
+        const afterScore =
+          Number(
+            after?.score ??
+            0
+          );
+
+        return {
+          id:
+            after.id ||
+            match?.id ||
+            "",
+
+          name:
+            after.name ||
+            match?.name ||
+            "Category",
+
+          before:
+            beforeScore,
+
+          after:
+            afterScore,
+
+          change:
+            afterScore -
+            beforeScore,
+        };
+      }
+    );
+
+  const biggestImprovement =
+    [
+      ...categoryChanges,
+    ]
+      .sort(
+        (a, b) =>
+          b.change -
+          a.change
+      )[0] ||
+    null;
+
+  const remainingOpportunity =
+    [
+      ...categoryChanges,
+    ]
+      .sort(
+        (a, b) =>
+          a.after -
+          b.after
+      )[0] ||
+    null;
+
+  return {
+    baselineAssessmentId:
+      baseline.assessmentId,
+
+    baselineCreatedAt:
+      baseline.createdAt,
+
+    currentCreatedAt:
+      currentResult
+        ?.assessmentMeta
+        ?.createdAt,
+
+    methodologyMatched:
+      baseline.scoringVersion ===
+      SCORING_VERSION,
+
+    baselineScoringVersion:
+      baseline.scoringVersion ||
+      "unknown",
+
+    currentScoringVersion:
+      SCORING_VERSION,
+
+    overall: {
+      before:
+        beforeOverall,
+
+      after:
+        afterOverall,
+
+      change:
+        afterOverall -
+        beforeOverall,
+    },
+
+    categories:
+      categoryChanges,
+
+    biggestImprovement,
+
+    remainingOpportunity,
+
+    summary:
+      afterOverall >
+        beforeOverall
+        ? `Brand Health improved by ${afterOverall - beforeOverall} points.`
+        : afterOverall <
+            beforeOverall
+          ? `Brand Health changed by ${afterOverall - beforeOverall} points.`
+          : "Brand Health remained at the baseline score.",
+
+    disclaimer:
+      "This comparison measures changes in Brand Health using the Brand Rater methodology. It does not by itself prove a change in sales or revenue.",
+  };
+}
+
+/* =========================================================
+   RUBRIC
+========================================================= */
+
+const RUBRIC = {
+  clarity: {
+    name: "Clarity",
+    overallWeight: 25,
+    question:
+      "Can the right customer quickly understand what the company does, who it is for, why it matters, and what they should do next?",
+    criteria: {
+      offerClarity: {
+        name: "Offer Clarity",
+        weight: 25,
+        definition:
+          "How quickly a customer-facing asset communicates what the company sells or provides.",
+      },
+      audienceClarity: {
+        name: "Audience Clarity",
+        weight: 20,
+        definition:
+          "How clearly the intended customer can recognize that the offer is relevant to them.",
+      },
+      valueProposition: {
+        name: "Value Proposition",
+        weight: 25,
+        definition:
+          "How clearly the brand communicates the benefit or value customers receive, beyond naming the product or service category.",
+      },
+      messagingHierarchy: {
+        name: "Messaging Hierarchy",
+        weight: 15,
+        definition:
+          "Whether the most important information is prioritized and easy to scan in the order customers need it.",
+      },
+      ctaClarity: {
+        name: "CTA Clarity",
+        weight: 15,
+        definition:
+          "Whether the customer can understand the next action the brand wants them to take.",
+      },
+    },
+  },
+
+  credibility: {
+    name: "Credibility",
+    overallWeight: 20,
+    question:
+      "Does the brand create an appropriate level of trust for the company's offering, maturity, and position?",
+    criteria: {
+      professionalPresentation: {
+        name: "Professional Presentation",
+        weight: 20,
+        definition:
+          "Whether execution feels competent, intentional, current, and appropriate for the business.",
+      },
+      trustEvidence: {
+        name: "Trust Evidence",
+        weight: 25,
+        definition:
+          "Whether customer-facing materials visibly use reviews, testimonials, results, case studies, client proof, credentials, awards, guarantees, or other confidence signals.",
+      },
+      expertiseAuthority: {
+        name: "Expertise / Authority",
+        weight: 20,
+        definition:
+          "Whether the brand demonstrates knowledge, experience, expertise, or authority appropriate to the purchase decision.",
+      },
+      maturityAlignment: {
+        name: "Business Maturity Alignment",
+        weight: 20,
+        definition:
+          "Whether the brand presentation feels appropriate for the actual stage and sophistication of the business described in the intake.",
+      },
+      purchaseConfidence: {
+        name: "Purchase Confidence",
+        weight: 15,
+        definition:
+          "Whether the customer-facing experience reduces hesitation rather than introducing avoidable doubt or risk.",
+      },
+    },
+  },
+
+  consistency: {
+    name: "Consistency",
+    overallWeight: 20,
+    question:
+      "Do the submitted touchpoints feel like they belong to one recognizable brand system?",
+    criteria: {
+      visualIdentityConsistency: {
+        name: "Visual Identity Consistency",
+        weight: 25,
+        definition:
+          "Consistency in logo usage, graphic devices, shapes, iconography, and overall identity behavior.",
+      },
+      typographyColorConsistency: {
+        name: "Typography & Color Consistency",
+        weight: 20,
+        definition:
+          "Whether typography and color are applied with repeatable, recognizable rules.",
+      },
+      imageryConsistency: {
+        name: "Imagery Consistency",
+        weight: 15,
+        definition:
+          "Whether photography, illustration, product imagery, and image treatment feel intentionally related.",
+      },
+      messagingVoiceConsistency: {
+        name: "Messaging & Voice Consistency",
+        weight: 20,
+        definition:
+          "Whether the language, tone, and messaging style feel like the same brand across submitted materials.",
+      },
+      crossChannelConsistency: {
+        name: "Cross-Channel Consistency",
+        weight: 20,
+        definition:
+          "Whether multiple submitted customer touchpoints feel cohesive rather than like separate brands.",
+      },
+    },
+  },
+
+  distinctiveness: {
+    name: "Distinctiveness",
+    overallWeight: 20,
+    question:
+      "Does the brand give customers something meaningful and memorable to associate specifically with this business?",
+    criteria: {
+      positioningDifferentiation: {
+        name: "Positioning Differentiation",
+        weight: 25,
+        definition:
+          "Whether the brand gives the intended customer a meaningful reason to choose this business over alternatives.",
+      },
+      visualDistinctiveness: {
+        name: "Visual Distinctiveness",
+        weight: 20,
+        definition:
+          "Whether the visual language moves beyond obvious category defaults and creates recognizable character.",
+      },
+      messagingDistinctiveness: {
+        name: "Messaging Distinctiveness",
+        weight: 20,
+        definition:
+          "Whether customer-facing language reflects a specific position, audience, philosophy, personality, or benefit instead of generic category language.",
+      },
+      brandPersonality: {
+        name: "Brand Personality",
+        weight: 15,
+        definition:
+          "Whether the brand expresses a recognizable character beyond broad labels such as professional, friendly, or modern.",
+      },
+      ownableElements: {
+        name: "Ownable / Memorable Elements",
+        weight: 20,
+        definition:
+          "Whether the brand uses repeatable verbal or visual assets customers could learn to associate with the business.",
+      },
+    },
+  },
+
+  visualExecution: {
+    name: "Visual Execution",
+    overallWeight: 15,
+    question:
+      "How effectively does the visual system communicate the quality, personality, and positioning of the business?",
+    criteria: {
+      identityQuality: {
+        name: "Identity Quality",
+        weight: 20,
+        definition:
+          "Functionality, legibility, appropriateness, versatility, and craft of the visible identity elements.",
+      },
+      typography: {
+        name: "Typography",
+        weight: 20,
+        definition:
+          "Readability, hierarchy, pairing, appropriateness, and execution of typography.",
+      },
+      color: {
+        name: "Color",
+        weight: 15,
+        definition:
+          "Contrast, functional use, hierarchy, appropriateness, and accessibility of color.",
+      },
+      layoutHierarchy: {
+        name: "Layout & Hierarchy",
+        weight: 25,
+        definition:
+          "How effectively layout, spacing, scale, grouping, and hierarchy guide attention and comprehension.",
+      },
+      imageryCraft: {
+        name: "Imagery & Craft",
+        weight: 20,
+        definition:
+          "Quality and execution of photography, illustration, cropping, image treatment, resolution, and finishing details.",
+      },
+    },
+  },
+};
+
+const SCORE_ANCHORS = {
+  0: "Missing, actively harmful, or unusable where evidence clearly shows the criterion should exist.",
+  1: "Very weak. Major problems substantially reduce effectiveness.",
+  2: "Needs significant improvement. The basic intent is present, but important weaknesses remain.",
+  3: "Functional. It works, but does not create a meaningful advantage.",
+  4: "Strong. Clear, intentional, and effective with only limited room for improvement.",
+  5: "Exceptional. Highly developed, strategically appropriate, and meaningfully strengthens the brand.",
+};
+
+/* =========================================================
+   STRUCTURED OUTPUT SCHEMAS
+========================================================= */
+
+function buildCriterionSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "assessed",
+      "score",
+      "confidence",
+      "evidence",
+      "reasoning",
+      "businessImpact",
+    ],
+    properties: {
+      assessed: {
+        type: "boolean",
+      },
+      score: {
+        type: "integer",
+        minimum: 0,
+        maximum: 5,
+      },
+      confidence: {
+        type: "string",
+        enum: [
+          "high",
+          "medium",
+          "low",
+          "none",
+        ],
+      },
+      evidence: {
+        type: "string",
+      },
+      reasoning: {
+        type: "string",
+      },
+      businessImpact: {
+        type: "string",
+      },
+    },
+  };
+}
+
+function buildRubricSchema() {
+  const categoryProperties = {};
+
+  for (
+    const [categoryId, category]
+    of Object.entries(RUBRIC)
+  ) {
+    const criterionProperties = {};
+
+    for (
+      const criterionId
+      of Object.keys(category.criteria)
+    ) {
+      criterionProperties[criterionId] =
+        buildCriterionSchema();
+    }
+
+    categoryProperties[categoryId] = {
+      type: "object",
+      additionalProperties: false,
+      required:
+        Object.keys(category.criteria),
+      properties:
+        criterionProperties,
+    };
+  }
+
+  return {
+    type: "object",
+    additionalProperties: false,
+    required:
+      Object.keys(RUBRIC),
+    properties:
+      categoryProperties,
+  };
+}
+
+function buildSignalSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "assessed",
+      "score",
+      "confidence",
+      "evidence",
+    ],
+    properties: {
+      assessed: {
+        type: "boolean",
+      },
+      score: {
+        type: "integer",
+        minimum: 0,
+        maximum: 100,
+      },
+      confidence: {
+        type: "string",
+        enum: [
+          "high",
+          "medium",
+          "low",
+          "none",
+        ],
+      },
+      evidence: {
+        type: "string",
+      },
+    },
+  };
+}
+
+const ANALYSIS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "rubric",
+    "businessSignals",
+  ],
+  properties: {
+    rubric:
+      buildRubricSchema(),
+
+    businessSignals: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "customerProof",
+        "growthComplexity",
+      ],
+      properties: {
+        customerProof:
+          buildSignalSchema(),
+
+        growthComplexity:
+          buildSignalSchema(),
+      },
+    },
+  },
+};
+
+/* =========================================================
+   OPENAI
+========================================================= */
+
+function extractOutputText(data) {
+  if (typeof data.output_text === "string") {
+    return data.output_text.trim();
+  }
+
+  if (!Array.isArray(data.output)) {
+    return "";
+  }
+
+  return data.output
+    .flatMap(
+      item =>
+        Array.isArray(item.content)
+          ? item.content
+          : []
+    )
+    .map(content => {
+      if (
+        content.type === "output_text" &&
+        typeof content.text === "string"
+      ) {
+        return content.text;
+      }
+
+      if (typeof content.text === "string") {
+        return content.text;
+      }
+
+      return "";
+    })
+    .join("")
+    .trim();
+}
+
+async function callOpenAI({
+  model,
+  content,
+  schema,
+  schemaName,
+  maxOutputTokens,
+}) {
+  const response =
+    await fetch(
+      "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+
+        headers: {
+          Authorization:
+            `Bearer ${process.env.OPENAI_API_KEY}`,
+
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify({
+            model,
+            store: false,
+
+            max_output_tokens:
+              maxOutputTokens,
+
+            input: [
+              {
+                role: "user",
+                content,
+              },
+            ],
+
+            text: {
+              format: {
+                type: "json_schema",
+                name: schemaName,
+                strict: true,
+                schema,
+              },
+            },
+          }),
+      }
+    );
+
+  const raw =
+    await response.text();
+
+  let data;
+
+  try {
+    data =
+      JSON.parse(raw);
+  }
+  catch {
+    throw new Error(
+      `OpenAI returned a non-JSON API response (${response.status}).`
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data.error?.message ||
+      `OpenAI API error (${response.status}).`
+    );
+  }
+
+  const outputText =
+    extractOutputText(data);
+
+  if (!outputText) {
+    throw new Error(
+      "OpenAI returned no usable structured output."
+    );
+  }
+
+  try {
+    return JSON.parse(outputText);
+  }
+  catch {
+    throw new Error(
+      "OpenAI returned structured output that could not be parsed."
+    );
+  }
+}
+
+/* =========================================================
+   ANALYSIS PROMPT
+========================================================= */
+
+function rubricPromptText() {
+  const lines = [];
+
+  for (
+    const [categoryId, category]
+    of Object.entries(RUBRIC)
+  ) {
+    lines.push(
+      `${categoryId} — ${category.name}: ${category.question}`
+    );
+
+    for (
+      const [criterionId, criterion]
+      of Object.entries(category.criteria)
+    ) {
+      lines.push(
+        `  ${criterionId} — ${criterion.name}: ${criterion.definition}`
+      );
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function buildAnalysisPrompt({
+  business,
+  imageNames,
+}) {
+  const scoreAnchors =
+    Object.entries(SCORE_ANCHORS)
+      .map(
+        ([score, definition]) =>
+          `${score}: ${definition}`
+      )
+      .join("\n");
+
+  return `
+You are the evidence-analysis layer for Brand Rater V2 by Milky Minds Creative.
+
+Your job is NOT to invent an overall score, a Brand Pattern, a Brand Gap, or a marketing recommendation. The application will calculate those deterministically after your analysis.
+
+Evaluate the submitted CUSTOMER-FACING BRAND MATERIALS against the exact rubric below.
+
+BUSINESS CONTEXT
+Business / brand: ${business.name || "Not provided"}
+Website URL: ${business.website || "Not provided"}
+What the business says it does: ${business.description || "Not provided"}
+Primary audience: ${business.audience || "Not provided"}
+Years operating: ${business.yearsInBusiness || "Not provided"}
+Team size: ${business.teamSize || "Not provided"}
+Customer traction: ${business.traction || "Not provided"}
+Founder-reported brand concern: ${business.brandConcern || "Not provided"}
+12-month goal: ${business.twelveMonthGoal || "Not provided"}
+
+SUBMITTED ASSET FILENAMES
+${imageNames.length ? imageNames.join("\n") : "No filenames provided"}
+
+CRITICAL EVIDENCE RULES
+1. Separate founder-provided context from observed customer-facing evidence.
+2. Do NOT give a high score just because the founder describes the business clearly in the intake. Clarity must be visible in submitted customer-facing material.
+3. Do NOT treat claims in the intake as proof that customers can see testimonials, credentials, differentiation, or authority.
+4. A website URL alone is NOT evidence that you inspected the website. Do not claim to have visited or analyzed the live website.
+5. If a criterion cannot be assessed from the submitted visuals and business context, set:
+   - assessed = false
+   - score = 0
+   - confidence = "none"
+   - evidence = a short statement explaining what evidence is missing
+6. If assessed = true, evidence must describe something concrete you can actually observe: visible wording, hierarchy, type behavior, color behavior, imagery, CTA treatment, proof, layout, or differences between submitted assets.
+7. Avoid generic statements such as "the branding is consistent" unless you specify exactly what is consistent.
+8. Do not prescribe a full rebrand simply because execution is imperfect.
+9. Judge appropriateness relative to the stated audience, business maturity, offering, and goals.
+10. Keep each reasoning, evidence, and businessImpact field concise: usually 1–2 sentences.
+
+SCORING ANCHORS — use only integer scores 0–5
+${scoreAnchors}
+
+RUBRIC
+${rubricPromptText()}
+
+BUSINESS SIGNALS
+Also evaluate:
+- customerProof: How much evidence exists in the submitted assets or explicit context that this business has real market/customer proof such as reviews, testimonials, results, client history, case studies, awards, credentials, repeat business, or established traction. Do not confuse "proof exists" with "proof is presented well"; presentation quality belongs under Credibility.
+- growthComplexity: How complex the brand is becoming to manage, based on team size, growth goal, number of services/products/locations/audiences visibly or explicitly described, and signs that multiple touchpoints or contributors must stay aligned.
+
+For businessSignals:
+- score 0–100.
+- If there is not enough evidence, assessed=false, score=0, confidence="none".
+- Evidence must identify the specific signal used.
+
+Return only the structured result required by the supplied JSON schema.
+`;
+}
+
+/* =========================================================
+   SCORING ENGINE
+========================================================= */
+
+const CONFIDENCE_FACTORS = {
+  high: 1,
+  medium: 0.82,
+  low: 0.62,
+  none: 0,
+};
+
+function calculateCategoryScores(modelAnalysis) {
+  const categories = [];
+
+  for (
+    const [categoryId, category]
+    of Object.entries(RUBRIC)
+  ) {
+    const modelCategory =
+      modelAnalysis.rubric?.[categoryId] || {};
+
+    let weightedPoints = 0;
+    let assessedWeight = 0;
+    let confidencePoints = 0;
+
+    const subcriteria = [];
+
+    for (
+      const [criterionId, criterion]
+      of Object.entries(category.criteria)
+    ) {
+      const item =
+        modelCategory[criterionId] || {};
+
+      const assessed =
+        item.assessed === true;
+
+      const score =
+        clamp(
+          item.score,
+          0,
+          5
+        );
+
+      const confidence =
+        CONFIDENCE_FACTORS[
+          item.confidence
+        ] !== undefined
+          ? item.confidence
+          : "none";
+
+      const confidenceFactor =
+        CONFIDENCE_FACTORS[confidence];
+
+      if (assessed) {
+        weightedPoints +=
+          (score / 5) *
+          criterion.weight;
+
+        assessedWeight +=
+          criterion.weight;
+
+        confidencePoints +=
+          confidenceFactor *
+          criterion.weight;
+      }
+
+      subcriteria.push({
+        id: criterionId,
+        name: criterion.name,
+
+        categoryId,
+        categoryName:
+          category.name,
+
+        categoryOverallWeight:
+          category.overallWeight,
+
+        criterionWeight:
+          criterion.weight,
+
+        assessed,
+        score,
+
+        score100:
+          assessed
+            ? round(
+                (score / 5) * 100
+              )
+            : null,
+
+        confidence,
+
+        evidence:
+          String(
+            item.evidence || ""
+          ),
+
+        reasoning:
+          String(
+            item.reasoning || ""
+          ),
+
+        businessImpact:
+          String(
+            item.businessImpact || ""
+          ),
+      });
+    }
+
+    const hasEvidence =
+      assessedWeight > 0;
+
+    const score =
+      hasEvidence
+        ? round(
+            (weightedPoints /
+              assessedWeight) *
+            100
+          )
+        : 50;
+
+    const confidenceValue =
+      hasEvidence
+        ? confidencePoints /
+          assessedWeight
+        : 0;
+
+    let confidence =
+      "insufficient";
+
+    if (confidenceValue >= 0.86) {
+      confidence = "high";
+    }
+    else if (
+      confidenceValue >= 0.68
+    ) {
+      confidence = "medium";
+    }
+    else if (
+      confidenceValue > 0
+    ) {
+      confidence = "low";
+    }
+
+    categories.push({
+      id: categoryId,
+      name: category.name,
+      score,
+      confidence,
+      assessedWeight,
+
+      overallWeight:
+        category.overallWeight,
+
+      subcriteria,
+    });
+  }
+
+  return categories;
+}
+
+function calculateBrandHealth(categories) {
+  const assessedCategories =
+    categories.filter(
+      category =>
+        category.assessedWeight > 0
+    );
+
+  if (!assessedCategories.length) {
+    return {
+      score: 50,
+      level: "Developing",
+      confidence:
+        "insufficient",
+    };
+  }
+
+  const totalWeight =
+    assessedCategories.reduce(
+      (sum, category) =>
+        sum +
+        category.overallWeight,
+      0
+    );
+
+  const weighted =
+    assessedCategories.reduce(
+      (sum, category) =>
+        sum +
+        category.score *
+        category.overallWeight,
+      0
+    );
+
+  const score =
+    round(
+      weighted /
+      totalWeight
+    );
+
+  const confidenceAverage =
+    assessedCategories.reduce(
+      (sum, category) => {
+        const factor =
+          category.confidence === "high"
+            ? 1
+            : category.confidence === "medium"
+              ? 0.78
+              : category.confidence === "low"
+                ? 0.56
+                : 0;
+
+        return sum + factor;
+      },
+      0
+    ) /
+    assessedCategories.length;
+
+  const confidence =
+    confidenceAverage >= 0.86
+      ? "high"
+      : confidenceAverage >= 0.68
+        ? "medium"
+        : "low";
+
+  return {
+    score,
+
+    level:
+      brandHealthLevel(
+        score
+      ),
+
+    confidence,
+  };
+}
+
+function brandHealthLevel(score) {
+  if (score >= 90) {
+    return "Exceptional";
+  }
+
+  if (score >= 80) {
+    return "Strong";
+  }
+
+  if (score >= 70) {
+    return "Established";
+  }
+
+  if (score >= 60) {
+    return "Developing";
+  }
+
+  if (score >= 40) {
+    return "Inconsistent";
+  }
+
+  return "Critical";
+}
+
+/* =========================================================
+   BUSINESS MATURITY + BRAND GAP
+========================================================= */
+
+const HISTORY_SCORES = {
+  "less-than-1": 20,
+  "1-3": 40,
+  "4-7": 70,
+  "8-plus": 90,
+};
+
+const TEAM_SCORES = {
+  solo: 20,
+  "2-5": 40,
+  "6-10": 65,
+  "11-25": 85,
+  "25-plus": 95,
+};
+
+const TRACTION_SCORES = {
+  early: 25,
+  growing: 50,
+  established: 75,
+  mature: 95,
+};
+
+function fallbackGrowthComplexity(
+  business
+) {
+  const base =
+    {
+      solo: 20,
+      "2-5": 35,
+      "6-10": 55,
+      "11-25": 75,
+      "25-plus": 90,
+    }[business.teamSize] || 40;
+
+  const combined =
+    `${business.brandConcern} ${business.twelveMonthGoal} ${business.description}`
+      .toLowerCase();
+
+  let boost = 0;
+
+  if (
+    /(expand|expansion|second location|new location|multiple location|franchise|scale|scaling|grow|growth|hire|hiring)/i
+      .test(combined)
+  ) {
+    boost += 12;
+  }
+
+  if (
+    /(multiple services|multiple products|new product|new service|new market|new audience|national|regional)/i
+      .test(combined)
+  ) {
+    boost += 8;
+  }
+
+  return clamp(
+    base + boost,
+    0,
+    100
+  );
+}
+
+function calculateBusinessMaturity(
+  business,
+  businessSignals
+) {
+  const history =
+    HISTORY_SCORES[
+      business.yearsInBusiness
+    ] ?? 40;
+
+  const team =
+    TEAM_SCORES[
+      business.teamSize
+    ] ?? 40;
+
+  const traction =
+    TRACTION_SCORES[
+      business.traction
+    ] ?? 50;
+
+  const proofSignal =
+    businessSignals
+      ?.customerProof;
+
+  const complexitySignal =
+    businessSignals
+      ?.growthComplexity;
+
+  const customerProof =
+    proofSignal?.assessed
+      ? clamp(
+          proofSignal.score,
+          0,
+          100
+        )
+      : traction;
+
+  const growthComplexity =
+    complexitySignal?.assessed
+      ? clamp(
+          complexitySignal.score,
+          0,
+          100
+        )
+      : fallbackGrowthComplexity(
+          business
+        );
+
+  const score =
+    round(
+      history * 0.15 +
+      team * 0.15 +
+      traction * 0.25 +
+      customerProof * 0.25 +
+      growthComplexity * 0.20
+    );
+
+  return {
+    score,
+
+    dimensions: {
+      operatingHistory:
+        history,
+
+      teamScale:
+        team,
+
+      marketTraction:
+        traction,
+
+      customerProof:
+        round(
+          customerProof
+        ),
+
+      growthComplexity:
+        round(
+          growthComplexity
+        ),
+    },
+  };
+}
+
+function expectedBrandHealth(
+  maturityScore
+) {
+  if (maturityScore < 40) {
+    return 50;
+  }
+
+  if (maturityScore < 60) {
+    return 60;
+  }
+
+  if (maturityScore < 75) {
+    return 70;
+  }
+
+  if (maturityScore < 90) {
+    return 80;
+  }
+
+  return 85;
+}
+
+function calculateBrandGap(
+  maturityScore,
+  brandHealthScore
+) {
+  const expected =
+    expectedBrandHealth(
+      maturityScore
+    );
+
+  const difference =
+    round(
+      expected -
+      brandHealthScore
+    );
+
+  let level;
+
+  if (difference <= -8) {
+    level =
+      "Brand Advantage";
+  }
+  else if (
+    difference >= -7 &&
+    difference <= 7
+  ) {
+    level =
+      "Aligned";
+  }
+  else if (
+    difference <= 15
+  ) {
+    level =
+      "Moderate Gap";
+  }
+  else if (
+    difference <= 25
+  ) {
+    level =
+      "Significant Gap";
+  }
+  else {
+    level =
+      "Critical Gap";
+  }
+
+  return {
+    businessMaturity:
+      maturityScore,
+
+    expectedBrandHealth:
+      expected,
+
+    actualBrandHealth:
+      brandHealthScore,
+
+    gap:
+      difference,
+
+    level,
+  };
+}
+
+/* =========================================================
+   BRAND PATTERN ENGINE
+========================================================= */
+
+function categoryMap(categories) {
+  return Object.fromEntries(
+    categories.map(
+      category => [
+        category.id,
+        category,
+      ]
+    )
+  );
+}
+
+function high(value, threshold) {
+  if (value <= threshold) {
+    return 0;
+  }
+
+  return clamp(
+    (value - threshold) /
+    (100 - threshold),
+    0,
+    1
+  );
+}
+
+function low(value, threshold) {
+  if (value >= threshold) {
+    return 0;
+  }
+
+  return clamp(
+    (threshold - value) /
+    threshold,
+    0,
+    1
+  );
+}
+
+function nearOrAbove(
+  value,
+  threshold,
+  spread = 20
+) {
+  return clamp(
+    (
+      value -
+      (threshold - spread)
+    ) /
+    spread,
+    0,
+    1
+  );
+}
+
+function growthSignal(business) {
+  const text =
+    `${business.brandConcern} ${business.twelveMonthGoal}`
+      .toLowerCase();
+
+  let score = 0.2;
+
+  if (
+    /(grow|growth|expand|expansion|scale|scaling|location|hire|hiring|launch|new market|new service|new product)/i
+      .test(text)
+  ) {
+    score += 0.55;
+  }
+
+  if (
+    [
+      "growing",
+      "established",
+      "mature",
+    ].includes(
+      business.traction
+    )
+  ) {
+    score += 0.2;
+  }
+
+  return clamp(
+    score,
+    0,
+    1
+  );
+}
+function selectBrandPattern({
+  categories,
+  brandHealth,
+  maturity,
+  gap,
+  business,
+  businessSignals,
+}) {
+  const c =
+    categoryMap(categories);
+
+  const clarity =
+    c.clarity?.score ?? 50;
+
+  const credibility =
+    c.credibility?.score ?? 50;
+
+  const consistency =
+    c.consistency?.score ?? 50;
+
+  const distinctiveness =
+    c.distinctiveness?.score ?? 50;
+
+  const visual =
+    c.visualExecution?.score ?? 50;
+
+  const minCategory =
+    Math.min(
+      clarity,
+      credibility,
+      consistency,
+      distinctiveness,
+      visual
+    );
+
+  const maxOtherThanConsistency =
+    Math.max(
+      clarity,
+      credibility,
+      distinctiveness,
+      visual
+    );
+
+  const proof =
+    businessSignals?.customerProof?.assessed
+      ? businessSignals.customerProof.score
+      : TRACTION_SCORES[
+          business.traction
+        ] || 50;
+
+  const gapPositive =
+    Math.max(0, gap.gap);
+
+  const growth =
+    growthSignal(business);
+
+  const candidates = [
+    {
+      id: "STRONG_FOUNDATION",
+      name: "The Strong Foundation",
+      definition:
+        "A mature, well-balanced brand where refinement matters more than major correction.",
+      score:
+        (
+          nearOrAbove(
+            brandHealth.score,
+            80,
+            18
+          ) +
+          nearOrAbove(
+            minCategory,
+            70,
+            18
+          ) +
+          low(
+            Math.max(
+              gapPositive,
+              0
+            ),
+            8
+          )
+        ) / 3,
+    },
+
+    {
+      id:
+        "HIGH_EXECUTION_LOW_DIFFERENTIATION",
+      name:
+        "The Polished Generic",
+      definition:
+        "A professionally executed brand that still relies too heavily on category conventions or generic positioning.",
+      score:
+        (
+          nearOrAbove(
+            visual,
+            75,
+            22
+          ) +
+          nearOrAbove(
+            consistency,
+            70,
+            22
+          ) +
+          low(
+            distinctiveness,
+            65
+          )
+        ) / 3,
+    },
+
+    {
+      id:
+        "SCALE_CONSISTENCY_GAP",
+      name:
+        "The Growing Pains",
+      definition:
+        "The business is becoming more sophisticated than the brand system supporting its growth.",
+      score:
+        (
+          nearOrAbove(
+            maturity.score,
+            65,
+            25
+          ) +
+          low(
+            consistency,
+            65
+          ) +
+          growth +
+          nearOrAbove(
+            gapPositive,
+            8,
+            18
+          )
+        ) / 4,
+    },
+
+    {
+      id:
+        "EARLY_IDENTITY_MATURITY_GAP",
+      name:
+        "The DIY Ceiling",
+      definition:
+        "A brand that was sufficient earlier in the business but is now visibly limiting how mature the company appears.",
+      score:
+        (
+          nearOrAbove(
+            maturity.score,
+            65,
+            25
+          ) +
+          low(
+            visual,
+            60
+          ) +
+          low(
+            consistency,
+            65
+          ) +
+          nearOrAbove(
+            gapPositive,
+            16,
+            20
+          )
+        ) / 4,
+    },
+
+    {
+      id:
+        "CLARITY_CREDIBILITY_GAP",
+      name:
+        "The Trust Gap",
+      definition:
+        "Customers can understand the offer, but the brand is not providing enough confidence to make the next step feel safe.",
+      score:
+        (
+          nearOrAbove(
+            clarity,
+            65,
+            20
+          ) +
+          low(
+            credibility,
+            60
+          )
+        ) / 2,
+    },
+
+    {
+      id:
+        "LOW_CLARITY",
+      name:
+        "The Foggy Brand",
+      definition:
+        "There is value in the business, but customers have to work too hard to understand the offer, audience, or reason to care.",
+      score:
+        low(
+          clarity,
+          60
+        ),
+    },
+
+    {
+      id:
+        "FRAGMENTED_SYSTEM",
+      name:
+        "The Patchwork Brand",
+      definition:
+        "Strong individual pieces are not adding up to one recognizable brand system.",
+      score:
+        (
+          low(
+            consistency,
+            55
+          ) +
+          nearOrAbove(
+            maxOtherThanConsistency,
+            70,
+            20
+          )
+        ) / 2,
+    },
+
+    {
+      id:
+        "MATURITY_PRESENTATION_GAP",
+      name:
+        "The Hidden Gem",
+      definition:
+        "The underlying business and customer proof are stronger than the way the brand currently communicates them.",
+      score:
+        (
+          nearOrAbove(
+            maturity.score,
+            65,
+            25
+          ) +
+          nearOrAbove(
+            proof,
+            65,
+            25
+          ) +
+          Math.max(
+            low(
+              clarity,
+              65
+            ),
+            low(
+              visual,
+              65
+            ),
+            low(
+              credibility,
+              65
+            )
+          ) +
+          nearOrAbove(
+            gapPositive,
+            8,
+            18
+          )
+        ) / 4,
+    },
+  ];
+
+  const ranked =
+    candidates
+      .map(candidate => ({
+        ...candidate,
+        score:
+          clamp(
+            candidate.score,
+            0,
+            1
+          ),
+      }))
+      .sort(
+        (a, b) =>
+          b.score - a.score
+      );
+
+  const winner =
+    ranked[0];
+
+  if (
+    !winner ||
+    winner.score < 0.42
+  ) {
+    return {
+      id:
+        "UNEVEN_FOUNDATION",
+      name:
+        "The Uneven Foundation",
+      definition:
+        "The brand has a workable base, but performance varies enough across key areas that one or two weaknesses are limiting the whole experience.",
+      confidence: 0.58,
+      secondarySignal: null,
+    };
+  }
+
+  const secondary =
+    ranked[1] &&
+    ranked[1].score >= 0.58
+      ? {
+          id:
+            ranked[1].id,
+
+          name:
+            ranked[1].name,
+
+          confidence:
+            Number(
+              ranked[1].score
+                .toFixed(2)
+            ),
+        }
+      : null;
+
+  return {
+    id:
+      winner.id,
+
+    name:
+      winner.name,
+
+    definition:
+      winner.definition,
+
+    confidence:
+      Number(
+        winner.score.toFixed(2)
+      ),
+
+    secondarySignal:
+      secondary,
+  };
+}
+
+/* =========================================================
+   PRIORITY ENGINE
+========================================================= */
+
+function categoryRelevance(
+  categoryId,
+  business
+) {
+  let relevance = 0.5;
+
+  const concern =
+    business.brandConcern
+      .toLowerCase();
+
+  const goal =
+    business.twelveMonthGoal
+      .toLowerCase();
+
+  const boost = amount => {
+    relevance += amount;
+  };
+
+  if (
+    concern.includes("different")
+  ) {
+    if (
+      categoryId ===
+      "distinctiveness"
+    ) {
+      boost(0.38);
+    }
+
+    if (
+      categoryId === "clarity"
+    ) {
+      boost(0.22);
+    }
+  }
+
+  if (
+    concern.includes("inconsistent")
+  ) {
+    if (
+      categoryId === "consistency"
+    ) {
+      boost(0.42);
+    }
+  }
+
+  if (
+    concern.includes("professional") ||
+    concern.includes("established")
+  ) {
+    if (
+      categoryId === "credibility"
+    ) {
+      boost(0.32);
+    }
+
+    if (
+      categoryId ===
+      "visualExecution"
+    ) {
+      boost(0.25);
+    }
+  }
+
+  if (
+    concern.includes("outgrown")
+  ) {
+    if (
+      categoryId === "consistency"
+    ) {
+      boost(0.26);
+    }
+
+    if (
+      categoryId ===
+      "visualExecution"
+    ) {
+      boost(0.2);
+    }
+
+    if (
+      categoryId === "credibility"
+    ) {
+      boost(0.18);
+    }
+  }
+
+  if (
+    concern.includes("website")
+  ) {
+    if (
+      categoryId === "clarity" ||
+      categoryId === "credibility" ||
+      categoryId ===
+        "visualExecution"
+    ) {
+      boost(0.24);
+    }
+  }
+
+  if (
+    /(grow|growth|expand|expansion|scale|scaling|location|hire|hiring)/i
+      .test(goal) ||
+    concern.includes("growth") ||
+    concern.includes("expansion")
+  ) {
+    if (
+      categoryId === "consistency"
+    ) {
+      boost(0.32);
+    }
+
+    if (
+      categoryId === "clarity"
+    ) {
+      boost(0.18);
+    }
+
+    if (
+      categoryId === "credibility"
+    ) {
+      boost(0.15);
+    }
+  }
+
+  return clamp(
+    relevance,
+    0,
+    1
+  );
+}
+
+function choosePriority(
+  categories,
+  business
+) {
+  const candidates = [];
+
+  for (
+    const category
+    of categories
+  ) {
+    const relevance =
+      categoryRelevance(
+        category.id,
+        business
+      );
+
+    for (
+      const item
+      of category.subcriteria
+    ) {
+      if (!item.assessed) {
+        continue;
+      }
+
+      const deficit =
+        (5 - item.score) / 5;
+
+      const categoryImportance =
+        category.overallWeight / 25;
+
+      const criterionImportance =
+        item.criterionWeight / 25;
+
+      const confidence =
+        CONFIDENCE_FACTORS[
+          item.confidence
+        ] || 0.5;
+
+      const priorityScore =
+        (
+          deficit * 0.48 +
+          relevance * 0.28 +
+          categoryImportance * 0.14 +
+          criterionImportance * 0.10
+        ) *
+        confidence;
+
+      candidates.push({
+        ...item,
+
+        priorityScore:
+          Number(
+            priorityScore
+              .toFixed(3)
+          ),
+
+        businessRelevance:
+          Number(
+            relevance
+              .toFixed(2)
+          ),
+      });
+    }
+  }
+
+  candidates.sort(
+    (a, b) =>
+      b.priorityScore -
+      a.priorityScore
+  );
+
+  return (
+    candidates[0] || {
+      categoryId:
+        "clarity",
+
+      categoryName:
+        "Clarity",
+
+      id:
+        "general",
+
+      name:
+        "Clarify the customer-facing brand",
+
+      assessed:
+        false,
+
+      score:
+        3,
+
+      confidence:
+        "low",
+
+      evidence:
+        "The assessment did not have enough evidence to identify a stronger priority.",
+
+      businessImpact:
+        "A clearer customer-facing brand makes later improvements easier to prioritize.",
+
+      priorityScore:
+        0,
+
+      businessRelevance:
+        0.5,
+    }
+  );
+}
+
+/* One free growth priority; the paid plan keeps the full sequence. */
+
+const GROWTH_OUTCOME_BY_CATEGORY = {
+  clarity: "UNDERSTAND → ACT",
+  credibility: "TRUST → ACT",
+  consistency: "TRUST",
+  distinctiveness: "ATTRACT → UNDERSTAND",
+  visualExecution: "ATTRACT → UNDERSTAND",
+};
+
+const CONVERSION_IMPACT_BY_CRITERION = {
+  offerClarity: 5,
+  audienceClarity: 4,
+  valueProposition: 5,
+  messagingHierarchy: 4,
+  ctaClarity: 5,
+  professionalPresentation: 3,
+  trustEvidence: 5,
+  expertiseAuthority: 4,
+  maturityAlignment: 3,
+  purchaseConfidence: 5,
+  visualIdentityConsistency: 2,
+  typographyColorConsistency: 2,
+  imageryConsistency: 2,
+  messagingVoiceConsistency: 3,
+  crossChannelConsistency: 3,
+  positioningDifferentiation: 5,
+  visualDistinctiveness: 3,
+  messagingDistinctiveness: 4,
+  brandPersonality: 2,
+  ownableElements: 2,
+  identityQuality: 3,
+  typography: 3,
+  color: 2,
+  layoutHierarchy: 4,
+  imageryCraft: 3,
+};
+
+const FOUNDATION_BY_CATEGORY = {
+  clarity: 5,
+  credibility: 4,
+  consistency: 4,
+  distinctiveness: 4,
+  visualExecution: 3,
+};
+
+const ACTION_BY_CATEGORY = {
+  clarity:
+    "Clarify the core offer, customer benefit, and primary next step, then make that message prominent across the highest-traffic customer touchpoints.",
+
+  credibility:
+    "Strengthen the most visible trust signals with relevant proof, expertise, and a more confidence-building presentation near key decisions.",
+
+  consistency:
+    "Define repeatable rules for typography, color, imagery, messaging, and layout, then apply them across the primary customer touchpoints.",
+
+  distinctiveness:
+    "Sharpen the brand's positioning and translate it into more recognizable messaging and visual elements customers can associate with this business.",
+
+  visualExecution:
+    "Improve hierarchy, readability, and visual direction so the most important message and next action are easier to notice and understand.",
+};
+
+const KPI_BY_CATEGORY = {
+  clarity: {
+    label: "Track customer action",
+    metric:
+      "Contact-form completion, consultation bookings, product-page conversion, or CTA click-through rate",
+  },
+
+  credibility: {
+    label: "Track purchase confidence",
+    metric:
+      "Qualified inquiries, sales-call conversion, checkout completion, or lead-to-customer rate",
+  },
+
+  consistency: {
+    label: "Track recognition and engagement",
+    metric:
+      "Returning visitors, direct traffic, branded search, or engagement across repeated campaigns",
+  },
+
+  distinctiveness: {
+    label: "Track customer preference",
+    metric:
+      "Branded search, campaign engagement, qualified inquiries, or win/loss reasons from sales conversations",
+  },
+
+  visualExecution: {
+    label: "Track engagement and action",
+    metric:
+      "CTA click-through rate, scroll depth, bounce rate, or conversion on the improved touchpoint",
+  },
+};
+
+const MILKY_MINDS_CONTACT_URL =
+  "https://www.milkymindscreative.com/free-brand-consultation";
+
+const MILKY_MINDS_CLARITY_SESSION_URL =
+  "https://calendly.com/milkymindscreative/brand-clarity-session";
+
+function createSolutionPaths({
+  diyTitle,
+  diyDescription,
+  diySteps,
+  guidanceService,
+  guidancePrice,
+  guidanceDescription,
+  doneForYouService,
+  doneForYouDescription,
+}) {
+  return {
+    diy: {
+      title:
+        diyTitle,
+
+      description:
+        diyDescription,
+
+      steps:
+        diySteps,
+    },
+
+    guidance: {
+      title:
+        "Work through it with Milky Minds",
+
+      service:
+        guidanceService,
+
+      description:
+        guidanceDescription,
+
+      price:
+        guidancePrice,
+
+      ctaLabel:
+        `Explore ${guidanceService}`,
+
+      ctaUrl:
+        MILKY_MINDS_CLARITY_SESSION_URL,
+    },
+
+    doneForYou: {
+      title:
+        "Have Milky Minds build the solution",
+
+      service:
+        doneForYouService,
+
+      description:
+        doneForYouDescription,
+
+      ctaLabel:
+        "Discuss Your Project",
+
+      ctaUrl:
+        MILKY_MINDS_CONTACT_URL,
+    },
+  };
+}
+
+/*
+  Category-level fallbacks are used only when Brand Rater
+  receives an unfamiliar or missing criterion ID.
+*/
+const SOLUTION_PATHS_BY_CATEGORY = {
+  clarity:
+    createSolutionPaths({
+      diyTitle:
+        "Simplify the primary message",
+
+      diyDescription:
+        "Focus the most important customer-facing touchpoint on one audience, one primary benefit, and one clear next step.",
+
+      diySteps: [
+        "Identify the primary customer",
+        "State the main offer in plain language",
+        "Lead with the most important customer benefit",
+        "Use one clear primary call to action",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Work with Milky Minds to clarify the offer, audience, value proposition, and strongest next step.",
+
+      doneForYouService:
+        "Brand Strategy & Messaging",
+
+      doneForYouDescription:
+        "Milky Minds develops the positioning, value proposition, messaging hierarchy, and customer-facing message system.",
+    }),
+
+  credibility:
+    createSolutionPaths({
+      diyTitle:
+        "Strengthen visible trust signals",
+
+      diyDescription:
+        "Add the most relevant proof near the places where customers are deciding whether to contact or purchase.",
+
+      diySteps: [
+        "Collect testimonials, reviews, or client results",
+        "Choose proof relevant to the primary offer",
+        "Add credentials or experience where appropriate",
+        "Place trust signals near important decisions",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Identify which credibility gaps matter most and determine the strongest proof to present.",
+
+      doneForYouService:
+        "Brand Strategy & Creative Implementation",
+
+      doneForYouDescription:
+        "Milky Minds strengthens trust through messaging, proof presentation, visual design, and customer-facing collateral.",
+    }),
+
+  consistency:
+    createSolutionPaths({
+      diyTitle:
+        "Create a basic brand consistency checklist",
+
+      diyDescription:
+        "Document the colors, type styles, imagery, messaging, and layouts that should remain consistent.",
+
+      diySteps: [
+        "Select the approved logo versions",
+        "Document primary colors and typography",
+        "Define an imagery and voice direction",
+        "Review primary touchpoints against the checklist",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Get focused guidance on the inconsistencies creating the most visible brand drift.",
+
+      doneForYouService:
+        "Visual Identity System & Brand Guidelines",
+
+      doneForYouDescription:
+        "Milky Minds creates a repeatable identity system and practical guidelines for consistent execution.",
+    }),
+
+  distinctiveness:
+    createSolutionPaths({
+      diyTitle:
+        "Define why customers should remember you",
+
+      diyDescription:
+        "Identify the strongest difference between the business and the alternatives customers are considering.",
+
+      diySteps: [
+        "List the closest customer alternatives",
+        "Identify what your business does differently",
+        "Connect that difference to a customer benefit",
+        "Repeat that idea across messaging and visuals",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify the brand’s strongest position, differentiators, and opportunities to become more memorable.",
+
+      doneForYouService:
+        "Brand Strategy & Visual Identity",
+
+      doneForYouDescription:
+        "Milky Minds develops a distinctive position and translates it into a recognizable verbal and visual system.",
+    }),
+
+  visualExecution:
+    createSolutionPaths({
+      diyTitle:
+        "Improve the most important customer touchpoint",
+
+      diyDescription:
+        "Start with the asset customers see most often and improve its hierarchy, readability, spacing, and visual focus.",
+
+      diySteps: [
+        "Identify the most important message",
+        "Reduce unnecessary visual competition",
+        "Create a clearer type hierarchy",
+        "Make the primary action easy to find",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Get focused feedback on the visual issues having the greatest effect on clarity and perceived quality.",
+
+      doneForYouService:
+        "Visual Identity & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds redesigns the identity or customer-facing assets to create a clearer, more polished experience.",
+    }),
+};
+
+/*
+  Criterion-specific solutions override the category fallbacks.
+*/
+const SOLUTION_PATHS_BY_CRITERION = {
+  offerClarity:
+    createSolutionPaths({
+      diyTitle:
+        "Rewrite the primary offer statement",
+
+      diyDescription:
+        "Describe exactly what the business provides using language a new customer can understand immediately.",
+
+      diySteps: [
+        "Name the primary product or service",
+        "Remove internal terminology and vague claims",
+        "State who the offer is designed for",
+        "Test whether someone can understand it in five seconds",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify the offer and determine the strongest way to present it to prospective customers.",
+
+      doneForYouService:
+        "Brand Messaging Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops clear offer messaging and applies it across the primary customer touchpoints.",
+    }),
+
+  audienceClarity:
+    createSolutionPaths({
+      diyTitle:
+        "Name the primary audience",
+
+      diyDescription:
+        "Make it easier for the right customer to recognize that the offer was created for them.",
+
+      diySteps: [
+        "Choose one primary customer group",
+        "Identify that customer’s main need",
+        "Use language familiar to that audience",
+        "Show situations or imagery they recognize",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Define the highest-priority audience and clarify how the brand should speak to them.",
+
+      doneForYouService:
+        "Audience & Messaging Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops audience positioning, messaging pillars, and customer-facing language.",
+    }),
+
+  valueProposition:
+    createSolutionPaths({
+      diyTitle:
+        "Write a focused value proposition",
+
+      diyDescription:
+        "Explain the meaningful result customers receive rather than only naming the product or service.",
+
+      diySteps: [
+        "Identify the customer’s primary problem",
+        "Name the outcome the offer creates",
+        "Add the most meaningful differentiator",
+        "Condense the idea into one clear statement",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Develop a clearer value proposition that connects the offer to what customers care about.",
+
+      doneForYouService:
+        "Brand Strategy & Messaging",
+
+      doneForYouDescription:
+        "Milky Minds develops the positioning, value proposition, and supporting messaging system.",
+    }),
+
+  messagingHierarchy:
+    createSolutionPaths({
+      diyTitle:
+        "Prioritize the message",
+
+      diyDescription:
+        "Organize information in the order customers need it instead of giving every message equal emphasis.",
+
+      diySteps: [
+        "Choose one primary headline",
+        "Support it with one concise explanation",
+        "Move secondary details lower",
+        "End with one clear next step",
+      ],
+
+      guidanceService:
+        "Website First Impression",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where the current messaging hierarchy creates confusion or slows comprehension.",
+
+      doneForYouService:
+        "Website UX & Messaging Design",
+
+      doneForYouDescription:
+        "Milky Minds restructures the message and page hierarchy to guide customers toward action.",
+    }),
+
+  ctaClarity:
+    createSolutionPaths({
+      diyTitle:
+        "Choose one primary call to action",
+
+      diyDescription:
+        "Make the desired next step specific, visible, and consistent across the customer journey.",
+
+      diySteps: [
+        "Choose the most valuable customer action",
+        "Use direct action-oriented language",
+        "Give the primary CTA visual priority",
+        "Repeat it at relevant decision points",
+      ],
+
+      guidanceService:
+        "Website First Impression",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Review the current conversion path and identify where the call to action becomes unclear.",
+
+      doneForYouService:
+        "Website UX & Conversion Design",
+
+      doneForYouDescription:
+        "Milky Minds improves CTA language, hierarchy, placement, and the surrounding conversion experience.",
+    }),
+
+  professionalPresentation:
+    createSolutionPaths({
+      diyTitle:
+        "Audit the most visible quality issues",
+
+      diyDescription:
+        "Correct the execution problems most likely to affect the customer’s first impression.",
+
+      diySteps: [
+        "Check alignment, spacing, and image quality",
+        "Remove outdated or conflicting elements",
+        "Standardize primary design treatments",
+        "Review the experience on mobile",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify the visual issues most responsible for making the brand feel less polished.",
+
+      doneForYouService:
+        "Visual Identity & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds refines or redesigns the customer-facing system to better reflect the quality of the business.",
+    }),
+
+  trustEvidence:
+    createSolutionPaths({
+      diyTitle:
+        "Add proof near customer decisions",
+
+      diyDescription:
+        "Present credible evidence that reduces uncertainty about the business and its ability to deliver.",
+
+      diySteps: [
+        "Collect relevant testimonials or reviews",
+        "Choose specific results or examples",
+        "Add credentials when they affect the decision",
+        "Place proof near the offer and CTA",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Determine which trust signals will be most persuasive for the audience and offer.",
+
+      doneForYouService:
+        "Credibility Messaging & Design",
+
+      doneForYouDescription:
+        "Milky Minds organizes and presents testimonials, results, credentials, and case studies across key touchpoints.",
+    }),
+
+  expertiseAuthority:
+    createSolutionPaths({
+      diyTitle:
+        "Make expertise visible",
+
+      diyDescription:
+        "Show customers the knowledge, experience, or perspective supporting the offer.",
+
+      diySteps: [
+        "Identify the most relevant expertise",
+        "Replace broad claims with specific evidence",
+        "Share a useful point of view",
+        "Connect experience to customer outcomes",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify how the brand can communicate authority without relying on generic claims.",
+
+      doneForYouService:
+        "Authority Positioning & Content Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops authority messaging and a branded content direction that makes expertise more visible.",
+    }),
+
+  maturityAlignment:
+    SOLUTION_PATHS_BY_CATEGORY.credibility,
+
+  purchaseConfidence:
+    createSolutionPaths({
+      diyTitle:
+        "Reduce the biggest source of hesitation",
+
+      diyDescription:
+        "Identify the unanswered question most likely to stop a customer from taking the next step.",
+
+      diySteps: [
+        "List common customer objections",
+        "Answer the most important objection",
+        "Clarify the process or expected outcome",
+        "Add proof near the next action",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Identify the trust and communication gaps creating avoidable purchase hesitation.",
+
+      doneForYouService:
+        "Customer Journey & Conversion Design",
+
+      doneForYouDescription:
+        "Milky Minds improves messaging, proof, hierarchy, and conversion touchpoints to build greater confidence.",
+    }),
+
+  visualIdentityConsistency:
+    SOLUTION_PATHS_BY_CATEGORY.consistency,
+
+  typographyColorConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Standardize typography and color",
+
+      diyDescription:
+        "Reduce visual variation by documenting a small set of approved styles and uses.",
+
+      diySteps: [
+        "Choose approved brand colors",
+        "Choose primary and secondary typefaces",
+        "Define headline and body styles",
+        "Remove unapproved variations",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify the typography and color inconsistencies creating the most visible fragmentation.",
+
+      doneForYouService:
+        "Visual Identity System",
+
+      doneForYouDescription:
+        "Milky Minds develops a cohesive color and typography system with practical usage rules.",
+    }),
+
+  imageryConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Create an imagery checklist",
+
+      diyDescription:
+        "Define the qualities every photograph, illustration, or graphic should share.",
+
+      diySteps: [
+        "Choose the intended visual mood",
+        "Define subject and composition preferences",
+        "Standardize cropping and image treatment",
+        "Remove images that conflict with the direction",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Clarify which imagery choices support the brand and which ones create inconsistency.",
+
+      doneForYouService:
+        "Art Direction & Brand Imagery",
+
+      doneForYouDescription:
+        "Milky Minds establishes a recognizable imagery direction and applies it across customer touchpoints.",
+    }),
+
+  messagingVoiceConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Define three voice rules",
+
+      diyDescription:
+        "Create simple rules that make the brand sound like the same business across every channel.",
+
+      diySteps: [
+        "Choose three specific voice traits",
+        "Define what each trait sounds like",
+        "Document words or tones to avoid",
+        "Rewrite one key message using the rules",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Define a more consistent voice and messaging direction for the brand.",
+
+      doneForYouService:
+        "Brand Voice & Messaging System",
+
+      doneForYouDescription:
+        "Milky Minds creates verbal identity guidelines, messaging pillars, and practical examples.",
+    }),
+
+  crossChannelConsistency:
+    createSolutionPaths({
+      diyTitle:
+        "Review every primary touchpoint together",
+
+      diyDescription:
+        "Compare the website, social media, email, and sales materials as one connected customer experience.",
+
+      diySteps: [
+        "Collect the primary customer touchpoints",
+        "Identify conflicting visual treatments",
+        "Identify conflicting messages or CTAs",
+        "Standardize the highest-impact differences",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where the brand changes most noticeably between customer channels.",
+
+      doneForYouService:
+        "Brand Guidelines & Cross-Channel System",
+
+      doneForYouDescription:
+        "Milky Minds creates and applies a unified system across web, social, email, and marketing collateral.",
+    }),
+
+  positioningDifferentiation:
+    createSolutionPaths({
+      diyTitle:
+        "Define one meaningful differentiator",
+
+      diyDescription:
+        "Focus on a difference customers value rather than relying on broad claims such as quality or service.",
+
+      diySteps: [
+        "List the closest customer alternatives",
+        "Identify a meaningful difference",
+        "Connect it to a customer benefit",
+        "Make it prominent in the primary message",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Clarify the strongest competitive position and the reasons customers should choose the brand.",
+
+      doneForYouService:
+        "Brand Positioning Strategy",
+
+      doneForYouDescription:
+        "Milky Minds develops the positioning, differentiators, value proposition, and supporting message system.",
+    }),
+
+  visualDistinctiveness:
+    createSolutionPaths({
+      diyTitle:
+        "Reduce category-default design choices",
+
+      diyDescription:
+        "Identify the visual decisions that make the brand resemble competitors and replace one with something more recognizable.",
+
+      diySteps: [
+        "Review several close competitors",
+        "List repeated category conventions",
+        "Choose one convention to move beyond",
+        "Create a repeatable alternative",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where the visual identity feels generic and where distinctiveness can be strengthened.",
+
+      doneForYouService:
+        "Distinctive Visual Identity",
+
+      doneForYouDescription:
+        "Milky Minds creates a more recognizable identity system built around ownable visual decisions.",
+    }),
+
+  messagingDistinctiveness:
+    createSolutionPaths({
+      diyTitle:
+        "Replace generic claims with a specific point of view",
+
+      diyDescription:
+        "Use language that reflects the business’s actual philosophy, method, audience, or advantage.",
+
+      diySteps: [
+        "Highlight generic phrases",
+        "Identify the specific proof behind each claim",
+        "Add the brand’s point of view",
+        "Rewrite the primary message",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Develop a more differentiated verbal direction based on the brand’s real strengths.",
+
+      doneForYouService:
+        "Brand Messaging & Verbal Identity",
+
+      doneForYouDescription:
+        "Milky Minds creates distinctive positioning, messaging pillars, voice, and customer-facing copy direction.",
+    }),
+
+  brandPersonality:
+    createSolutionPaths({
+      diyTitle:
+        "Define three specific personality traits",
+
+      diyDescription:
+        "Choose traits that can guide real visual and verbal decisions rather than broad words such as professional.",
+
+      diySteps: [
+        "Choose three distinctive traits",
+        "Define what each trait means",
+        "Translate each trait into visual behavior",
+        "Translate each trait into voice behavior",
+      ],
+
+      guidanceService:
+        "Brand Clarity Session",
+
+      guidancePrice:
+        "$149",
+
+      guidanceDescription:
+        "Define a usable brand personality that supports the audience, position, and customer experience.",
+
+      doneForYouService:
+        "Brand Strategy & Creative Direction",
+
+      doneForYouDescription:
+        "Milky Minds builds a distinctive personality and translates it into visual and verbal direction.",
+    }),
+
+  ownableElements:
+    createSolutionPaths({
+      diyTitle:
+        "Choose one repeatable brand element",
+
+      diyDescription:
+        "Create a verbal or visual device customers can repeatedly associate with the business.",
+
+      diySteps: [
+        "Review current recurring elements",
+        "Choose the most recognizable candidate",
+        "Define how it should be used",
+        "Repeat it consistently across key channels",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify which current elements have the greatest potential to become recognizable brand assets.",
+
+      doneForYouService:
+        "Visual Identity System",
+
+      doneForYouDescription:
+        "Milky Minds develops ownable graphic devices, messaging elements, and rules for consistent use.",
+    }),
+
+  identityQuality:
+    createSolutionPaths({
+      diyTitle:
+        "Test the identity in real situations",
+
+      diyDescription:
+        "Evaluate whether the logo and identity remain clear, useful, and recognizable across common applications.",
+
+      diySteps: [
+        "Test the logo at small sizes",
+        "Test it in one color",
+        "Review legibility and spacing",
+        "Check performance across primary applications",
+      ],
+
+      guidanceService:
+        "Logo Scorecard",
+
+      guidancePrice:
+        "$29",
+
+      guidanceDescription:
+        "Get a focused evaluation of the logo’s clarity, distinctiveness, flexibility, and execution.",
+
+      doneForYouService:
+        "Logo & Visual Identity Design",
+
+      doneForYouDescription:
+        "Milky Minds refines or redesigns the identity and builds a practical system around it.",
+    }),
+
+  typography:
+    createSolutionPaths({
+      diyTitle:
+        "Simplify the type system",
+
+      diyDescription:
+        "Use fewer styles and establish a clearer relationship between headlines, supporting text, and body copy.",
+
+      diySteps: [
+        "Choose one primary type family",
+        "Define headline and body styles",
+        "Improve size and spacing contrast",
+        "Remove unnecessary variations",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify the typography issues affecting readability, hierarchy, and consistency.",
+
+      doneForYouService:
+        "Typography & Visual Identity System",
+
+      doneForYouDescription:
+        "Milky Minds develops an intentional type system with repeatable hierarchy and usage rules.",
+    }),
+
+  color:
+    createSolutionPaths({
+      diyTitle:
+        "Clarify the role of each brand color",
+
+      diyDescription:
+        "Assign specific jobs to the primary, secondary, background, and action colors.",
+
+      diySteps: [
+        "Identify the primary brand color",
+        "Choose supporting and neutral colors",
+        "Check text contrast",
+        "Use action colors consistently",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Review the palette for consistency, hierarchy, appropriateness, and accessibility.",
+
+      doneForYouService:
+        "Color System & Visual Identity",
+
+      doneForYouDescription:
+        "Milky Minds develops a strategic, accessible color system with practical usage guidance.",
+    }),
+
+  layoutHierarchy:
+    createSolutionPaths({
+      diyTitle:
+        "Create one clear visual path",
+
+      diyDescription:
+        "Use scale, spacing, and grouping to guide customers from the primary message to the next action.",
+
+      diySteps: [
+        "Choose the most important element",
+        "Reduce competition around it",
+        "Group related information",
+        "Create a clear path to the CTA",
+      ],
+
+      guidanceService:
+        "Website First Impression",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify where layout and hierarchy make the customer experience harder to scan or understand.",
+
+      doneForYouService:
+        "Website UX & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds redesigns the layout system to improve comprehension, engagement, and action.",
+    }),
+
+  imageryCraft:
+    createSolutionPaths({
+      diyTitle:
+        "Improve image selection and treatment",
+
+      diyDescription:
+        "Use imagery that feels intentional, relevant to the audience, and consistent with the brand’s quality.",
+
+      diySteps: [
+        "Remove low-quality or irrelevant images",
+        "Choose a consistent visual direction",
+        "Standardize cropping and treatment",
+        "Check image quality across devices",
+      ],
+
+      guidanceService:
+        "Express Brand Audit",
+
+      guidancePrice:
+        "$49",
+
+      guidanceDescription:
+        "Identify which image choices weaken perceived quality or create an inconsistent visual story.",
+
+      doneForYouService:
+        "Art Direction & Marketing Design",
+
+      doneForYouDescription:
+        "Milky Minds develops the imagery direction and applies it across branded customer touchpoints.",
+    }),
+};
+
+const SOLUTION_PREVIEW_TEMPLATES = {
+  messaging: {
+    type:
+      "messaging",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Make the message easier to understand",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "A broad or unclear message",
+
+      supportingText:
+        "Several ideas compete for attention, making the main value harder to understand.",
+
+      cta:
+        "Multiple next steps",
+
+      signals: [
+        "Offer is difficult to identify",
+        "Customer benefit is buried",
+        "Audience relevance is unclear",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "One clear customer outcome",
+
+      supportingText:
+        "The offer, intended customer, and primary benefit are presented in the order customers need them.",
+
+      cta:
+        "One primary action",
+
+      signals: [
+        "Clear offer",
+        "Relevant customer benefit",
+        "Focused next step",
+      ],
+    },
+
+    disclaimer:
+      "This is an illustrative direction, not finished copy or a completed redesign.",
+  },
+
+  hierarchy: {
+    type:
+      "hierarchy",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Create a clearer path through the content",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Everything competes for attention",
+
+      supportingText:
+        "Similar sizes, weights, colors, or buttons make it difficult to know what should be viewed first.",
+
+      cta:
+        "Competing actions",
+
+      signals: [
+        "Weak reading order",
+        "Important information blends in",
+        "Several elements demand attention",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "One intentional reading order",
+
+      supportingText:
+        "Scale, spacing, grouping, and contrast guide customers from the main message to the desired action.",
+
+      cta:
+        "Clear primary action",
+
+      signals: [
+        "Visible headline priority",
+        "Grouped supporting information",
+        "Easy-to-find CTA",
+      ],
+    },
+
+    disclaimer:
+      "This preview demonstrates hierarchy principles, not a finished page design.",
+  },
+
+  trust: {
+    type:
+      "trust",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Support the promise with visible proof",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "A strong claim without enough support",
+
+      supportingText:
+        "Customers are asked to trust the business without seeing enough evidence near the decision.",
+
+      cta:
+        "Act without reassurance",
+
+      signals: [
+        "Limited visible proof",
+        "Expertise is not demonstrated",
+        "Questions remain unanswered",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "A clear promise supported by proof",
+
+      supportingText:
+        "Relevant testimonials, results, credentials, or examples reduce uncertainty before the next action.",
+
+      cta:
+        "Act with greater confidence",
+
+      signals: [
+        "Relevant customer proof",
+        "Visible expertise",
+        "Reduced purchase hesitation",
+      ],
+    },
+
+    disclaimer:
+      "The proof shown in a finished solution must come from verified business information.",
+  },
+
+  consistency: {
+    type:
+      "consistency",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Turn disconnected choices into one system",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Different rules across touchpoints",
+
+      supportingText:
+        "Typography, colors, imagery, messaging, or layouts change depending on where customers encounter the brand.",
+
+      cta:
+        "Inconsistent treatments",
+
+      signals: [
+        "Several visual styles",
+        "Changing voice or message",
+        "Touchpoints feel disconnected",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "One recognizable brand system",
+
+      supportingText:
+        "A defined set of visual and verbal rules creates continuity across the customer experience.",
+
+      cta:
+        "Consistent treatment",
+
+      signals: [
+        "Repeatable typography",
+        "Defined color and imagery",
+        "Connected customer touchpoints",
+      ],
+    },
+
+    disclaimer:
+      "This preview demonstrates system consistency, not a proposed final visual identity.",
+  },
+
+  distinctiveness: {
+    type:
+      "distinctiveness",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Move from category-generic to recognizable",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Familiar category language and visuals",
+
+      supportingText:
+        "The brand communicates the type of business but offers few elements customers can associate specifically with it.",
+
+      cta:
+        "A familiar experience",
+
+      signals: [
+        "Generic value claims",
+        "Common category visuals",
+        "Limited memorable elements",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "A specific position customers can remember",
+
+      supportingText:
+        "A meaningful differentiator is expressed through recognizable messaging, personality, and visual behavior.",
+
+      cta:
+        "A more ownable experience",
+
+      signals: [
+        "Clear differentiator",
+        "Recognizable personality",
+        "Repeatable brand elements",
+      ],
+    },
+
+    disclaimer:
+      "This is an illustrative strategic direction, not a finished identity concept.",
+  },
+
+  visualQuality: {
+    type:
+      "visual-quality",
+
+    label:
+      "Improvement Preview",
+
+    title:
+      "Make the execution feel more intentional",
+
+    current: {
+      label:
+        "Current pattern",
+
+      headline:
+        "Unrefined visual decisions",
+
+      supportingText:
+        "Inconsistent spacing, type, imagery, color, or finishing details reduce clarity and perceived quality.",
+
+      cta:
+        "Uneven visual emphasis",
+
+      signals: [
+        "Inconsistent spacing",
+        "Weak visual hierarchy",
+        "Uneven image or type treatment",
+      ],
+    },
+
+    improved: {
+      label:
+        "Improved direction",
+
+      headline:
+        "A clearer and more polished system",
+
+      supportingText:
+        "Intentional hierarchy, spacing, typography, imagery, and color better reflect the quality of the business.",
+
+      cta:
+        "Focused visual emphasis",
+
+      signals: [
+        "Consistent spacing",
+        "Clear hierarchy",
+        "Intentional finishing details",
+      ],
+    },
+
+    disclaimer:
+      "This preview demonstrates the intended improvement, not a finished visual redesign.",
+  },
+};
+
+const PREVIEW_TYPE_BY_CRITERION = {
+  offerClarity:
+    "messaging",
+
+  audienceClarity:
+    "messaging",
+
+  valueProposition:
+    "messaging",
+
+  messagingHierarchy:
+    "hierarchy",
+
+  ctaClarity:
+    "hierarchy",
+
+  professionalPresentation:
+    "visualQuality",
+
+  trustEvidence:
+    "trust",
+
+  expertiseAuthority:
+    "trust",
+
+  maturityAlignment:
+    "visualQuality",
+
+  purchaseConfidence:
+    "trust",
+
+  visualIdentityConsistency:
+    "consistency",
+
+  typographyColorConsistency:
+    "consistency",
+
+  imageryConsistency:
+    "consistency",
+
+  messagingVoiceConsistency:
+    "consistency",
+
+  crossChannelConsistency:
+    "consistency",
+
+  positioningDifferentiation:
+    "distinctiveness",
+
+  visualDistinctiveness:
+    "distinctiveness",
+
+  messagingDistinctiveness:
+    "distinctiveness",
+
+  brandPersonality:
+    "distinctiveness",
+
+  ownableElements:
+    "distinctiveness",
+
+  identityQuality:
+    "visualQuality",
+
+  typography:
+    "hierarchy",
+
+  color:
+    "consistency",
+
+  layoutHierarchy:
+    "hierarchy",
+
+  imageryCraft:
+    "visualQuality",
+};
+
+function clampPriorityFactor(value) {
+  return Math.max(
+    1,
+    Math.min(
+      5,
+      Math.round(value)
+    )
+  );
+}
+
+function buildGrowthOpportunity({
+  priority,
+  business,
+  submittedAssets,
+}) {
+  const severity =
+    clampPriorityFactor(
+      5 - (priority.score || 0)
+    );
+
+  const customerImpact =
+    clampPriorityFactor(
+      severity * 0.65 +
+      (
+        priority.businessRelevance ||
+        0.5
+      ) * 2.2
+    );
+
+  const conversionImpact =
+    clampPriorityFactor(
+      CONVERSION_IMPACT_BY_CRITERION[
+        priority.id
+      ] || 3
+    );
+
+  const reach =
+    clampPriorityFactor(
+      Math.min(
+        submittedAssets || 1,
+        4
+      ) +
+      (
+        priority.id ===
+          "crossChannelConsistency" ||
+        priority.categoryId ===
+          "clarity"
+          ? 1
+          : 0
+      )
+    );
+
+  const foundation =
+    clampPriorityFactor(
+      FOUNDATION_BY_CATEGORY[
+        priority.categoryId
+      ] || 3
+    );
+
+  const businessPriorityScore =
+    Number(
+      (
+        customerImpact * 0.30 +
+        conversionImpact * 0.25 +
+        severity * 0.20 +
+        reach * 0.15 +
+        foundation * 0.10
+      ).toFixed(1)
+    );
+
+  const priorityLabel =
+    businessPriorityScore >= 4
+      ? "FIX FIRST"
+      : businessPriorityScore >= 3
+        ? "HIGH OPPORTUNITY"
+        : "BUILD ON";
+
+  const categoryId =
+    priority.categoryId ||
+    "clarity";
+
+  const solutionPaths =
+    SOLUTION_PATHS_BY_CRITERION[
+      priority.id
+    ] ||
+    SOLUTION_PATHS_BY_CATEGORY[
+      categoryId
+    ] ||
+    SOLUTION_PATHS_BY_CATEGORY.clarity;
+
+  const previewType =
+    PREVIEW_TYPE_BY_CRITERION[
+      priority.id
+    ] ||
+    "messaging";
+
+  const solutionPreview =
+    SOLUTION_PREVIEW_TEMPLATES[
+      previewType
+    ] ||
+    SOLUTION_PREVIEW_TEMPLATES.messaging;
+
+  return {
+    rank: 1,
+
+    label:
+      "Your #1 Growth Opportunity",
+
+    priorityLabel,
+
+    title:
+      priority.name,
+
+    customerJourney:
+      GROWTH_OUTCOME_BY_CATEGORY[
+        categoryId
+      ] ||
+      "UNDERSTAND → ACT",
+
+    businessPriorityScore,
+
+    scoringScale: 5,
+
+    factors: {
+      customerImpact,
+      conversionImpact,
+      severity,
+      reach,
+      foundation,
+    },
+
+    evidence:
+      priority.evidence ||
+      "The submitted materials indicate this is the most important customer-facing issue to address first.",
+
+    businessImpact:
+      priority.businessImpact ||
+      "Addressing this issue could reduce customer hesitation and improve the brand's ability to support the business goal.",
+
+    recommendedAction:
+      ACTION_BY_CATEGORY[
+        categoryId
+      ] ||
+      ACTION_BY_CATEGORY.clarity,
+
+    successMeasure:
+      KPI_BY_CATEGORY[
+        categoryId
+      ] ||
+      KPI_BY_CATEGORY.clarity,
+
+    solutionPaths,
+
+    solutionPreview,
+
+    goalContext:
+      business.twelveMonthGoal ||
+      "",
+
+    disclaimer:
+      "This identifies conversion potential, not a guaranteed sales result. Compare the selected KPI before and after implementation.",
+  };
+}
+function chooseStrongestSignal(
+  categories
+) {
+  const candidates =
+    categories
+      .flatMap(
+        category =>
+          category.subcriteria
+      )
+      .filter(
+        item =>
+          item.assessed
+      )
+      .map(
+        item => ({
+          ...item,
+
+          strengthScore:
+            (item.score / 5) *
+            (
+              CONFIDENCE_FACTORS[
+                item.confidence
+              ] || 0.5
+            ),
+        })
+      )
+      .sort(
+        (a, b) =>
+          b.strengthScore -
+          a.strengthScore
+      );
+
+  return candidates[0] || null;
+}
+
+/* =========================================================
+   NARRATIVE
+========================================================= */
+
+function categoryEvidenceDigest(
+  category
+) {
+  const assessed =
+    category.subcriteria
+      .filter(
+        item =>
+          item.assessed
+      )
+      .sort(
+        (a, b) =>
+          a.score - b.score
+      );
+
+  if (!assessed.length) {
+    return {
+      category:
+        category.name,
+
+      score:
+        category.score,
+
+      confidence:
+        category.confidence,
+
+      evidence:
+        "Not enough customer-facing evidence was available to assess this category confidently.",
+    };
+  }
+
+  const weakest =
+    assessed[0];
+
+  const strongest =
+    assessed[
+      assessed.length - 1
+    ];
+
+  return {
+    category:
+      category.name,
+
+    score:
+      category.score,
+
+    confidence:
+      category.confidence,
+
+    weakest: {
+      criterion:
+        weakest.name,
+      score:
+        weakest.score,
+      evidence:
+        weakest.evidence,
+      impact:
+        weakest.businessImpact,
+    },
+
+    strongest: {
+      criterion:
+        strongest.name,
+      score:
+        strongest.score,
+      evidence:
+        strongest.evidence,
+      impact:
+        strongest.businessImpact,
+    },
+  };
+}
+
+function buildLocalNarrative({
+  business,
+  brandHealth,
+  categories,
+  maturity,
+  gap,
+  pattern,
+  priority,
+  strongest,
+}) {
+  const categorySummaries = {};
+
+  for (const category of categories) {
+    const assessed =
+      category.subcriteria
+        .filter(item => item.assessed)
+        .sort((a, b) => a.score - b.score);
+
+    if (!assessed.length) {
+      categorySummaries[category.id] =
+        "There was not enough customer-facing evidence to assess this area confidently.";
+      continue;
+    }
+
+    const weakest = assessed[0];
+    const best = assessed[assessed.length - 1];
+
+    if (weakest.score <= 2) {
+      categorySummaries[category.id] =
+        `${weakest.name} is the main limiter here. ${weakest.evidence} ${weakest.businessImpact}`.trim();
+    }
+    else if (best.score >= 4) {
+      categorySummaries[category.id] =
+        `${best.name} is a clear strength. ${best.evidence}`.trim();
+    }
+    else {
+      categorySummaries[category.id] =
+        `${category.name} is functional but has room to become more effective. ${weakest.evidence}`.trim();
+    }
+  }
+
+  let gapSummary;
+
+  if (gap.level === "Brand Advantage") {
+    gapSummary =
+      "The brand is currently presenting ahead of what we would normally expect for a business at this stage.";
+  }
+  else if (gap.level === "Aligned") {
+    gapSummary =
+      "The brand is broadly keeping pace with the maturity of the business.";
+  }
+  else {
+    gapSummary =
+      `The business is operating at a maturity score of ${gap.businessMaturity}, while Brand Health is ${gap.actualBrandHealth}. That creates a ${gap.level.toLowerCase()} and suggests the brand is not fully keeping pace with the business behind it.`;
+  }
+
+  const strength =
+    strongest || priority;
+
+  const evidenceCandidates =
+    [
+      strongest,
+      priority,
+      ...categories.flatMap(
+        category =>
+          category.subcriteria
+            .filter(item => item.assessed)
+      ),
+    ]
+      .filter(Boolean)
+      .filter(
+        (item, index, array) =>
+          array.findIndex(
+            candidate =>
+              candidate.categoryId === item.categoryId &&
+              candidate.id === item.id
+          ) === index
+      )
+      .filter(item => item.evidence)
+      .slice(0, 3);
+
+  return {
+    brandHealthSummary:
+      `${business.name || "This brand"} earned a Brand Health score of ${brandHealth.score}/100, placing it in the ${brandHealth.level} range. The strongest opportunity is to improve ${priority.name.toLowerCase()} so the brand better supports the business's current stage and goals.`,
+
+    patternSummary:
+      `${pattern.name} best describes the current brand. ${pattern.definition}`,
+
+    gapSummary,
+
+    categorySummaries,
+
+    biggestStrength: {
+      title:
+        strength?.name ||
+        "Strongest observed signal",
+
+      summary:
+        strength?.evidence ||
+        "The submitted materials show several workable brand elements.",
+    },
+
+    biggestOpportunity: {
+      title:
+        priority.name,
+
+      summary:
+        `${priority.evidence} ${priority.businessImpact}`.trim(),
+    },
+
+    evidence:
+      evidenceCandidates.map(
+        item => ({
+          observation:
+            item.evidence,
+
+          impact:
+            item.businessImpact ||
+            item.reasoning ||
+            "This affects how clearly and confidently customers experience the brand.",
+        })
+      ),
+
+    freeRecommendation: {
+      title:
+        `Start with ${priority.name}`,
+
+      summary:
+        priority.businessImpact
+          ? `Address this first: ${priority.businessImpact}`
+          : `Make ${priority.name.toLowerCase()} the first improvement before investing in lower-priority brand changes.`,
+    },
+  };
+}
+
+/* =========================================================
+   FINAL RESPONSE ASSEMBLY
+========================================================= */
+
+function buildCategoriesForClient(
+  categories,
+  narrative
+) {
+  return categories.map(
+    category => ({
+      id:
+        category.id,
+
+      name:
+        category.name,
+
+      score:
+        category.score,
+
+      confidence:
+        category.confidence,
+
+      summary:
+        narrative
+          .categorySummaries?.[
+            category.id
+          ] ||
+        "Not enough evidence was available to summarize this category.",
+    })
+  );
+}
+
+function buildDiagnostics(
+  categories,
+  maturity,
+  businessSignals,
+  priority,
+  strongest
+) {
+  return {
+    scoringVersion:
+      SCORING_VERSION,
+
+    categoryRubric:
+      Object.fromEntries(
+        categories.map(
+          category => [
+            category.id,
+            {
+              score:
+                category.score,
+
+              confidence:
+                category.confidence,
+
+              subcriteria:
+                category.subcriteria,
+            },
+          ]
+        )
+      ),
+
+    businessMaturity:
+      maturity,
+
+    businessSignals:
+      businessSignals,
+
+    priority:
+      priority,
+
+    strongestSignal:
+      strongest,
+  };
+}
+
+/* =========================================================
+   ENGINE VALIDATION
+========================================================= */
+
+function validateRateEngineInput({
+  business,
+  images,
+}) {
+  if (
+    !process.env
+      .OPENAI_API_KEY
+  ) {
+    throw new Error(
+      "OPENAI_API_KEY is missing from Netlify."
+    );
+  }
+
+  if (
+    !Array.isArray(
+      images
+    ) ||
+    images.length <
+      MIN_IMAGES
+  ) {
+    throw new Error(
+      `Please provide at least ${MIN_IMAGES} brand asset.`
+    );
+  }
+
+  if (
+    images.length >
+      MAX_IMAGES
+  ) {
+    throw new Error(
+      `Please provide no more than ${MAX_IMAGES} brand assets.`
+    );
+  }
+
+  const invalidImage =
+    images.find(
+      image =>
+        !isAllowedImage(
+          image
+        )
+    );
+
+  if (invalidImage) {
+    throw new Error(
+      "Only PNG, JPG, and WEBP brand images are supported."
+    );
+  }
+
+  const sizes =
+    images.map(
+      image =>
+        getImageSize(
+          image.dataUrl
+        )
+    );
+
+  if (
+    sizes.some(
+      size =>
+        size >
+        MAX_IMAGE_BYTES
+    )
+  ) {
+    throw new Error(
+      "One or more brand images are larger than the 4 MB per-file production limit."
+    );
+  }
+
+  const totalBytes =
+    sizes.reduce(
+      (
+        sum,
+        size
+      ) =>
+        sum +
+        size,
+      0
+    );
+
+  if (
+    totalBytes >
+      MAX_TOTAL_IMAGE_BYTES
+  ) {
+    throw new Error(
+      "The submitted brand asset set exceeds the current production processing limit."
+    );
+  }
+
+  const normalizedBusiness =
+    normalizeBusiness(
+      business
+    );
+
+  if (
+    !normalizedBusiness.name
+  ) {
+    throw new Error(
+      "The business / brand name is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .description
+  ) {
+    throw new Error(
+      "The business description is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .audience
+  ) {
+    throw new Error(
+      "The primary audience is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .yearsInBusiness
+  ) {
+    throw new Error(
+      "Years in business is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .teamSize
+  ) {
+    throw new Error(
+      "Team size is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .traction
+  ) {
+    throw new Error(
+      "Customer traction is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .brandConcern
+  ) {
+    throw new Error(
+      "The primary brand concern is missing."
+    );
+  }
+
+  if (
+    !normalizedBusiness
+      .twelveMonthGoal
+  ) {
+    throw new Error(
+      "The 12-month goal is missing."
+    );
+  }
+
+  return {
+    business:
+      normalizedBusiness,
+
+    totalBytes,
+  };
+}
+
+
+/* =========================================================
+   PROGRESS CALLBACK
+========================================================= */
+
+async function reportStage(
+  onStage,
+  stage,
+  progress,
+  message
+) {
+  if (
+    typeof onStage !==
+      "function"
+  ) {
+    return;
+  }
+
+  try {
+    await onStage({
+      stage,
+      progress,
+      message,
+    });
+  }
+  catch (
+    error
+  ) {
+    /*
+      Progress reporting must never terminate the
+      actual Brand Rater analysis.
+    */
+    console.warn(
+      "Brand Rater Rate stage callback failed:",
+      error
+    );
+  }
+}
+
+
+/* =========================================================
+   PUBLIC RATE ENGINE
+========================================================= */
+
+async function analyzeRate({
+  business,
+  images,
+  onStage = null,
+}) {
+  const validated =
+    validateRateEngineInput({
+      business,
+      images,
+    });
+
+  const normalizedBusiness =
+    validated.business;
+
+  await reportStage(
+    onStage,
+    "analyzing-brand-evidence",
+    54,
+    "Analyzing customer-facing brand evidence"
+  );
+
+  const imageInputs =
+    images.flatMap(
+      (
+        image,
+        index
+      ) => [
+        {
+          type:
+            "input_text",
+
+          text:
+            `BRAND ASSET ${index + 1} — ${image.name || `Brand asset ${index + 1}`}`,
+        },
+
+        {
+          type:
+            "input_image",
+
+          image_url:
+            image.dataUrl,
+
+          detail:
+            IMAGE_DETAIL,
+        },
+      ]
+    );
+
+  const analysisPrompt =
+    buildAnalysisPrompt({
+      business:
+        normalizedBusiness,
+
+      imageNames:
+        images.map(
+          (
+            image,
+            index
+          ) =>
+            image.name ||
+            `Brand asset ${index + 1}`
+        ),
+    });
+
+  const modelAnalysis =
+    await callOpenAI({
+      model:
+        ANALYSIS_MODEL,
+
+      content: [
+        ...imageInputs,
+
+        {
+          type:
+            "input_text",
+
+          text:
+            analysisPrompt,
+        },
+      ],
+
+      schema:
+        ANALYSIS_SCHEMA,
+
+      schemaName:
+        "brand_rater_v2_analysis",
+
+      maxOutputTokens:
+        5000,
+    });
+
+  await reportStage(
+    onStage,
+    "scoring-brand-health",
+    72,
+    "Scoring Brand Health"
+  );
+
+  const categories =
+    calculateCategoryScores(
+      modelAnalysis
+    );
+
+  const brandHealth =
+    calculateBrandHealth(
+      categories
+    );
+
+  const maturity =
+    calculateBusinessMaturity(
+      normalizedBusiness,
+      modelAnalysis
+        .businessSignals
+    );
+
+  const gap =
+    calculateBrandGap(
+      maturity.score,
+      brandHealth.score
+    );
+
+  await reportStage(
+    onStage,
+    "identifying-brand-pattern",
+    84,
+    "Identifying the Brand Pattern and highest-priority opportunity"
+  );
+
+  const pattern =
+    selectBrandPattern({
+      categories,
+      brandHealth,
+      maturity,
+      gap,
+      business:
+        normalizedBusiness,
+
+      businessSignals:
+        modelAnalysis
+          .businessSignals,
+    });
+
+  const priority =
+    choosePriority(
+      categories,
+      normalizedBusiness
+    );
+
+  const strongest =
+    chooseStrongestSignal(
+      categories
+    );
+
+  const growthOpportunity =
+    buildGrowthOpportunity({
+      priority,
+
+      business:
+        normalizedBusiness,
+
+      submittedAssets:
+        images.length,
+    });
+
+  await reportStage(
+    onStage,
+    "building-assessment",
+    92,
+    "Building the Brand Health assessment"
+  );
+
+  const narrative =
+    buildLocalNarrative({
+      business:
+        normalizedBusiness,
+
+      brandHealth,
+      categories,
+      maturity,
+      gap,
+      pattern,
+      priority,
+      strongest,
+    });
+
+  const createdAt =
+    new Date()
+      .toISOString();
+
+  const result = {
+    version:
+      SCORING_VERSION,
+
+    brandHealth: {
+      score:
+        brandHealth.score,
+
+      level:
+        brandHealth.level,
+
+      confidence:
+        brandHealth.confidence,
+
+      summary:
+        narrative
+          .brandHealthSummary,
+    },
+
+    brandPattern: {
+      id:
+        pattern.id,
+
+      name:
+        pattern.name,
+
+      confidence:
+        pattern.confidence,
+
+      secondarySignal:
+        pattern.secondarySignal,
+
+      summary:
+        narrative
+          .patternSummary,
+    },
+
+    brandGap: {
+      businessMaturity:
+        gap.businessMaturity,
+
+      expectedBrandHealth:
+        gap.expectedBrandHealth,
+
+      actualBrandHealth:
+        gap.actualBrandHealth,
+
+      gap:
+        gap.gap,
+
+      level:
+        gap.level,
+
+      summary:
+        narrative
+          .gapSummary,
+    },
+
+    categories:
+      buildCategoriesForClient(
+        categories,
+        narrative
+      ),
+
+    biggestStrength:
+      narrative
+        .biggestStrength,
+
+    biggestOpportunity:
+      narrative
+        .biggestOpportunity,
+
+    evidence:
+      Array.isArray(
+        narrative.evidence
+      )
+        ? narrative
+            .evidence
+            .slice(
+              0,
+              3
+            )
+        : [],
+
+    freeRecommendation:
+      narrative
+        .freeRecommendation,
+
+    growthOpportunity,
+
+    actionPlanPreview: {
+      available:
+        false,
+
+      label:
+        "Brand Action Plan",
+
+      includes: [
+        "Fix First + Fix Next",
+        "Quick wins + budget guidance",
+        "What not to prioritize",
+        "90-day roadmap",
+      ],
+    },
+
+    assessmentMeta: {
+      assessmentId:
+        null,
+
+      createdAt,
+
+      scoringVersion:
+        SCORING_VERSION,
+
+      overallConfidence:
+        brandHealth.confidence,
+
+      analysisModel:
+        ANALYSIS_MODEL,
+
+      narrativeModel:
+        "local-deterministic",
+
+      imageDetail:
+        IMAGE_DETAIL,
+
+      submittedAssets:
+        images.length,
+
+      totalUploadBytes:
+        validated.totalBytes,
+
+      baselineSaved:
+        false,
+
+      architectureVersion:
+        RATE_ARCHITECTURE_VERSION,
+    },
+
+    diagnostics:
+      buildDiagnostics(
+        categories,
+        maturity,
+        modelAnalysis
+          .businessSignals,
+        priority,
+        strongest
+      ),
+  };
+
+  await reportStage(
+    onStage,
+    "assessment-ready",
+    97,
+    "Brand Health assessment ready"
+  );
+
+  return result;
+}
+
+
+/* =========================================================
+   EXPORTS
+========================================================= */
+
+module.exports = {
+  analyzeRate,
+  buildAssessmentComparison,
+  normalizeBusiness,
+  SCORING_VERSION,
+  RATE_ARCHITECTURE_VERSION,
+  RUBRIC,
+  MIN_IMAGES,
+  MAX_IMAGES,
+  MAX_IMAGE_BYTES,
+  MAX_TOTAL_IMAGE_BYTES,
+};
