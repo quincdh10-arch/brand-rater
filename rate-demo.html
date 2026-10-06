@@ -1,0 +1,6119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Brand Enterprise | Rate Demo</title>
+  <meta
+    name="description"
+    content="See whether your brand is keeping up with your business. Get a structured Brand Health assessment across clarity, credibility, consistency, distinctiveness, and visual execution."
+  />
+
+  <script
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+    async
+    defer
+  ></script>
+
+  <style>
+    :root {
+      --milky-blue: #1e66a5;
+      --milky-blue-dark: #18598f;
+      --galaxy-navy: #0e1e3c;
+      --milky-white: #f9fafb;
+      --starlight-yellow: #ffd85c;
+
+      --page-bg: #f3f4f7;
+      --card: #ffffff;
+      --text: #111827;
+      --body-text: #344054;
+      --muted: #667085;
+      --subtle: #98a2b3;
+      --success: #1f7a4d;
+      --warning: #a15c08;
+
+      --line: rgba(14, 30, 60, 0.12);
+      --line-strong: rgba(14, 30, 60, 0.18);
+
+      --shadow:
+        0 2px 4px rgba(14, 30, 60, 0.03),
+        0 18px 48px rgba(14, 30, 60, 0.07);
+
+      --shadow-lg:
+        0 10px 28px rgba(14, 30, 60, 0.08),
+        0 28px 70px rgba(14, 30, 60, 0.08);
+
+      --radius-xl: 30px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
+      --container: 1240px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--galaxy-navy);
+      background: var(--page-bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font-family: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    /* =========================================================
+       NAVIGATION
+    ========================================================= */
+
+    .site-nav {
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 32px;
+      background: var(--milky-blue);
+      color: var(--milky-white);
+    }
+
+    .nav-inner {
+      width: min(100%, var(--container));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 110px;
+      height: auto;
+    }
+
+    .back-link {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 999px;
+      background: var(--milky-white);
+      color: var(--galaxy-navy);
+      text-decoration: none;
+      font-size: 15px;
+      line-height: 1;
+      font-weight: 700;
+      white-space: nowrap;
+      transition:
+        transform 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+    }
+
+    .back-link:hover {
+      transform: translateY(-1px);
+      background: #ffffff;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    /* =========================================================
+       GLOBAL
+    ========================================================= */
+
+    main {
+      width: min(100%, var(--container));
+      margin: 0 auto;
+      padding: 72px 32px 48px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 0 22px;
+      padding: 10px 16px;
+      border: 1px solid rgba(30, 102, 165, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.68);
+      color: var(--milky-blue);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .section-kicker {
+      margin: 0 0 10px;
+      color: var(--milky-blue);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(30, 102, 165, 0.08);
+      color: var(--milky-blue);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* =========================================================
+       INTAKE HERO
+    ========================================================= */
+
+    .top-grid {
+      display: grid;
+      grid-template-columns:
+        minmax(0, 0.88fr)
+        minmax(500px, 1.12fr);
+      align-items: start;
+      gap: clamp(48px, 6vw, 84px);
+    }
+
+    .hero-card {
+      position: sticky;
+      top: 40px;
+      padding-top: 42px;
+    }
+
+    .hero-title {
+      max-width: 650px;
+      margin: 0 0 26px;
+      color: var(--text);
+      font-size: clamp(50px, 5.3vw, 74px);
+      line-height: 0.98;
+      letter-spacing: -0.057em;
+      font-weight: 800;
+    }
+
+    .hero-copy {
+      max-width: 590px;
+      margin: 0 0 34px;
+      color: var(--body-text);
+      font-size: clamp(19px, 1.7vw, 23px);
+      line-height: 1.43;
+      letter-spacing: -0.025em;
+    }
+
+    .benefits {
+      max-width: 580px;
+      display: grid;
+      gap: 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--galaxy-navy);
+      font-size: 17px;
+      line-height: 1.4;
+    }
+
+    .benefits li {
+      position: relative;
+      padding-left: 31px;
+    }
+
+    .benefits li::before {
+      content: "✓";
+      position: absolute;
+      top: 1px;
+      left: 0;
+      width: 21px;
+      height: 21px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(30, 102, 165, 0.18);
+      border-radius: 50%;
+      background: rgba(30, 102, 165, 0.08);
+      color: var(--milky-blue);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    /* =========================================================
+       FORM CARD / PROGRESS
+    ========================================================= */
+
+    .form-card {
+      padding: clamp(30px, 4vw, 48px);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .progress-wrap {
+      margin-bottom: 34px;
+    }
+
+    .progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 7px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e9edf3;
+    }
+
+    .progress-fill {
+      width: 33.333%;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--milky-blue);
+      transition: width 220ms ease;
+    }
+
+    .step-label {
+      margin: 0 0 9px;
+      color: var(--milky-blue);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .form-title {
+      margin: 0 0 11px;
+      color: var(--text);
+      font-size: clamp(30px, 3vw, 40px);
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+      font-weight: 800;
+    }
+
+    .form-intro {
+      max-width: 520px;
+      margin: 0 0 30px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.48;
+    }
+
+    .form-step {
+      display: none;
+    }
+
+    .form-step.is-active {
+      display: block;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .field-group {
+      margin-bottom: 20px;
+    }
+
+    .field-group.full {
+      grid-column: 1 / -1;
+    }
+
+    .field-label {
+      display: block;
+      margin: 0 0 9px;
+      color: #475467;
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .field-help {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .text-input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid rgba(14, 30, 60, 0.16);
+      border-radius: 14px;
+      background: #f9fafb;
+      color: var(--galaxy-navy);
+      font: inherit;
+      font-size: 16px;
+      outline: none;
+      transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease;
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    .text-input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--milky-blue);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(30, 102, 165, 0.1);
+    }
+
+    .text-input::placeholder,
+    textarea::placeholder {
+      color: var(--subtle);
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 11px;
+    }
+
+    .choice {
+      position: relative;
+    }
+
+    .choice input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .choice label {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+      color: var(--body-text);
+      font-size: 14px;
+      line-height: 1.35;
+      font-weight: 700;
+      cursor: pointer;
+      transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+    }
+
+    .choice input:checked + label {
+      border-color: var(--milky-blue);
+      background: rgba(30, 102, 165, 0.055);
+      box-shadow: 0 0 0 3px rgba(30, 102, 165, 0.08);
+      color: var(--galaxy-navy);
+    }
+
+    .choice label:hover {
+      transform: translateY(-1px);
+      border-color: rgba(30, 102, 165, 0.35);
+    }
+
+    /* =========================================================
+       UPLOAD
+    ========================================================= */
+
+    .upload-zone {
+      position: relative;
+      min-height: 218px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 18px;
+      padding: 30px;
+      overflow: hidden;
+      border: 1.5px dashed rgba(30, 102, 165, 0.55);
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(30, 102, 165, 0.025),
+          rgba(30, 102, 165, 0.055)
+        );
+      text-align: center;
+      cursor: pointer;
+      transition:
+        background 180ms ease,
+        transform 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--milky-blue);
+      background: rgba(30, 102, 165, 0.075);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(30, 102, 165, 0.07);
+    }
+
+    .upload-input {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 17px;
+      border-radius: 50%;
+      background: var(--galaxy-navy);
+      color: white;
+    }
+
+    .upload-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .upload-label {
+      margin: 0 0 8px;
+      color: var(--text);
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .upload-hint {
+      max-width: 380px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .previews {
+      display: none;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 24px;
+    }
+
+    .previews.has-files {
+      display: flex;
+    }
+
+    .preview-item {
+      position: relative;
+      width: 82px;
+      height: 82px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+    }
+
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .preview-remove {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      z-index: 3;
+      width: 23px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(14, 30, 60, 0.9);
+      color: white;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .turnstile-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 22px 0 24px;
+    }
+
+    /* =========================================================
+       BUTTONS
+    ========================================================= */
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .form-actions.is-single {
+      justify-content: flex-end;
+    }
+
+    .primary-btn,
+    .secondary-btn {
+      min-height: 54px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 27px;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        background 160ms ease,
+        border-color 160ms ease,
+        opacity 160ms ease,
+        box-shadow 160ms ease;
+    }
+
+    .primary-btn {
+      border: 0;
+      background: var(--milky-blue);
+      color: white;
+      font-size: 16px;
+    }
+
+    .primary-btn:hover {
+      background: var(--milky-blue-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(30, 102, 165, 0.18);
+    }
+
+    .primary-btn:active {
+      transform: translateY(0);
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .secondary-btn {
+      border: 1px solid var(--line-strong);
+      background: transparent;
+      color: var(--galaxy-navy);
+      font-size: 15px;
+    }
+
+    .secondary-btn:hover {
+      border-color: rgba(30, 102, 165, 0.4);
+      background: rgba(30, 102, 165, 0.05);
+    }
+
+    .privacy-note {
+      margin: 15px 0 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .error-text {
+      display: none;
+      margin: 16px 0 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(173, 55, 55, 0.18);
+      border-radius: 12px;
+      background: rgba(173, 55, 55, 0.06);
+      color: #8c2c2c;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .error-text.is-visible {
+      display: block;
+    }
+
+    /* =========================================================
+       EXPLAINER
+    ========================================================= */
+
+    .how-section {
+      padding: 112px 0 20px;
+    }
+
+    .section-title {
+      max-width: 760px;
+      margin: 0 0 38px;
+      color: var(--text);
+      font-size: clamp(39px, 4vw, 54px);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      font-weight: 800;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .step-card {
+      min-height: 235px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 29px;
+      border-radius: 22px;
+    }
+
+    .step-number {
+      width: 39px;
+      height: 39px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 36px;
+      border: 1px solid rgba(30, 102, 165, 0.2);
+      border-radius: 50%;
+      background: rgba(30, 102, 165, 0.08);
+      color: var(--milky-blue);
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .step-card h3 {
+      margin: auto 0 10px;
+      color: var(--text);
+      font-size: 25px;
+      line-height: 1.06;
+      letter-spacing: -0.045em;
+      font-weight: 800;
+    }
+
+    .step-card p {
+      max-width: 330px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.48;
+    }
+
+    /* =========================================================
+       ASYNC RATE PROCESSING
+    ========================================================= */
+
+    #processing-view {
+      display: none;
+      padding: 64px 0 80px;
+    }
+
+    .processing-shell {
+      width: min(760px, calc(100% - 36px));
+      margin: 0 auto;
+    }
+
+    .processing-card {
+      padding: clamp(30px, 5vw, 54px);
+      border-radius: var(--radius-xl);
+    }
+
+    .processing-title {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+      font-weight: 800;
+    }
+
+    .processing-copy {
+      max-width: 640px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .processing-job-id {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+
+    .rate-progress {
+      margin-top: 34px;
+    }
+
+    .rate-progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(14, 30, 60, 0.09);
+    }
+
+    .rate-progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--milky-blue);
+      transition: width 320ms ease;
+    }
+
+    .rate-progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .rate-stage-list {
+      display: grid;
+      gap: 12px;
+      margin: 30px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .rate-stage-item {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 13px;
+      align-items: start;
+      padding: 15px 16px;
+      border: 1px solid rgba(14, 30, 60, 0.08);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.68);
+      opacity: 0.62;
+      transition:
+        opacity 180ms ease,
+        border-color 180ms ease,
+        background 180ms ease;
+    }
+
+    .rate-stage-item.is-active,
+    .rate-stage-item.is-complete {
+      opacity: 1;
+    }
+
+    .rate-stage-item.is-active {
+      border-color: rgba(30, 102, 165, 0.32);
+      background: rgba(30, 102, 165, 0.055);
+    }
+
+    .rate-stage-icon {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(30, 102, 165, 0.1);
+      color: var(--milky-blue);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .rate-stage-item.is-complete .rate-stage-icon {
+      background: var(--milky-blue);
+      color: white;
+    }
+
+    .rate-stage-item strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .rate-stage-item span:last-child {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .processing-note {
+      margin: 26px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .processing-error {
+      display: none;
+      margin: 24px 0 0;
+      padding: 14px 16px;
+      border: 1px solid rgba(180, 52, 52, 0.2);
+      border-radius: 14px;
+      background: rgba(180, 52, 52, 0.06);
+      color: #8d2525;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .processing-error.is-visible {
+      display: block;
+    }
+
+    .processing-actions {
+      display: none;
+      margin-top: 18px;
+    }
+
+    .processing-actions.is-visible {
+      display: flex;
+    }
+
+    /* =========================================================
+       RESULTS
+    ========================================================= */
+
+    #results-view {
+      display: none;
+    }
+
+    .results-main {
+      padding-top: 64px;
+    }
+
+    .results-intro {
+      display: grid;
+      grid-template-columns:
+        minmax(0, 0.7fr)
+        minmax(0, 1.3fr);
+      align-items: center;
+      gap: clamp(38px, 6vw, 80px);
+      margin-bottom: 24px;
+      padding: clamp(34px, 5vw, 58px);
+      border-radius: var(--radius-xl);
+    }
+
+    .results-score-side {
+      text-align: center;
+    }
+
+    .score-circle {
+      width: 190px;
+      height: 190px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      border-radius: 50%;
+      background:
+        linear-gradient(
+          145deg,
+          #2475ba,
+          var(--milky-blue)
+        );
+      color: white;
+      box-shadow: 0 16px 35px rgba(30, 102, 165, 0.2);
+    }
+
+    .score-circle span {
+      display: block;
+      font-size: 67px;
+      line-height: 0.92;
+      font-weight: 800;
+      letter-spacing: -0.06em;
+    }
+
+    .score-circle small {
+      display: block;
+      margin-top: 5px;
+      font-size: 15px;
+      font-weight: 700;
+      opacity: 0.82;
+    }
+
+    .results-copy-side {
+      max-width: 690px;
+    }
+
+    .results-verdict {
+      margin: 0 0 16px;
+      color: var(--text);
+      font-size: clamp(37px, 4.2vw, 57px);
+      line-height: 1;
+      letter-spacing: -0.052em;
+      font-weight: 800;
+    }
+
+    .results-summary {
+      max-width: 650px;
+      margin: 0;
+      color: var(--body-text);
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .diagnostic-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .diagnostic-card {
+      padding: 30px;
+    }
+
+    .diagnostic-card h2 {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: 31px;
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+    }
+
+    .diagnostic-card p:last-child {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .gap-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 20px 0 16px;
+    }
+
+    .gap-metric {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(30, 102, 165, 0.055);
+    }
+
+    .gap-metric span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .gap-metric strong {
+      color: var(--text);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .results-section-header {
+      margin: 72px 0 28px;
+    }
+
+    .results-section-header h2 {
+      margin: 0;
+      color: var(--text);
+      font-size: clamp(34px, 3.8vw, 48px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .category-card {
+      min-height: 235px;
+      display: flex;
+      flex-direction: column;
+      padding: 25px;
+    }
+
+    .category-name {
+      margin: 0 0 26px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .category-score {
+      margin: 0 0 16px;
+      color: var(--text);
+      font-size: 46px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+    }
+
+    .category-score small {
+      color: var(--subtle);
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 7px;
+      overflow: hidden;
+      margin-bottom: 17px;
+      border-radius: 999px;
+      background: #e9edf3;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--milky-blue);
+    }
+
+    .category-note {
+      margin: auto 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .insight-card {
+      padding: 30px;
+    }
+
+    .insight-card h3 {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: 27px;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+
+    .insight-card p:last-child {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .evidence-card,
+    .priority-card {
+      padding: clamp(31px, 5vw, 52px);
+      margin-bottom: 24px;
+      border-radius: var(--radius-xl);
+    }
+
+    .evidence-list {
+      display: grid;
+      gap: 0;
+      margin-top: 25px;
+    }
+
+    .evidence-row {
+      display: grid;
+      grid-template-columns:
+        minmax(0, 0.8fr)
+        minmax(0, 1.2fr);
+      gap: 32px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .evidence-row strong {
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .evidence-row p {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 15px;
+      line-height: 1.52;
+    }
+
+    .priority-card {
+      background: var(--galaxy-navy);
+      color: white;
+      border: 0;
+    }
+
+    .priority-card .section-kicker {
+      color: rgba(249, 250, 251, 0.65);
+    }
+
+    .priority-card h2 {
+      max-width: 720px;
+      margin: 0 0 16px;
+      color: white;
+      font-size: clamp(34px, 4vw, 49px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .priority-card p {
+      max-width: 720px;
+      margin: 0;
+      color: rgba(249, 250, 251, 0.78);
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    .priority-meta { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 24px; }
+    .priority-pill { display:inline-flex; align-items:center; min-height:34px; padding:7px 12px; border:1px solid rgba(255,255,255,.18); border-radius:999px; background:rgba(255,255,255,.08); color:white; font-size:12px; line-height:1; font-weight:800; letter-spacing:.055em; text-transform:uppercase; }
+    .growth-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:28px; }
+    .growth-detail { padding:20px; border:1px solid rgba(255,255,255,.14); border-radius:16px; background:rgba(255,255,255,.055); }
+    .growth-detail strong { display:block; margin-bottom:8px; color:white; font-size:14px; }
+    .growth-detail p { font-size:14px; }
+    .growth-disclaimer { margin-top:18px !important; font-size:12px !important; opacity:.76; }
+
+    .improvement-preview { margin-top:36px; padding:26px; border:1px solid rgba(255,255,255,.16); border-radius:20px; background:rgba(255,255,255,.045); }
+    .improvement-preview-header { margin-bottom:18px; }
+    .improvement-preview-kicker { margin:0 0 8px !important; color:var(--starlight-yellow) !important; font-size:11px !important; line-height:1 !important; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .improvement-preview-title { margin:0; color:white; font-size:24px; line-height:1.15; letter-spacing:-.025em; }
+    .preview-comparison { display:grid; grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr); align-items:stretch; gap:14px; }
+    .preview-panel { min-width:0; padding:22px; border:1px solid rgba(255,255,255,.14); border-radius:18px; background:rgba(255,255,255,.05); }
+    .preview-panel.is-improved { border-color:rgba(255,216,92,.55); background:rgba(255,216,92,.09); }
+    .preview-panel-label { margin:0 0 18px !important; color:rgba(249,250,251,.62) !important; font-size:11px !important; line-height:1 !important; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .preview-panel.is-improved .preview-panel-label { color:var(--starlight-yellow) !important; }
+    .preview-mock-headline { margin:0 0 10px; color:white; font-size:clamp(21px,2.3vw,29px); line-height:1.08; letter-spacing:-.035em; }
+    .preview-mock-copy { min-height:63px; margin:0 0 17px !important; color:rgba(249,250,251,.73) !important; font-size:14px !important; line-height:1.5 !important; }
+    .preview-mock-cta { width:fit-content; display:inline-flex; align-items:center; min-height:36px; padding:8px 13px; border:1px solid rgba(255,255,255,.2); border-radius:999px; color:white; font-size:12px; line-height:1.2; font-weight:800; }
+    .preview-panel.is-improved .preview-mock-cta { border-color:var(--starlight-yellow); background:var(--starlight-yellow); color:var(--galaxy-navy); }
+    .preview-signal-list { display:grid; gap:8px; margin:18px 0 0; padding:16px 0 0; border-top:1px solid rgba(255,255,255,.12); list-style:none; }
+    .preview-signal-list li { position:relative; padding-left:17px; color:rgba(249,250,251,.74); font-size:12px; line-height:1.4; }
+    .preview-signal-list li::before { content:"•"; position:absolute; left:2px; color:var(--starlight-yellow); font-weight:800; }
+    .preview-arrow { display:flex; align-items:center; justify-content:center; color:var(--starlight-yellow); font-size:25px; font-weight:800; }
+    .preview-disclaimer { margin:16px 0 0 !important; color:rgba(249,250,251,.58) !important; font-size:11px !important; line-height:1.45 !important; }
+
+    .solution-paths-heading { margin:36px 0 16px; color:white; font-size:22px; line-height:1.15; }
+    .solution-paths-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .solution-path-card { display:flex; flex-direction:column; min-width:0; padding:22px; border:1px solid rgba(255,255,255,.14); border-radius:18px; background:rgba(255,255,255,.055); }
+    .solution-path-card.is-featured { border-color:rgba(255,216,92,.55); background:rgba(255,216,92,.09); }
+    .solution-path-label { margin:0 0 12px; color:var(--starlight-yellow); font-size:11px; line-height:1; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .solution-path-card h3 { margin:0 0 10px; color:white; font-size:21px; line-height:1.12; letter-spacing:-.025em; }
+    .solution-path-card > p:not(.solution-path-label) { margin:0 0 16px; color:rgba(249,250,251,.75); font-size:14px; line-height:1.5; }
+    .solution-steps { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+    .solution-steps li { position:relative; padding-left:18px; color:rgba(249,250,251,.82); font-size:13px; line-height:1.4; }
+    .solution-steps li::before { content:"✓"; position:absolute; left:0; color:var(--starlight-yellow); font-weight:800; }
+    .solution-service { margin-top:auto !important; padding-top:4px; color:white !important; font-weight:800; }
+    .solution-price { display:inline-block; margin-left:5px; color:var(--starlight-yellow); }
+    .solution-link { min-height:44px; display:inline-flex; align-items:center; justify-content:center; margin-top:18px; padding:11px 16px; border-radius:999px; background:white; color:var(--galaxy-navy); font-size:13px; line-height:1.2; font-weight:800; text-align:center; text-decoration:none; }
+    .solution-link:hover { background:var(--starlight-yellow); }
+
+    .action-preview {
+      margin-top: 28px;
+      padding: 26px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .locked-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0 22px;
+    }
+
+    .locked-item {
+      min-height: 78px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.09);
+      color: white;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .light-btn {
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 22px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--milky-white);
+      color: var(--galaxy-navy);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .ghost-light-btn {
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 22px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      background: transparent;
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .restart-wrap {
+      padding: 18px 0 30px;
+      text-align: center;
+    }
+
+    .rerate-banner { display:none; margin:0 0 22px; padding:18px; border:1px solid rgba(30,102,165,.18); border-radius:16px; background:rgba(30,102,165,.06); }
+    .rerate-banner.is-visible { display:block; }
+    .rerate-banner strong { display:block; margin-bottom:6px; color:var(--galaxy-navy); font-size:16px; }
+    .rerate-banner p { margin:0 0 13px; color:var(--body-text); font-size:13px; line-height:1.45; }
+    .rerate-banner button { min-height:40px; padding:9px 15px; border:0; border-radius:999px; background:var(--milky-blue); color:white; font-weight:800; cursor:pointer; }
+
+    .comparison-card { margin-bottom:24px; padding:clamp(28px,4vw,46px); background:var(--galaxy-navy); color:white; border:0; }
+    .comparison-card .section-kicker { color:var(--starlight-yellow); }
+    .comparison-card h2 { margin:0 0 10px; color:white; font-size:clamp(32px,4vw,48px); line-height:1; letter-spacing:-.045em; }
+    .comparison-card > p { margin:0; color:rgba(249,250,251,.76); line-height:1.5; }
+    .comparison-overall { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:14px; margin:28px 0; }
+    .comparison-score { padding:20px; border:1px solid rgba(255,255,255,.14); border-radius:16px; background:rgba(255,255,255,.06); text-align:center; }
+    .comparison-score span { display:block; margin-bottom:7px; color:rgba(249,250,251,.62); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .comparison-score strong { font-size:38px; line-height:1; }
+    .comparison-score.is-change strong { color:var(--starlight-yellow); }
+    .comparison-arrow { color:var(--starlight-yellow); font-size:25px; font-weight:800; }
+    .comparison-table { width:100%; border-collapse:collapse; }
+    .comparison-table th, .comparison-table td { padding:13px 10px; border-top:1px solid rgba(255,255,255,.13); text-align:right; }
+    .comparison-table th:first-child, .comparison-table td:first-child { text-align:left; }
+    .comparison-table th { color:rgba(249,250,251,.58); font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
+    .comparison-table td { color:white; font-size:14px; }
+    .comparison-change-positive { color:#86efac !important; font-weight:800; }
+    .comparison-change-negative { color:#fca5a5 !important; font-weight:800; }
+    .comparison-highlights { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:22px; }
+    .comparison-highlight { padding:17px; border-radius:14px; background:rgba(255,255,255,.07); }
+    .comparison-highlight span { display:block; margin-bottom:5px; color:rgba(249,250,251,.58); font-size:11px; font-weight:800; text-transform:uppercase; }
+    .comparison-highlight strong { color:white; }
+    .comparison-note { margin-top:18px !important; font-size:11px !important; color:rgba(249,250,251,.55) !important; }
+
+    .comparison-unchanged {
+      margin: 28px 0 0;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.07);
+    }
+
+    .comparison-unchanged-score {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .comparison-unchanged-score strong {
+      color: white;
+      font-size: clamp(36px, 5vw, 54px);
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+
+    .comparison-unchanged-score span {
+      color: rgba(249,250,251,.58);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .comparison-unchanged-copy {
+      margin: 0;
+      max-width: 760px;
+      color: rgba(249,250,251,.78);
+      line-height: 1.55;
+    }
+
+    .comparison-unchanged-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .comparison-unchanged-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      color: rgba(249,250,251,.72);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    /* =========================================================
+       MODAL
+    ========================================================= */
+
+    .lead-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(14, 30, 60, 0.78);
+      backdrop-filter: blur(7px);
+    }
+
+    .lead-modal-backdrop.is-open {
+      display: flex;
+    }
+
+    .lead-modal {
+      width: min(100%, 560px);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      padding: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 26px;
+      background: white;
+      box-shadow: 0 28px 80px rgba(14, 30, 60, 0.32);
+    }
+
+    .modal-eyebrow {
+      margin: 0 0 14px;
+      color: var(--milky-blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .lead-modal h2 {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: 36px;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      font-weight: 800;
+    }
+
+    .lead-modal > p:not(.modal-eyebrow) {
+      margin: 0 0 25px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .lead-form-grid {
+      display: grid;
+      gap: 13px;
+    }
+
+    .lead-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .lead-note,
+    .save-success {
+      margin: 3px 0 0;
+      color: rgba(14, 30, 60, 0.62);
+      font-size: 12px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .save-success {
+      display: none;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(31, 122, 77, 0.08);
+      color: var(--success);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .save-success.is-visible {
+      display: block;
+    }
+
+    .bot-field {
+      position: absolute;
+      left: -9999px;
+      display: none !important;
+      visibility: hidden;
+    }
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+
+    .site-footer {
+      margin-top: 76px;
+      padding: 38px 32px;
+      background: var(--galaxy-navy);
+      color: var(--milky-white);
+    }
+
+    .footer-inner {
+      width: min(100%, var(--container));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin: 0 auto;
+      font-size: 14px;
+    }
+
+    .footer-brand {
+      font-weight: 700;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .footer-links a {
+      color: var(--milky-white);
+      text-underline-offset: 4px;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+    ========================================================= */
+
+    @media (max-width: 1020px) {
+      main {
+        padding-top: 58px;
+      }
+
+      .top-grid {
+        grid-template-columns: 1fr;
+        gap: 52px;
+      }
+
+      .hero-card {
+        position: static;
+        max-width: 760px;
+        padding-top: 0;
+      }
+
+      .form-card {
+        max-width: 820px;
+      }
+
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .step-card {
+        min-height: auto;
+      }
+
+      .results-intro,
+      .evidence-row {
+        grid-template-columns: 1fr;
+      }
+
+      .results-intro {
+        text-align: center;
+      }
+
+      .results-copy-side {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+
+      .diagnostic-grid,
+      .insight-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .locked-list {
+        grid-template-columns: 1fr;
+      }
+
+      .growth-details {
+        grid-template-columns: 1fr;
+      }
+
+      .solution-paths-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .comparison-overall {
+        grid-template-columns: 1fr;
+      }
+
+      .comparison-arrow {
+        transform:rotate(90deg);
+        text-align:center;
+      }
+
+      .comparison-highlights {
+        grid-template-columns:1fr;
+      }
+
+      .preview-comparison {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-arrow {
+        min-height: 20px;
+        transform: rotate(90deg);
+      }
+    }
+
+    @media (max-width: 700px) {
+      .site-nav {
+        min-height: 70px;
+        padding-inline: 18px;
+      }
+
+      .brand-logo {
+        width: 92px;
+      }
+
+      .back-link {
+        min-height: 40px;
+        padding-inline: 14px;
+        font-size: 13px;
+      }
+
+      main {
+        padding: 44px 18px 28px;
+      }
+
+      .hero-title {
+        font-size: clamp(44px, 13vw, 54px);
+      }
+
+      .hero-copy {
+        font-size: 18px;
+      }
+
+      .field-grid,
+      .choice-grid,
+      .gap-metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .form-card {
+        padding: 27px 20px;
+        border-radius: 22px;
+      }
+
+      .form-title {
+        font-size: 32px;
+      }
+
+      .upload-zone {
+        min-height: 185px;
+        padding: 22px 16px;
+      }
+
+      .turnstile-wrap {
+        overflow: hidden;
+      }
+
+      .form-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+
+      .form-actions .primary-btn,
+      .form-actions .secondary-btn {
+        width: 100%;
+      }
+
+      .how-section {
+        padding-top: 78px;
+      }
+
+      .section-title {
+        font-size: 39px;
+      }
+
+      .results-main {
+        padding-top: 42px;
+      }
+
+      .results-intro,
+      .evidence-card,
+      .priority-card {
+        padding: 30px 22px;
+        border-radius: 22px;
+      }
+
+      .score-circle {
+        width: 160px;
+        height: 160px;
+      }
+
+      .score-circle span {
+        font-size: 58px;
+      }
+
+      .results-verdict {
+        font-size: 38px;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .action-buttons > * {
+        width: 100%;
+      }
+
+      .lead-modal {
+        padding: 28px 20px;
+      }
+
+      .lead-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+
+      .lead-actions .primary-btn,
+      .lead-actions .secondary-btn {
+        width: 100%;
+      }
+
+      .site-footer {
+        padding: 34px 18px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* =======================================================
+       BRAND ACTION PLAN
+    ======================================================== */
+
+    .action-plan-section {
+      margin-top: 80px;
+    }
+
+    .action-plan-loading,
+    .action-plan-error,
+    .action-plan-intro,
+    .action-plan-diagnosis,
+    .dont-prioritize-card,
+    .budget-card,
+    .action-plan-close {
+      padding: clamp(28px, 4vw, 44px);
+      margin-bottom: 24px;
+    }
+
+    .action-plan-lead {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 20px;
+      line-height: 1.55;
+    }
+
+    .action-plan-priority-grid,
+    .quick-win-grid,
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .quick-win-grid,
+    .roadmap-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .action-plan-priority,
+    .quick-win-card,
+    .roadmap-card {
+      padding: 28px;
+    }
+
+    .action-plan-priority h3,
+    .quick-win-card h3,
+    .roadmap-card h3 {
+      margin: 0 0 14px;
+      color: var(--text);
+      font-size: 27px;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+
+    .action-plan-callout {
+      margin: 22px 0;
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(30, 102, 165, 0.06);
+    }
+
+    .action-plan-callout p,
+    .budget-recommendation p,
+    .budget-next-dollar p,
+    .budget-grid p {
+      margin-bottom: 0;
+    }
+
+    .action-plan-evidence {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .action-plan-evidence strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .action-plan-evidence p {
+      margin: 0;
+      color: var(--body-text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .action-plan-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin: 18px 0;
+    }
+
+    .action-plan-meta span {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(14, 30, 60, 0.06);
+      font-size: 12px;
+    }
+
+    .action-plan-impact {
+      margin-bottom: 0;
+    }
+
+    .quick-win-card .step-number {
+      margin-bottom: 26px;
+    }
+
+    .roadmap-card ul {
+      padding-left: 20px;
+    }
+
+    .roadmap-card li {
+      margin-bottom: 9px;
+      line-height: 1.45;
+    }
+
+    .budget-recommendation {
+      margin-bottom: 16px;
+      padding: 24px;
+      border: 1px solid rgba(30, 102, 165, 0.2);
+      border-radius: 16px;
+      background: rgba(30, 102, 165, 0.055);
+    }
+
+    .budget-recommendation .section-kicker {
+      margin-bottom: 8px;
+    }
+
+    .budget-recommendation h3 {
+      margin: 0 0 10px;
+      color: var(--text);
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .budget-recommendation p:last-child {
+      margin: 0;
+      color: var(--body-text);
+      line-height: 1.5;
+    }
+
+    .budget-next-dollar {
+      margin-bottom: 26px;
+      padding: 20px;
+      border-radius: 15px;
+      background: rgba(30, 102, 165, 0.07);
+    }
+
+    .budget-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .budget-grid > div {
+      position: relative;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    .budget-grid > div.is-recommended {
+      border-color: rgba(30, 102, 165, 0.35);
+      background: rgba(30, 102, 165, 0.055);
+      box-shadow: 0 0 0 2px rgba(30, 102, 165, 0.06);
+    }
+
+    .budget-path-badge {
+      width: fit-content;
+      display: inline-flex;
+      margin-bottom: 10px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--milky-blue);
+      color: #fff;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .action-plan-next-step {
+  padding: clamp(32px, 5vw, 52px);
+  margin: 48px 0 24px;
+  border-radius: var(--radius-xl);
+}
+
+.action-plan-next-step h2 {
+  max-width: 720px;
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.next-step-offer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-top: 32px;
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(30, 102, 165, 0.06);
+}
+
+.next-step-label {
+  margin: 0 0 8px;
+  color: var(--milky-blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.next-step-offer h3 {
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.next-step-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--body-text);
+}
+
+.next-step-list li {
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.implementation-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-top: 16px;
+  padding: 24px 28px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.implementation-cta p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--body-text);
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  .next-step-offer,
+  .implementation-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .next-step-offer .primary-btn,
+  .implementation-cta .secondary-btn {
+    width: 100%;
+  }
+}  
+    @media (max-width: 800px) {
+      .action-plan-priority-grid,
+      .quick-win-grid,
+      .roadmap-grid,
+      .budget-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  
+    /* =========================================================
+       BRAND ENTERPRISE RATE DEMO
+    ========================================================= */
+
+    .demo-mode-badge {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border: 1px solid rgba(30, 102, 165, .22);
+      border-radius: 999px;
+      background: rgba(249, 250, 251, .94);
+      box-shadow: 0 10px 28px rgba(14, 30, 60, .10);
+      backdrop-filter: blur(10px);
+      color: var(--galaxy-navy, #0E1E3C);
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .demo-mode-badge span {
+      color: var(--milky-blue, #1E66A5);
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+
+    .demo-mode-badge strong {
+      font-weight: 800;
+    }
+
+    .demo-action-plan-note {
+      margin-top: 12px;
+      color: rgba(255,255,255,.68);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 640px) {
+      .demo-mode-badge {
+        top: 10px;
+        right: 10px;
+      }
+    }
+
+</style>
+</head>
+
+<body>
+
+  <div class="demo-mode-badge" role="status" aria-label="Demo mode">
+    <span>DEMO MODE</span>
+    <strong>Rate</strong>
+  </div>
+
+
+  <nav class="site-nav" aria-label="Main navigation">
+    <div class="nav-inner">
+
+      <a
+        class="brand-link"
+        href="https://www.milkymindscreative.com"
+        aria-label="Milky Minds Creative home"
+      >
+        <img
+          class="brand-logo"
+          src="Logo.svg"
+          alt="Milky Minds Creative"
+        />
+      </a>
+
+      <a
+        class="back-link"
+        href="https://www.milkymindscreative.com/about-brand-rater"
+      >
+        About Brand Rater →
+      </a>
+
+    </div>
+  </nav>
+
+  <!-- =======================================================
+       INTAKE
+  ======================================================== -->
+
+  <div id="intake-view">
+    <main>
+
+      <section class="top-grid" aria-labelledby="page-title">
+
+        <article class="hero-card">
+
+          <p class="eyebrow">
+            Free Brand Health Assessment
+          </p>
+
+          <h1 id="page-title" class="hero-title">
+            Is your brand keeping up with your business?
+          </h1>
+
+          <p class="hero-copy">
+            Tell us about the business you’ve built, show us how your brand
+            shows up today, and get a structured assessment of what’s working,
+            what’s falling behind, and where to focus next.
+          </p>
+
+          <ul class="benefits">
+            <li>Get a clear 0–100 Brand Health score</li>
+            <li>See how you perform across five business-focused brand dimensions</li>
+            <li>Identify the gap between your business maturity and brand maturity</li>
+            <li>Get a prioritized first move based on your goals</li>
+          </ul>
+
+        </article>
+
+        <section class="card form-card" aria-labelledby="form-title">
+
+          <div class="progress-wrap" aria-label="Assessment progress">
+            <div class="progress-meta">
+              <span id="progress-label">Step 1 of 3</span>
+              <span>About 5 minutes</span>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="rerate-banner" id="rerate-banner">
+            <strong id="rerate-banner-title">A saved baseline is available.</strong>
+            <p>Upload the improved brand materials to measure what changed.</p>
+            <button id="resume-rerate-btn" type="button">Re-Rate this brand →</button>
+          </div>
+
+          <form id="brand-rater-form" novalidate>
+
+            <!-- STEP 1 -->
+            <section class="form-step is-active" data-step="1">
+
+              <p class="step-label">Step 1 · Business context</p>
+              <h2 id="form-title" class="form-title">Tell us about your business.</h2>
+              <p class="form-intro">
+                Brand Rater uses your business stage and customer context to make
+                the assessment more relevant to where you are today.
+              </p>
+
+              <div class="field-grid">
+
+                <div class="field-group">
+                  <label class="field-label" for="business-name">
+                    Business / brand name
+                  </label>
+                  <input
+                    class="text-input"
+                    id="business-name"
+                    name="businessName"
+                    type="text"
+                    placeholder="Example: Little Cloud"
+                    autocomplete="organization"
+                    required
+                  />
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="website">
+                    Website URL
+                  </label>
+                  <input
+                    class="text-input"
+                    id="website"
+                    name="website"
+                    type="url"
+                    placeholder="https://..."
+                    autocomplete="url"
+                  />
+                  <p class="field-help">Optional for now, but recommended when available.</p>
+                </div>
+
+                <div class="field-group full">
+                  <label class="field-label" for="business-description">
+                    What does your business do?
+                  </label>
+                  <textarea
+                    id="business-description"
+                    name="description"
+                    placeholder="Briefly describe what you sell or provide."
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="field-group full">
+                  <label class="field-label" for="audience">
+                    Who do you primarily serve?
+                  </label>
+                  <textarea
+                    id="audience"
+                    name="audience"
+                    placeholder="Describe the customers you most want to reach."
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="years-in-business">
+                    How long have you been operating?
+                  </label>
+                  <select id="years-in-business" name="yearsInBusiness" required>
+                    <option value="">Select one</option>
+                    <option value="less-than-1">Less than 1 year</option>
+                    <option value="1-3">1–3 years</option>
+                    <option value="4-7">4–7 years</option>
+                    <option value="8-plus">8+ years</option>
+                  </select>
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="team-size">
+                    Team size
+                  </label>
+                  <select id="team-size" name="teamSize" required>
+                    <option value="">Select one</option>
+                    <option value="solo">Just me</option>
+                    <option value="2-5">2–5 people</option>
+                    <option value="6-10">6–10 people</option>
+                    <option value="11-25">11–25 people</option>
+                    <option value="25-plus">25+ people</option>
+                  </select>
+                </div>
+
+              </div>
+
+              <p class="error-text" id="step-1-error">
+                Please complete the required fields before continuing.
+              </p>
+
+              <div class="form-actions is-single">
+                <button
+                  class="primary-btn"
+                  type="button"
+                  data-next-step="2"
+                >
+                  Continue →
+                </button>
+              </div>
+
+            </section>
+
+            <!-- STEP 2 -->
+            <section class="form-step" data-step="2">
+
+              <p class="step-label">Step 2 · Goals</p>
+              <h2 class="form-title">Where are you trying to go?</h2>
+              <p class="form-intro">
+                The same brand weakness can matter very differently depending on
+                whether you’re trying to grow, expand, reposition, or simply look
+                more established.
+              </p>
+
+              <div class="field-group">
+                <span class="field-label">What’s your biggest brand concern right now?</span>
+
+                <div class="choice-grid">
+
+                  <div class="choice">
+                    <input
+                      id="concern-professional"
+                      type="radio"
+                      name="brandConcern"
+                      value="We do not look as professional or established as the business we have built."
+                      required
+                    />
+                    <label for="concern-professional">
+                      We don’t look as established as the business we’ve built.
+                    </label>
+                  </div>
+
+                  <div class="choice">
+                    <input
+                      id="concern-different"
+                      type="radio"
+                      name="brandConcern"
+                      value="Customers do not clearly understand what makes us different."
+                    />
+                    <label for="concern-different">
+                      Customers don’t understand what makes us different.
+                    </label>
+                  </div>
+
+                  <div class="choice">
+                    <input
+                      id="concern-inconsistent"
+                      type="radio"
+                      name="brandConcern"
+                      value="Our brand feels inconsistent across touchpoints."
+                    />
+                    <label for="concern-inconsistent">
+                      Our brand feels inconsistent.
+                    </label>
+                  </div>
+
+                  <div class="choice">
+                    <input
+                      id="concern-outgrown"
+                      type="radio"
+                      name="brandConcern"
+                      value="We have outgrown our current brand."
+                    />
+                    <label for="concern-outgrown">
+                      We’ve outgrown our current brand.
+                    </label>
+                  </div>
+
+                  <div class="choice">
+                    <input
+                      id="concern-website"
+                      type="radio"
+                      name="brandConcern"
+                      value="Our website or brand is not performing the way we would like."
+                    />
+                    <label for="concern-website">
+                      Our website or brand isn’t performing the way we’d like.
+                    </label>
+                  </div>
+
+                  <div class="choice">
+                    <input
+                      id="concern-growth"
+                      type="radio"
+                      name="brandConcern"
+                      value="We are preparing the business for growth or expansion."
+                    />
+                    <label for="concern-growth">
+                      We’re preparing for growth or expansion.
+                    </label>
+                  </div>
+
+                  <div class="choice">
+                    <input
+                      id="concern-unsure"
+                      type="radio"
+                      name="brandConcern"
+                      value="I am not sure what the main brand problem is."
+                    />
+                    <label for="concern-unsure">
+                      I’m not sure what the main brand problem is.
+                    </label>
+                  </div>
+
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label class="field-label" for="goal">
+                  What are you hoping to accomplish in the next 12 months?
+                </label>
+                <textarea
+                  id="goal"
+                  name="twelveMonthGoal"
+                  placeholder="Example: Open a second location, attract higher-value clients, launch a new service, or create a more professional presence."
+                  required
+                ></textarea>
+              </div>
+
+              <div class="field-group">
+                <label class="field-label" for="traction">
+                  How would you describe your current customer traction?
+                </label>
+                <select id="traction" name="traction" required>
+                  <option value="">Select one</option>
+                  <option value="early">Still establishing regular customers</option>
+                  <option value="growing">Growing steadily with consistent customers or sales</option>
+                  <option value="established">Established with a predictable customer base</option>
+                  <option value="mature">Strong, mature market presence</option>
+                </select>
+              </div>
+
+              <p class="error-text" id="step-2-error">
+                Please complete the required fields before continuing.
+              </p>
+
+              <div class="form-actions">
+                <button
+                  class="secondary-btn"
+                  type="button"
+                  data-prev-step="1"
+                >
+                  ← Back
+                </button>
+
+                <button
+                  class="primary-btn"
+                  type="button"
+                  data-next-step="3"
+                >
+                  Continue →
+                </button>
+              </div>
+
+            </section>
+
+            <!-- STEP 3 -->
+            <section class="form-step" data-step="3">
+
+              <p class="step-label">Step 3 · Brand evidence</p>
+              <h2 class="form-title">Show us how your brand shows up.</h2>
+              <p class="form-intro">
+                Upload a few real examples of the brand your customers see.
+                A mix of touchpoints gives Brand Rater more useful evidence.
+              </p>
+
+              <label class="field-label" for="file-input">
+                Brand assets · 1–5 images
+              </label>
+
+              <div class="upload-zone" id="drop-zone">
+
+                <input
+                  class="upload-input"
+                  id="file-input"
+                  name="assets"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                />
+
+                <div>
+                  <div class="upload-icon" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M12 3v12"></path>
+                      <path d="m7 8 5-5 5 5"></path>
+                      <path d="M5 15v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3"></path>
+                    </svg>
+                  </div>
+
+                  <p class="upload-label">
+                    Drop files here or click to browse
+                  </p>
+
+                  <p class="upload-hint">
+                    Logo, homepage, social, marketing, packaging, or other customer-facing brand examples.
+                    PNG, JPG, or WEBP · 4 MB max per image · up to 5 images.
+                  </p>
+                </div>
+
+              </div>
+
+              <div
+                class="previews"
+                id="previews"
+                aria-live="polite"
+              ></div>
+
+              <div class="turnstile-wrap">
+                <div
+                  class="cf-turnstile"
+                  data-sitekey="0x4AAAAAADd4hprTP58g9DXP"
+                  data-callback="onTurnstileSuccess"
+                  data-expired-callback="onTurnstileExpired"
+                  data-error-callback="onTurnstileExpired"
+                ></div>
+              </div>
+
+              <p class="error-text" id="step-3-error">
+                Please upload at least one brand asset and complete verification.
+              </p>
+
+              <div class="form-actions">
+                <button
+                  class="secondary-btn"
+                  type="button"
+                  data-prev-step="2"
+                >
+                  ← Back
+                </button>
+
+                <button
+                  class="primary-btn"
+                  id="score-btn"
+                  type="submit"
+                >
+                  Analyze my brand →
+                </button>
+              </div>
+
+              <p class="privacy-note">
+                Your uploaded images are used only to generate this assessment.
+                They are not stored with your lead submission.
+              </p>
+
+            </section>
+
+          </form>
+
+        </section>
+
+      </section>
+
+      <section class="how-section" aria-labelledby="how-title">
+
+        <p class="eyebrow">How Brand Rater thinks</p>
+
+        <h2 id="how-title" class="section-title">
+          More than a visual score. A clearer view of how your brand supports your business.
+        </h2>
+
+        <div class="steps-grid">
+
+          <article class="card step-card">
+            <span class="step-number" aria-hidden="true">01</span>
+            <h3>Understand the business</h3>
+            <p>
+              We use your audience, maturity, goals, and growth context so the
+              assessment is grounded in your business—not a generic design critique.
+            </p>
+          </article>
+
+          <article class="card step-card">
+            <span class="step-number" aria-hidden="true">02</span>
+            <h3>Score the brand</h3>
+            <p>
+              Brand Health is evaluated across clarity, credibility, consistency,
+              distinctiveness, and visual execution.
+            </p>
+          </article>
+
+          <article class="card step-card">
+            <span class="step-number" aria-hidden="true">03</span>
+            <h3>Find the gap</h3>
+            <p>
+              Your results identify where the brand may be lagging behind the
+              business—and what deserves attention first.
+            </p>
+          </article>
+
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =======================================================
+       ASYNC RATE PROCESSING
+  ======================================================== -->
+
+  <div id="processing-view" aria-live="polite">
+    <main class="processing-shell">
+
+      <section class="card processing-card">
+
+        <p class="eyebrow">
+          Brand Health Assessment
+        </p>
+
+        <h1 class="processing-title" id="rate-processing-title">
+          Analyzing your brand…
+        </h1>
+
+        <p class="processing-copy" id="rate-processing-copy">
+          Brand Rater is preparing your evidence and building your Brand Health assessment.
+        </p>
+
+        <p class="processing-job-id" id="rate-processing-job-id"></p>
+
+        <div class="rate-progress">
+          <div class="rate-progress-track" aria-hidden="true">
+            <div class="rate-progress-fill" id="rate-progress-fill"></div>
+          </div>
+
+          <div class="rate-progress-meta">
+            <span id="rate-progress-label">Preparing assessment</span>
+            <span id="rate-progress-percent">5%</span>
+          </div>
+        </div>
+
+        <ul class="rate-stage-list" id="rate-stage-list">
+
+          <li class="rate-stage-item" data-rate-stage="creating-job">
+            <span class="rate-stage-icon">1</span>
+            <div>
+              <strong>Prepare your assessment</strong>
+              <span>Validate your business context and create a private Brand Health job.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="uploading-assets">
+            <span class="rate-stage-icon">2</span>
+            <div>
+              <strong>Upload brand evidence</strong>
+              <span>Securely prepare the customer-facing brand examples you submitted.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="analyzing-brand-evidence">
+            <span class="rate-stage-icon">3</span>
+            <div>
+              <strong>Analyze brand evidence</strong>
+              <span>Review clarity, credibility, consistency, distinctiveness, and visual execution.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="scoring-brand-health">
+            <span class="rate-stage-icon">4</span>
+            <div>
+              <strong>Score Brand Health</strong>
+              <span>Turn the evidence into the five Brand Health dimensions and overall score.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="identifying-brand-pattern">
+            <span class="rate-stage-icon">5</span>
+            <div>
+              <strong>Find the pattern and priority</strong>
+              <span>Identify the Brand Pattern, Brand Gap, and the opportunity that matters most.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="building-assessment">
+            <span class="rate-stage-icon">6</span>
+            <div>
+              <strong>Build your assessment</strong>
+              <span>Organize your results, recommendation, and Re-Rate baseline.</span>
+            </div>
+          </li>
+
+        </ul>
+
+        <p class="processing-note">
+          You can keep this tab open while the assessment runs. If the page refreshes,
+          Brand Rater will attempt to reconnect to the active assessment.
+        </p>
+
+        <p class="processing-error" id="rate-processing-error"></p>
+
+        <div class="processing-actions" id="rate-processing-actions">
+          <button class="secondary-btn" id="rate-start-over-btn" type="button">
+            Start over
+          </button>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =======================================================
+       RESULTS
+  ======================================================== -->
+
+  <div id="results-view" aria-live="polite">
+    <main id="results-main" class="results-main">
+      <!-- Generated by JavaScript -->
+    </main>
+  </div>
+
+  <!-- =======================================================
+       FOOTER
+  ======================================================== -->
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+
+      <div class="footer-brand">
+        © Milky Minds Creative
+      </div>
+
+      <div class="footer-links">
+        <a href="/privacy.html">Privacy</a>
+        <span aria-hidden="true">•</span>
+        <a href="/terms.html">Terms</a>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- =======================================================
+       SAVE RESULTS MODAL
+  ======================================================== -->
+
+  <div
+    class="lead-modal-backdrop"
+    id="lead-modal"
+    aria-hidden="true"
+  >
+
+    <div
+      class="lead-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lead-modal-title"
+    >
+
+      <p class="modal-eyebrow">Save your assessment</p>
+
+      <h2 id="lead-modal-title">
+        Keep your Brand Health results.
+      </h2>
+
+      <p>
+        Share your email and we’ll save the assessment details with your
+        submission so you can revisit the opportunities later.
+      </p>
+
+      <form
+        id="lead-capture-form"
+        class="lead-form-grid"
+      >
+
+        <input
+          class="text-input"
+          type="text"
+          name="name"
+          placeholder="Your name"
+          autocomplete="name"
+          required
+        />
+
+        <input
+          class="text-input"
+          type="email"
+          name="email"
+          placeholder="Email address"
+          autocomplete="email"
+          required
+        />
+
+        <input
+          class="text-input"
+          type="text"
+          name="company"
+          placeholder="Company / brand name"
+          autocomplete="organization"
+        />
+
+        <input
+          class="text-input"
+          type="url"
+          name="website"
+          placeholder="Website URL"
+          autocomplete="url"
+        />
+
+        <input
+          class="bot-field"
+          type="text"
+          name="bot-field"
+          tabindex="-1"
+          autocomplete="off"
+        />
+
+        <div class="lead-actions">
+
+          <button
+            class="secondary-btn"
+            id="close-lead-modal"
+            type="button"
+          >
+            Cancel
+          </button>
+
+          <button
+            class="primary-btn"
+            id="lead-submit-btn"
+            type="submit"
+          >
+            Save results →
+          </button>
+
+        </div>
+
+        <p class="save-success" id="save-success">
+          Your assessment was saved successfully.
+        </p>
+
+        <p class="lead-note">
+          Uploaded images are not stored with this form.
+        </p>
+
+      </form>
+
+    </div>
+
+  </div>
+
+  <!-- =======================================================
+       NETLIFY FORM REGISTRATION
+  ======================================================== -->
+
+  <form
+    name="brand-rater-leads"
+    method="POST"
+    action="/"
+    data-netlify="true"
+    netlify
+    netlify-honeypot="bot-field"
+    style="display: none;"
+  >
+
+    <input type="hidden" name="form-name" value="brand-rater-leads" />
+    <input type="text" name="bot-field" />
+
+    <input type="text" name="name" />
+    <input type="email" name="email" />
+    <input type="text" name="company" />
+    <input type="text" name="website" />
+
+    <input type="text" name="years_in_business" />
+    <input type="text" name="team_size" />
+    <input type="text" name="traction" />
+    <textarea name="business_description"></textarea>
+    <textarea name="audience"></textarea>
+    <textarea name="brand_concern"></textarea>
+    <textarea name="twelve_month_goal"></textarea>
+
+    <input type="text" name="brand_health_score" />
+    <input type="text" name="brand_health_level" />
+    <input type="text" name="brand_pattern" />
+    <input type="text" name="brand_pattern_id" />
+    <input type="text" name="business_maturity_score" />
+    <input type="text" name="expected_brand_health" />
+    <input type="text" name="brand_gap_score" />
+    <input type="text" name="brand_gap_level" />
+
+    <input type="text" name="assessment_id" />
+    <input type="text" name="assessment_created_at" />
+    <input type="text" name="baseline_saved" />
+
+    <textarea name="category_scores"></textarea>
+    <textarea name="top_priority"></textarea>
+    <textarea name="full_result_json"></textarea>
+
+  </form>
+
+  <!-- =======================================================
+       JAVASCRIPT
+  ======================================================== -->
+
+  <script>
+    const CREATE_RATE_JOB_ENDPOINT =
+      '/.netlify/functions/create-rate-job';
+
+    const UPLOAD_RATE_ASSET_ENDPOINT =
+      '/.netlify/functions/upload-rate-asset';
+
+    const RATE_STATUS_ENDPOINT =
+      '/.netlify/functions/rate-status';
+
+    const ACTION_PLAN_ENDPOINT =
+      '/.netlify/functions/generate-demo-action-plan';
+
+    const form =
+      document.getElementById('brand-rater-form');
+
+    const formSteps =
+      [...document.querySelectorAll('.form-step')];
+
+    const progressLabel =
+      document.getElementById('progress-label');
+
+    const progressFill =
+      document.getElementById('progress-fill');
+
+    const fileInput =
+      document.getElementById('file-input');
+
+    const dropZone =
+      document.getElementById('drop-zone');
+
+    const previews =
+      document.getElementById('previews');
+
+    const submitButton =
+      document.getElementById('score-btn');
+
+    const leadModal =
+      document.getElementById('lead-modal');
+
+    const leadForm =
+      document.getElementById('lead-capture-form');
+
+    const closeLeadButton =
+      document.getElementById('close-lead-modal');
+
+    const saveSuccess =
+      document.getElementById('save-success');
+
+    const rerateBanner =
+      document.getElementById('rerate-banner');
+
+    const resumeRerateButton =
+      document.getElementById('resume-rerate-btn');
+
+    const intakeView =
+      document.getElementById('intake-view');
+
+    const processingView =
+      document.getElementById('processing-view');
+
+    const resultsView =
+      document.getElementById('results-view');
+
+    const rateProcessingTitle =
+      document.getElementById('rate-processing-title');
+
+    const rateProcessingCopy =
+      document.getElementById('rate-processing-copy');
+
+    const rateProcessingJobId =
+      document.getElementById('rate-processing-job-id');
+
+    const rateProgressFill =
+      document.getElementById('rate-progress-fill');
+
+    const rateProgressLabel =
+      document.getElementById('rate-progress-label');
+
+    const rateProgressPercent =
+      document.getElementById('rate-progress-percent');
+
+    const rateProcessingError =
+      document.getElementById('rate-processing-error');
+
+    const rateProcessingActions =
+      document.getElementById('rate-processing-actions');
+
+    const rateStartOverButton =
+      document.getElementById('rate-start-over-btn');
+
+    const RERATE_REFERENCE_KEY =
+      'brand_rater_demo_rerate_reference';
+
+    let currentStep = 1;
+    let uploadedFiles = [];
+    let latestResult = null;
+    let latestBusiness = null;
+    let turnstileToken = '';
+    let activeReRateReference = null;
+    const MAX_FILE_SIZE =
+      4 * 1024 * 1024;
+
+    const MAX_TOTAL_SIZE =
+      20 * 1024 * 1024;
+
+    const LAST_SUBMISSION_KEY =
+      'brand_rater_demo_last_submission';
+
+    const ACTIVE_RATE_JOB_KEY =
+      'brand_rater_demo_active_rate_job';
+
+    const RATE_POLL_INTERVAL_MS =
+      1800;
+
+    const RATE_POLL_TIMEOUT_MS =
+      15 * 60 * 1000;
+
+    let ratePollingTimer = null;
+    let ratePollingStartedAt = 0;
+
+    function readReRateReference() {
+      try {
+        const reference = JSON.parse(
+          localStorage.getItem(
+            RERATE_REFERENCE_KEY
+          ) || 'null'
+        );
+
+        return (
+          reference?.assessmentId &&
+          reference?.accessToken
+        )
+          ? reference
+          : null;
+      }
+      catch {
+        return null;
+      }
+    }
+
+    function refreshReRateBanner() {
+      const reference =
+        readReRateReference();
+
+      rerateBanner?.classList.toggle(
+        'is-visible',
+        Boolean(reference) &&
+        !activeReRateReference
+      );
+
+      const title =
+        document.getElementById(
+          'rerate-banner-title'
+        );
+
+      if (title && reference?.brandName) {
+        title.textContent =
+          `${reference.brandName} has a saved baseline.`;
+      }
+    }
+
+    function beginReRate(reference) {
+      if (!reference) {
+        return;
+      }
+
+      activeReRateReference =
+        reference;
+
+      restartBrandRater(true);
+
+      rerateBanner?.classList.add(
+        'is-visible'
+      );
+
+      const title =
+        document.getElementById(
+          'rerate-banner-title'
+        );
+
+      if (title) {
+        title.textContent =
+          `Re-Rating ${reference.brandName || 'your brand'}`;
+      }
+
+      if (resumeRerateButton) {
+        resumeRerateButton.textContent =
+          'Re-Rate mode active';
+        resumeRerateButton.disabled =
+          true;
+      }
+    }
+
+    resumeRerateButton?.addEventListener(
+      'click',
+      () => beginReRate(
+        readReRateReference()
+      )
+    );
+
+    refreshReRateBanner();
+
+    /* =====================================================
+       TURNSTILE
+    ====================================================== */
+
+    window.onTurnstileSuccess = function(token) {
+      turnstileToken = token;
+    };
+
+    window.onTurnstileExpired = function() {
+      turnstileToken = '';
+    };
+
+    /* =====================================================
+       UTILITIES
+    ====================================================== */
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function clampScore(value) {
+      return Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(Number(value) || 0)
+        )
+      );
+    }
+
+    function showError(id, message) {
+      const element =
+        document.getElementById(id);
+
+      if (!element) {
+        return;
+      }
+
+      if (message) {
+        element.textContent = message;
+      }
+
+      element.classList.add('is-visible');
+    }
+
+    function hideError(id) {
+      const element =
+        document.getElementById(id);
+
+      if (element) {
+        element.classList.remove('is-visible');
+      }
+    }
+
+    function getBusinessData() {
+      const formData =
+        new FormData(form);
+
+      return {
+        name:
+          String(formData.get('businessName') || '').trim(),
+
+        website:
+          String(formData.get('website') || '').trim(),
+
+        description:
+          String(formData.get('description') || '').trim(),
+
+        audience:
+          String(formData.get('audience') || '').trim(),
+
+        yearsInBusiness:
+          String(formData.get('yearsInBusiness') || ''),
+
+        teamSize:
+          String(formData.get('teamSize') || ''),
+
+        traction:
+          String(formData.get('traction') || ''),
+
+        brandConcern:
+          String(formData.get('brandConcern') || '').trim(),
+
+        twelveMonthGoal:
+          String(formData.get('twelveMonthGoal') || '').trim()
+      };
+    }
+
+    /*
+      Backward compatibility:
+      The current V1 analyze-brand function already accepts a single "context"
+      string. Until the backend is replaced, this gives the existing function
+      much richer context while the new structured "business" object is also sent.
+    */
+    function buildLegacyContext(business) {
+      return [
+        `Business / brand: ${business.name}`,
+        business.website
+          ? `Website: ${business.website}`
+          : '',
+        `What the business does: ${business.description}`,
+        `Primary audience: ${business.audience}`,
+        `Years operating: ${business.yearsInBusiness}`,
+        `Team size: ${business.teamSize}`,
+        `Customer traction: ${business.traction}`,
+        `Primary brand concern: ${business.brandConcern}`,
+        `12-month goal: ${business.twelveMonthGoal}`
+      ]
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    /* =====================================================
+       MULTI-STEP FORM
+    ====================================================== */
+
+    function setStep(step) {
+      currentStep = step;
+
+      formSteps.forEach(section => {
+        section.classList.toggle(
+          'is-active',
+          Number(section.dataset.step) === step
+        );
+      });
+
+      progressLabel.textContent =
+        `Step ${step} of 3`;
+
+      progressFill.style.width =
+        `${(step / 3) * 100}%`;
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    function validateStep(step) {
+      hideError(`step-${step}-error`);
+
+      const section =
+        form.querySelector(`[data-step="${step}"]`);
+
+      if (!section) {
+        return true;
+      }
+
+      const requiredFields =
+        [...section.querySelectorAll('[required]')];
+
+      for (const field of requiredFields) {
+        if (field.type === 'radio') {
+          const checked =
+            section.querySelector(
+              `input[name="${field.name}"]:checked`
+            );
+
+          if (!checked) {
+            showError(
+              `step-${step}-error`,
+              'Please complete the required fields before continuing.'
+            );
+            return false;
+          }
+        }
+        else if (!String(field.value || '').trim()) {
+          field.focus();
+
+          showError(
+            `step-${step}-error`,
+            'Please complete the required fields before continuing.'
+          );
+
+          return false;
+        }
+        else if (
+          field.type === 'url' &&
+          field.value &&
+          !field.checkValidity()
+        ) {
+          field.focus();
+
+          showError(
+            `step-${step}-error`,
+            'Please enter a valid website URL or leave the field blank.'
+          );
+
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    document
+      .querySelectorAll('[data-next-step]')
+      .forEach(button => {
+        button.addEventListener(
+          'click',
+          () => {
+            if (!validateStep(currentStep)) {
+              return;
+            }
+
+            setStep(
+              Number(button.dataset.nextStep)
+            );
+          }
+        );
+      });
+
+    document
+      .querySelectorAll('[data-prev-step]')
+      .forEach(button => {
+        button.addEventListener(
+          'click',
+          () => {
+            setStep(
+              Number(button.dataset.prevStep)
+            );
+          }
+        );
+      });
+
+    /* =====================================================
+       FILE HANDLING
+    ====================================================== */
+
+    function syncFiles(files) {
+      const validFiles = [];
+      let totalSize = 0;
+      const skippedNames = [];
+
+      for (const file of [...files]) {
+        if (!file.type.startsWith('image/')) {
+          continue;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+          skippedNames.push(file.name);
+          continue;
+        }
+
+        totalSize += file.size;
+
+        if (totalSize > MAX_TOTAL_SIZE) {
+          alert(
+            'The total upload size is too large.\n\n' +
+            'Please upload fewer images or compress them before trying again.'
+          );
+
+          fileInput.value = '';
+          break;
+        }
+
+        validFiles.push(file);
+      }
+
+      if (skippedNames.length > 0) {
+        alert(
+          `The following image${skippedNames.length > 1 ? 's exceed' : ' exceeds'} ` +
+          `the 4 MB per-file limit and ` +
+          `${skippedNames.length > 1 ? 'were' : 'was'} not added:\n\n` +
+          `${skippedNames.join('\n')}\n\n` +
+          `Please compress or resize before uploading.`
+        );
+      }
+
+      uploadedFiles =
+        validFiles.slice(0, 5);
+
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      previews.innerHTML = '';
+
+      previews.classList.toggle(
+        'has-files',
+        uploadedFiles.length > 0
+      );
+
+      uploadedFiles.forEach(
+        (file, index) => {
+          const reader =
+            new FileReader();
+
+          reader.onload = event => {
+            const item =
+              document.createElement('div');
+
+            item.className =
+              'preview-item';
+
+            item.innerHTML = `
+              <img
+                src="${event.target.result}"
+                alt="Uploaded brand asset preview ${index + 1}"
+              >
+              <button
+                type="button"
+                class="preview-remove"
+                aria-label="Remove image ${index + 1}"
+              >
+                ×
+              </button>
+            `;
+
+            item
+              .querySelector('button')
+              .addEventListener(
+                'click',
+                () => {
+                  uploadedFiles.splice(
+                    index,
+                    1
+                  );
+
+                  fileInput.value = '';
+
+                  renderPreviews();
+                }
+              );
+
+            previews.appendChild(item);
+          };
+
+          reader.readAsDataURL(file);
+        }
+      );
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise(
+        (resolve, reject) => {
+          const reader =
+            new FileReader();
+
+          reader.onload = () => {
+            resolve({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              dataUrl: reader.result
+            });
+          };
+
+          reader.onerror = () => {
+            reject(
+              new Error(
+                'Could not read file.'
+              )
+            );
+          };
+
+          reader.readAsDataURL(file);
+        }
+      );
+    }
+
+    fileInput.addEventListener(
+      'change',
+      () => {
+        syncFiles(fileInput.files);
+      }
+    );
+
+    [
+      'dragenter',
+      'dragover'
+    ].forEach(
+      eventName => {
+        dropZone.addEventListener(
+          eventName,
+          event => {
+            event.preventDefault();
+
+            dropZone.classList.add(
+              'drag-over'
+            );
+          }
+        );
+      }
+    );
+
+    [
+      'dragleave',
+      'drop'
+    ].forEach(
+      eventName => {
+        dropZone.addEventListener(
+          eventName,
+          event => {
+            event.preventDefault();
+
+            dropZone.classList.remove(
+              'drag-over'
+            );
+          }
+        );
+      }
+    );
+
+    dropZone.addEventListener(
+      'drop',
+      event => {
+        syncFiles(
+          event.dataTransfer.files
+        );
+      }
+    );
+
+    /* =====================================================
+       ASYNC RATE JOB
+    ====================================================== */
+
+    const RATE_STAGE_ORDER = [
+      'creating-job',
+      'uploading-assets',
+      'analyzing-brand-evidence',
+      'scoring-brand-health',
+      'identifying-brand-pattern',
+      'building-assessment'
+    ];
+
+    const RATE_STAGE_ALIASES = {
+      'awaiting-assets': 'creating-job',
+      'queued': 'uploading-assets',
+      'loading-assets': 'analyzing-brand-evidence',
+      'saving-assessment': 'building-assessment',
+      'assessment-ready': 'building-assessment',
+      'complete': 'building-assessment'
+    };
+
+    function stopRatePolling() {
+      if (ratePollingTimer) {
+        clearTimeout(ratePollingTimer);
+        ratePollingTimer = null;
+      }
+    }
+
+    function showRateView(viewName) {
+      if (intakeView) {
+        intakeView.style.display =
+          viewName === 'intake'
+            ? 'block'
+            : 'none';
+      }
+
+      if (processingView) {
+        processingView.style.display =
+          viewName === 'processing'
+            ? 'block'
+            : 'none';
+      }
+
+      if (resultsView) {
+        resultsView.style.display =
+          viewName === 'results'
+            ? 'block'
+            : 'none';
+      }
+    }
+
+    function normalizedRateStage(stage) {
+      return (
+        RATE_STAGE_ALIASES[stage] ||
+        stage ||
+        'creating-job'
+      );
+    }
+
+    function setRateProcessingStage(
+      stage,
+      progress = 0,
+      message = ''
+    ) {
+      const normalizedStage =
+        normalizedRateStage(stage);
+
+      const activeIndex =
+        Math.max(
+          0,
+          RATE_STAGE_ORDER.indexOf(
+            normalizedStage
+          )
+        );
+
+      const safeProgress =
+        Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              Number(progress) || 0
+            )
+          )
+        );
+
+      document
+        .querySelectorAll(
+          '[data-rate-stage]'
+        )
+        .forEach(
+          (item, index) => {
+            item.classList.toggle(
+              'is-complete',
+              index < activeIndex ||
+              safeProgress >= 100
+            );
+
+            item.classList.toggle(
+              'is-active',
+              index === activeIndex &&
+              safeProgress < 100
+            );
+
+            const icon =
+              item.querySelector(
+                '.rate-stage-icon'
+              );
+
+            if (
+              icon &&
+              item.classList.contains(
+                'is-complete'
+              )
+            ) {
+              icon.textContent = '✓';
+            }
+            else if (icon) {
+              icon.textContent =
+                String(index + 1);
+            }
+          }
+        );
+
+      if (rateProgressFill) {
+        rateProgressFill.style.width =
+          `${safeProgress}%`;
+      }
+
+      if (rateProgressPercent) {
+        rateProgressPercent.textContent =
+          `${safeProgress}%`;
+      }
+
+      if (rateProgressLabel) {
+        rateProgressLabel.textContent =
+          message ||
+          'Building your Brand Health assessment';
+      }
+    }
+
+    function beginRateProcessing(
+      jobId,
+      brandName = ''
+    ) {
+      showRateView('processing');
+
+      if (rateProcessingTitle) {
+        rateProcessingTitle.textContent =
+          brandName
+            ? `Analyzing ${brandName}…`
+            : 'Analyzing your brand…';
+      }
+
+      if (rateProcessingCopy) {
+        rateProcessingCopy.textContent =
+          'Brand Rater is reviewing your evidence, scoring Brand Health, and identifying the highest-priority opportunity.';
+      }
+
+      if (rateProcessingJobId) {
+        rateProcessingJobId.textContent =
+          jobId
+            ? `Assessment ID: ${jobId}`
+            : '';
+      }
+
+      if (rateProcessingError) {
+        rateProcessingError.textContent = '';
+        rateProcessingError.classList.remove(
+          'is-visible'
+        );
+      }
+
+      rateProcessingActions?.classList.remove(
+        'is-visible'
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    function showRateProcessingError(
+      message
+    ) {
+      if (rateProcessingError) {
+        rateProcessingError.textContent =
+          message ||
+          'Brand Rater could not complete this assessment. Please try again.';
+
+        rateProcessingError.classList.add(
+          'is-visible'
+        );
+      }
+
+      rateProcessingActions?.classList.add(
+        'is-visible'
+      );
+    }
+
+    async function readJsonResponse(
+      response,
+      fallbackMessage
+    ) {
+      let payload = null;
+
+      try {
+        payload =
+          await response.json();
+      }
+      catch {
+        throw new Error(
+          `${fallbackMessage} (${response.status}).`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          fallbackMessage
+        );
+      }
+
+      return payload;
+    }
+
+    async function createRateJob({
+      business,
+      assetCount
+    }) {
+      const response =
+        await fetch(
+          CREATE_RATE_JOB_ENDPOINT,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify({
+                business,
+                assetCount,
+                turnstileToken,
+                baselineAssessmentId:
+                  activeReRateReference?.assessmentId || '',
+                baselineAccessToken:
+                  activeReRateReference?.accessToken || ''
+              })
+          }
+        );
+
+      return readJsonResponse(
+        response,
+        'Brand Rater could not create the assessment job'
+      );
+    }
+
+    async function uploadRateAsset(
+      jobId,
+      file,
+      assetIndex
+    ) {
+      const image =
+        await fileToDataUrl(
+          file
+        );
+
+      const response =
+        await fetch(
+          UPLOAD_RATE_ASSET_ENDPOINT,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify({
+                jobId,
+                assetIndex,
+                assetName:
+                  image.name,
+                mimeType:
+                  image.type,
+                dataUrl:
+                  image.dataUrl
+              })
+          }
+        );
+
+      let payload = null;
+
+      try {
+        payload =
+          await response.json();
+      }
+      catch {
+        throw new Error(
+          `Brand Rater received an invalid upload response (${response.status}).`
+        );
+      }
+
+      /*
+        A retried final upload may arrive after the worker has
+        already been queued. In that case the correct recovery
+        path is polling the existing job, not changing the inputs.
+      */
+      if (
+        response.status === 409 &&
+        payload?.recoverByPolling
+      ) {
+        return payload;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          'Brand Rater could not upload one of the brand assets.'
+        );
+      }
+
+      setRateProcessingStage(
+        payload.stage ||
+        'uploading-assets',
+        payload.progress ||
+        20,
+        payload.message ||
+        `Uploaded ${assetIndex + 1} of ${uploadedFiles.length} brand assets.`
+      );
+
+      return payload;
+    }
+
+    async function uploadRateAssets(
+      jobId
+    ) {
+      for (
+        let index = 0;
+        index < uploadedFiles.length;
+        index += 1
+      ) {
+        setRateProcessingStage(
+          'uploading-assets',
+          Math.round(
+            12 +
+            (
+              index /
+              Math.max(
+                1,
+                uploadedFiles.length
+              )
+            ) * 22
+          ),
+          `Uploading brand asset ${index + 1} of ${uploadedFiles.length}`
+        );
+
+        const payload =
+          await uploadRateAsset(
+            jobId,
+            uploadedFiles[index],
+            index
+          );
+
+        if (
+          payload?.recoverByPolling
+        ) {
+          break;
+        }
+      }
+    }
+
+    async function getRateStatus(
+      jobId
+    ) {
+      const endpoint =
+        new URL(
+          RATE_STATUS_ENDPOINT,
+          window.location.origin
+        );
+
+      endpoint.searchParams.set(
+        'jobId',
+        jobId
+      );
+
+      const response =
+        await fetch(
+          endpoint.toString(),
+          {
+            method: 'GET',
+            cache: 'no-store'
+          }
+        );
+
+      return readJsonResponse(
+        response,
+        'Brand Rater could not read the assessment status'
+      );
+    }
+
+    function saveCompletedRateResult(
+      result,
+      business
+    ) {
+      if (
+        result?.assessmentMeta?.assessmentId &&
+        result?.assessmentMeta?.reRateAccessToken
+      ) {
+        localStorage.setItem(
+          RERATE_REFERENCE_KEY,
+          JSON.stringify({
+            assessmentId:
+              result.assessmentMeta.assessmentId,
+
+            accessToken:
+              result.assessmentMeta.reRateAccessToken,
+
+            createdAt:
+              result.assessmentMeta.createdAt,
+
+            brandName:
+              business?.name ||
+              'Your brand'
+          })
+        );
+      }
+
+      sessionStorage.setItem(
+        'brandRaterResult',
+        JSON.stringify(
+          result
+        )
+      );
+
+      localStorage.setItem(
+        LAST_SUBMISSION_KEY,
+        Date.now()
+      );
+    }
+
+    async function pollRateStatus(
+      jobId,
+      business
+    ) {
+      stopRatePolling();
+
+      if (!ratePollingStartedAt) {
+        ratePollingStartedAt =
+          Date.now();
+      }
+
+      try {
+        const status =
+          await getRateStatus(
+            jobId
+          );
+
+        setRateProcessingStage(
+          status.stage ||
+          status.status,
+          status.progress,
+          status.message
+        );
+
+        if (
+          status.status ===
+            'complete'
+        ) {
+          stopRatePolling();
+          ratePollingStartedAt = 0;
+
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          if (!status.result) {
+            throw new Error(
+              'Brand Rater completed the job without returning an assessment.'
+            );
+          }
+
+          saveCompletedRateResult(
+            status.result,
+            business
+          );
+
+          renderResultsPage(
+            status.result,
+            business
+          );
+
+          return;
+        }
+
+        if (
+          status.status ===
+            'failed'
+        ) {
+          stopRatePolling();
+          ratePollingStartedAt = 0;
+
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          showRateProcessingError(
+            status.error ||
+            'Brand Rater could not complete this assessment. Please try again.'
+          );
+
+          return;
+        }
+
+        if (
+          Date.now() -
+          ratePollingStartedAt >
+          RATE_POLL_TIMEOUT_MS
+        ) {
+          stopRatePolling();
+
+          showRateProcessingError(
+            'This assessment is taking longer than expected. Your job may still be processing. Refresh the page to reconnect, or start over if the issue continues.'
+          );
+
+          return;
+        }
+
+        ratePollingTimer =
+          setTimeout(
+            () => pollRateStatus(
+              jobId,
+              business
+            ),
+            RATE_POLL_INTERVAL_MS
+          );
+      }
+      catch (error) {
+        if (
+          Date.now() -
+          ratePollingStartedAt >
+          RATE_POLL_TIMEOUT_MS
+        ) {
+          stopRatePolling();
+
+          showRateProcessingError(
+            error.message ||
+            'Brand Rater could not reconnect to the assessment.'
+          );
+
+          return;
+        }
+
+        ratePollingTimer =
+          setTimeout(
+            () => pollRateStatus(
+              jobId,
+              business
+            ),
+            RATE_POLL_INTERVAL_MS
+          );
+      }
+    }
+
+    async function resumeActiveRateJob() {
+      let active = null;
+
+      try {
+        active =
+          JSON.parse(
+            sessionStorage.getItem(
+              ACTIVE_RATE_JOB_KEY
+            ) || 'null'
+          );
+      }
+      catch {
+        active = null;
+      }
+
+      if (!active?.jobId) {
+        return;
+      }
+
+      let business =
+        latestBusiness;
+
+      if (!business) {
+        try {
+          business =
+            JSON.parse(
+              sessionStorage.getItem(
+                'brandRaterBusiness'
+              ) || 'null'
+            );
+        }
+        catch {
+          business = null;
+        }
+      }
+
+      try {
+        const status =
+          await getRateStatus(
+            active.jobId
+          );
+
+        if (
+          status.status ===
+            'complete'
+        ) {
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          if (status.result) {
+            saveCompletedRateResult(
+              status.result,
+              business || {}
+            );
+
+            renderResultsPage(
+              status.result,
+              business || {}
+            );
+          }
+
+          return;
+        }
+
+        if (
+          status.status ===
+            'failed'
+        ) {
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          beginRateProcessing(
+            active.jobId,
+            active.brandName || ''
+          );
+
+          setRateProcessingStage(
+            status.stage,
+            status.progress,
+            status.message
+          );
+
+          showRateProcessingError(
+            status.error ||
+            'Brand Rater could not complete this assessment.'
+          );
+
+          return;
+        }
+
+        beginRateProcessing(
+          active.jobId,
+          active.brandName || ''
+        );
+
+        setRateProcessingStage(
+          status.stage,
+          status.progress,
+          status.message
+        );
+
+        ratePollingStartedAt =
+          Date.now();
+
+        pollRateStatus(
+          active.jobId,
+          business || {}
+        );
+      }
+      catch {
+        sessionStorage.removeItem(
+          ACTIVE_RATE_JOB_KEY
+        );
+      }
+    }
+
+    rateStartOverButton?.addEventListener(
+      'click',
+      () => restartBrandRater(
+        Boolean(
+          activeReRateReference
+        )
+      )
+    );
+
+    /* =====================================================
+       MAIN SUBMISSION
+    ====================================================== */
+
+    form.addEventListener(
+      'submit',
+      async event => {
+        event.preventDefault();
+
+        hideError(
+          'step-3-error'
+        );
+
+        if (
+          !validateStep(1) ||
+          !validateStep(2)
+        ) {
+          setStep(1);
+          return;
+        }
+
+        if (
+          uploadedFiles.length === 0
+        ) {
+          showError(
+            'step-3-error',
+            'Please upload at least one brand asset before running the assessment.'
+          );
+          return;
+        }
+
+        if (!turnstileToken) {
+          showError(
+            'step-3-error',
+            'Please complete verification before running the assessment.'
+          );
+          return;
+        }
+
+        const lastSubmission =
+          Number(
+            localStorage.getItem(
+              LAST_SUBMISSION_KEY
+            )
+          ) || 0;
+
+        if (
+          Date.now() -
+          lastSubmission <
+          60000
+        ) {
+          showError(
+            'step-3-error',
+            'Please wait one minute before running another analysis.'
+          );
+
+          return;
+        }
+
+        try {
+          submitButton.disabled =
+            true;
+
+          submitButton.textContent =
+            'Preparing assessment…';
+
+          const business =
+            getBusinessData();
+
+          latestBusiness =
+            business;
+
+          const legacyContext =
+            buildLegacyContext(
+              business
+            );
+
+          sessionStorage.setItem(
+            'brandRaterBusiness',
+            JSON.stringify(
+              business
+            )
+          );
+
+          sessionStorage.setItem(
+            'brandRaterContext',
+            legacyContext
+          );
+
+          beginRateProcessing(
+            '',
+            business.name
+          );
+
+          setRateProcessingStage(
+            'creating-job',
+            5,
+            'Preparing your Brand Health assessment'
+          );
+
+          const job =
+            await createRateJob({
+              business,
+              assetCount:
+                uploadedFiles.length
+            });
+
+          if (!job?.jobId) {
+            throw new Error(
+              'Brand Rater created the assessment without a Job ID.'
+            );
+          }
+
+          sessionStorage.setItem(
+            ACTIVE_RATE_JOB_KEY,
+            JSON.stringify({
+              jobId:
+                job.jobId,
+
+              brandName:
+                business.name || '',
+
+              createdAt:
+                new Date()
+                  .toISOString()
+            })
+          );
+
+          beginRateProcessing(
+            job.jobId,
+            business.name
+          );
+
+          setRateProcessingStage(
+            job.stage ||
+            'creating-job',
+            job.progress ||
+            5,
+            job.message ||
+            'Preparing your Brand Health assessment'
+          );
+
+          await uploadRateAssets(
+            job.jobId
+          );
+
+          ratePollingStartedAt =
+            Date.now();
+
+          pollRateStatus(
+            job.jobId,
+            business
+          );
+        }
+        catch (error) {
+          console.error(
+            'Brand Rater async setup error:',
+            error
+          );
+
+          showRateView(
+            'processing'
+          );
+
+          showRateProcessingError(
+            error.message ||
+            'Something went wrong while starting the assessment. Please try again.'
+          );
+
+          submitButton.disabled =
+            false;
+
+          submitButton.textContent =
+            activeReRateReference
+              ? 'Re-Rate my brand →'
+              : 'Analyze my brand →';
+        }
+      }
+    );
+
+    /* =====================================================
+       RESULT NORMALIZATION
+       Supports both the new V2 response contract and the
+       current V1 result while analyze-brand is being upgraded.
+    ====================================================== */
+
+    function normalizeResult(raw) {
+      const brandHealth =
+        raw.brandHealth || {};
+
+      const pattern =
+        raw.brandPattern || null;
+
+      const gap =
+        raw.brandGap || null;
+
+      const score =
+        clampScore(
+          brandHealth.score ??
+          raw.overallScore ??
+          0
+        );
+
+      const level =
+        brandHealth.level ||
+        raw.verdict ||
+        'Brand Health Assessment';
+
+      const summary =
+        brandHealth.summary ||
+        raw.summary ||
+        '';
+
+      const categories =
+        Array.isArray(raw.categories)
+          ? raw.categories
+          : [];
+
+      return {
+        score,
+        level,
+        summary,
+        pattern,
+        gap,
+        categories,
+        biggestStrength:
+          raw.biggestStrength || null,
+        biggestOpportunity:
+          raw.biggestOpportunity || null,
+        evidence:
+          Array.isArray(raw.evidence)
+            ? raw.evidence
+            : [],
+        freeRecommendation:
+          raw.freeRecommendation ||
+          raw.topPriority ||
+          null,
+        growthOpportunity:
+          raw.growthOpportunity || null,
+        actionPlanPreview:
+          raw.actionPlanPreview || null,
+        raw
+      };
+    }
+
+    function renderDiagnosticCards(result) {
+      const items = [];
+
+      if (result.pattern) {
+        items.push(`
+          <article class="card diagnostic-card">
+            <p class="section-kicker">
+              Your Brand Pattern
+            </p>
+
+            <h2>
+              ${escapeHtml(result.pattern.name || 'Brand Pattern')}
+            </h2>
+
+            <p>
+              ${escapeHtml(result.pattern.summary || '')}
+            </p>
+          </article>
+        `);
+      }
+
+      if (result.gap) {
+        const maturity =
+          result.gap.businessMaturity ?? '—';
+
+        const expected =
+          result.gap.expectedBrandHealth ?? '—';
+
+        const actual =
+          result.gap.actualBrandHealth ?? result.score;
+
+        items.push(`
+          <article class="card diagnostic-card">
+            <p class="section-kicker">
+              Business–Brand Alignment
+            </p>
+
+            <h2>
+              ${escapeHtml(result.gap.level || 'Brand Gap')}
+            </h2>
+
+            <div class="gap-metrics">
+              <div class="gap-metric">
+                <span>Business maturity</span>
+                <strong>${escapeHtml(maturity)}</strong>
+              </div>
+
+              <div class="gap-metric">
+                <span>Expected brand</span>
+                <strong>${escapeHtml(expected)}</strong>
+              </div>
+
+              <div class="gap-metric">
+                <span>Current brand</span>
+                <strong>${escapeHtml(actual)}</strong>
+              </div>
+            </div>
+
+            <p>
+              ${escapeHtml(result.gap.summary || '')}
+            </p>
+          </article>
+        `);
+      }
+
+      if (!items.length) {
+        return '';
+      }
+
+      return `
+        <section class="diagnostic-grid">
+          ${items.join('')}
+        </section>
+      `;
+    }
+
+    function renderInsightCard(
+      label,
+      insight,
+      fallbackTitle
+    ) {
+      if (!insight) {
+        return '';
+      }
+
+      const title =
+        insight.title ||
+        insight.name ||
+        insight.label ||
+        fallbackTitle;
+
+      const copy =
+        insight.summary ||
+        insight.description ||
+        insight.reason ||
+        insight.text ||
+        '';
+
+      return `
+        <article class="card insight-card">
+          <p class="section-kicker">
+            ${escapeHtml(label)}
+          </p>
+
+          <h3>
+            ${escapeHtml(title)}
+          </h3>
+
+          <p>
+            ${escapeHtml(copy)}
+          </p>
+        </article>
+      `;
+    }
+
+    function renderEvidence(result) {
+      if (!result.evidence.length) {
+        return '';
+      }
+
+      const rows =
+        result.evidence
+          .slice(0, 4)
+          .map(item => {
+            const observation =
+              item.observation ||
+              item.title ||
+              item.finding ||
+              'Observation';
+
+            const impact =
+              item.impact ||
+              item.whyItMatters ||
+              item.summary ||
+              item.evidence ||
+              '';
+
+            return `
+              <div class="evidence-row">
+                <strong>
+                  ${escapeHtml(observation)}
+                </strong>
+
+                <p>
+                  ${escapeHtml(impact)}
+                </p>
+              </div>
+            `;
+          })
+          .join('');
+
+      return `
+        <section class="card evidence-card">
+          <p class="section-kicker">
+            What we noticed
+          </p>
+
+          <h2 class="section-title" style="font-size:clamp(32px,3.4vw,46px);margin-bottom:0;">
+            Specific signals behind your score
+          </h2>
+
+          <div class="evidence-list">
+            ${rows}
+          </div>
+        </section>
+      `;
+    }
+    function renderSolutionPreview(preview) {
+      if (!preview) {
+        return '';
+      }
+
+      const renderPanel = (panel, variant) => {
+        if (!panel) {
+          return '';
+        }
+
+        const signals = Array.isArray(panel.signals)
+          ? panel.signals.slice(0, 3).map(signal => `
+              <li>${escapeHtml(signal)}</li>
+            `).join('')
+          : '';
+
+        return `
+          <article class="preview-panel ${variant === 'improved' ? 'is-improved' : ''}">
+            <p class="preview-panel-label">
+              ${escapeHtml(panel.label || (variant === 'improved' ? 'Improved direction' : 'Current pattern'))}
+            </p>
+            <h4 class="preview-mock-headline">${escapeHtml(panel.headline || '')}</h4>
+            <p class="preview-mock-copy">${escapeHtml(panel.supportingText || '')}</p>
+            ${panel.cta ? `<span class="preview-mock-cta">${escapeHtml(panel.cta)}</span>` : ''}
+            ${signals ? `<ul class="preview-signal-list">${signals}</ul>` : ''}
+          </article>
+        `;
+      };
+
+      const currentPanel = renderPanel(preview.current, 'current');
+      const improvedPanel = renderPanel(preview.improved, 'improved');
+
+      if (!currentPanel && !improvedPanel) {
+        return '';
+      }
+
+      return `
+        <section class="improvement-preview" aria-label="Solution preview">
+          <div class="improvement-preview-header">
+            <p class="improvement-preview-kicker">${escapeHtml(preview.label || 'Improvement Preview')}</p>
+            <h3 class="improvement-preview-title">${escapeHtml(preview.title || 'See what a stronger direction could look like')}</h3>
+          </div>
+
+          <div class="preview-comparison">
+            ${currentPanel}
+            <div class="preview-arrow" aria-hidden="true">→</div>
+            ${improvedPanel}
+          </div>
+
+          ${preview.disclaimer ? `<p class="preview-disclaimer">${escapeHtml(preview.disclaimer)}</p>` : ''}
+        </section>
+      `;
+    }
+
+    function renderSolutionPaths(paths) {
+      if (!paths) {
+        return '';
+      }
+
+      const diy = paths.diy || null;
+      const guidance = paths.guidance || null;
+      const doneForYou = paths.doneForYou || null;
+
+      const diySteps = Array.isArray(diy?.steps)
+        ? diy.steps.slice(0, 4).map(step => `
+            <li>${escapeHtml(step)}</li>
+          `).join('')
+        : '';
+
+      const guidancePrice = guidance?.price
+        ? `<span class="solution-price">${escapeHtml(guidance.price)}</span>`
+        : '';
+
+      return `
+        <h3 class="solution-paths-heading">
+          Choose how you want to move forward
+        </h3>
+
+        <div class="solution-paths-grid">
+          ${diy ? `
+            <article class="solution-path-card">
+              <p class="solution-path-label">DIY</p>
+              <h3>${escapeHtml(diy.title || 'Start it yourself')}</h3>
+              <p>${escapeHtml(diy.description || '')}</p>
+              ${diySteps ? `<ul class="solution-steps">${diySteps}</ul>` : ''}
+            </article>
+          ` : ''}
+
+          ${guidance ? `
+            <article class="solution-path-card">
+              <p class="solution-path-label">Get Guidance</p>
+              <h3>${escapeHtml(guidance.title || 'Work through it with Milky Minds')}</h3>
+              <p>${escapeHtml(guidance.description || '')}</p>
+              <p class="solution-service">
+                ${escapeHtml(guidance.service || '')}
+                ${guidancePrice}
+              </p>
+              ${guidance.ctaUrl ? `
+                <a class="solution-link" href="${escapeHtml(guidance.ctaUrl)}" target="_blank" rel="noopener noreferrer">
+                  ${escapeHtml(guidance.ctaLabel || 'Explore this option')}
+                </a>
+              ` : ''}
+            </article>
+          ` : ''}
+
+          ${doneForYou ? `
+            <article class="solution-path-card is-featured">
+              <p class="solution-path-label">Have Milky Minds Fix It</p>
+              <h3>${escapeHtml(doneForYou.title || 'Have Milky Minds build the solution')}</h3>
+              <p>${escapeHtml(doneForYou.description || '')}</p>
+              <p class="solution-service">${escapeHtml(doneForYou.service || '')}</p>
+              ${doneForYou.ctaUrl ? `
+                <a class="solution-link" href="${escapeHtml(doneForYou.ctaUrl)}" target="_blank" rel="noopener noreferrer">
+                  ${escapeHtml(doneForYou.ctaLabel || 'Discuss your project')}
+                </a>
+              ` : ''}
+            </article>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderPriority(result) {
+      const recommendation =
+        result.freeRecommendation || {};
+
+      const growth =
+        result.growthOpportunity || null;
+
+      const title =
+        recommendation.title ||
+        recommendation.action ||
+        recommendation.name ||
+        'Start with the highest-impact opportunity.';
+
+      const copy =
+        recommendation.summary ||
+        recommendation.reason ||
+        recommendation.description ||
+        recommendation.text ||
+        'Your V2 Brand Action Plan will prioritize the most important improvements based on business impact, effort, investment, and your stated goals.';
+
+      const paidButton = `
+        <button
+          class="light-btn"
+          id="generate-action-plan-btn"
+          type="button"
+        >
+          View Demo Action Plan
+        </button>
+
+        <p class="demo-action-plan-note">
+          Demo mode bypasses checkout so the complete Action Plan can be shown during a presentation.
+        </p>
+      `;
+
+      const growthDetails = growth
+        ? `
+          <div class="priority-meta">
+            <span class="priority-pill">${escapeHtml(growth.priorityLabel || 'Fix First')}</span>
+            <span class="priority-pill">${escapeHtml(growth.customerJourney || 'Understand → Act')}</span>
+            <span class="priority-pill">Business Priority ${escapeHtml(growth.businessPriorityScore || '—')}/5</span>
+          </div>
+
+          <h2>${escapeHtml(growth.title || title)}</h2>
+          <p>${escapeHtml(growth.businessImpact || copy)}</p>
+
+          <div class="growth-details">
+            <div class="growth-detail">
+              <strong>What we found</strong>
+              <p>${escapeHtml(growth.evidence || '')}</p>
+            </div>
+            <div class="growth-detail">
+              <strong>Recommended action</strong>
+              <p>${escapeHtml(growth.recommendedAction || '')}</p>
+            </div>
+            <div class="growth-detail">
+              <strong>${escapeHtml(growth.successMeasure?.label || 'What to measure')}</strong>
+              <p>${escapeHtml(growth.successMeasure?.metric || '')}</p>
+            </div>
+            <div class="growth-detail">
+              <strong>What the complete plan adds</strong>
+              <p>Your next priorities, implementation sequence, budget path, and 90-day roadmap.</p>
+            </div>
+          </div>
+          ${renderSolutionPreview(
+            growth.solutionPreview
+          )}
+          ${renderSolutionPaths(
+            growth.solutionPaths
+          )}
+          <p class="growth-disclaimer">${escapeHtml(growth.disclaimer || '')}</p>
+        `
+        : `
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(copy)}</p>
+        `;
+
+      return `
+        <section class="card priority-card">
+
+          <p class="section-kicker">
+            ${escapeHtml(growth?.label || 'Your first move')}
+          </p>
+
+          ${growthDetails}
+
+          <div class="action-preview">
+
+            <strong style="font-size:18px;">
+              Your complete Brand Action Plan will include:
+            </strong>
+
+            <div class="locked-list">
+              <div class="locked-item">🔒 Fix First + Fix Next</div>
+              <div class="locked-item">🔒 Quick wins + budget guidance</div>
+              <div class="locked-item">🔒 90-day brand roadmap</div>
+            </div>
+
+            <div class="action-buttons">
+              ${paidButton}
+
+              <button
+                class="ghost-light-btn"
+                id="save-results-btn"
+                type="button"
+              >
+                Save my results
+              </button>
+            </div>
+
+          </div>
+
+        </section>
+      `;
+    }
+
+    function renderComparison(comparison) {
+      if (!comparison?.overall) {
+        return '';
+      }
+
+      const formatChange = value => {
+        const number = Number(value) || 0;
+        return `${number > 0 ? '+' : ''}${number}`;
+      };
+
+      /*
+        Fingerprinted Re-Rate:
+        If the business context and uploaded evidence match the
+        saved baseline, process-rate reuses the baseline instead
+        of running another AI assessment.
+
+        Do not present that as a "transformation."
+      */
+      if (
+        comparison.noMaterialChange === true
+      ) {
+        const unchangedScore =
+          Number(
+            comparison.overall.after ??
+            comparison.overall.before ??
+            0
+          ) || 0;
+
+        return `
+          <section class="card comparison-card">
+            <p class="section-kicker">Your Re-Rate Check</p>
+
+            <h2>No material changes detected.</h2>
+
+            <p>
+              The business context and brand evidence submitted for this Re-Rate
+              match your saved baseline, so Brand Rater did not claim a new improvement.
+            </p>
+
+            <div class="comparison-unchanged">
+
+              <div class="comparison-unchanged-score">
+                <strong>${escapeHtml(unchangedScore)}</strong>
+                <span>/ 100 · Brand Health unchanged</span>
+              </div>
+
+              <p class="comparison-unchanged-copy">
+                ${escapeHtml(
+                  comparison.detail ||
+                  'Your submitted inputs match the previous assessment, so the existing Brand Health evaluation was reused instead of running a new AI analysis.'
+                )}
+              </p>
+
+              <div class="comparison-unchanged-meta">
+                <span>No new AI analysis needed</span>
+                <span>Same scoring methodology</span>
+                <span>Change: 0 points</span>
+              </div>
+
+            </div>
+
+            ${comparison.remainingOpportunity ? `
+              <div class="comparison-highlights">
+                <div class="comparison-highlight">
+                  <span>Brand Health</span>
+                  <strong>${escapeHtml(unchangedScore)}/100 · Unchanged</strong>
+                </div>
+
+                <div class="comparison-highlight">
+                  <span>Remaining opportunity</span>
+                  <strong>
+                    ${escapeHtml(comparison.remainingOpportunity.name || 'Continue improving')}
+                    ${comparison.remainingOpportunity.after !== undefined
+                      ? ` (${escapeHtml(comparison.remainingOpportunity.after)}/100)`
+                      : ''}
+                  </strong>
+                </div>
+              </div>
+            ` : ''}
+
+            <p class="comparison-note">
+              ${escapeHtml(
+                comparison.disclaimer ||
+                'No Brand Health change is claimed because the submitted inputs matched the saved baseline.'
+              )}
+            </p>
+          </section>
+        `;
+      }
+
+      const rows = Array.isArray(comparison.categories)
+        ? comparison.categories.map(category => {
+            const change = Number(category.change) || 0;
+            const changeClass = change > 0
+              ? 'comparison-change-positive'
+              : change < 0
+                ? 'comparison-change-negative'
+                : '';
+
+            return `
+              <tr>
+                <td>${escapeHtml(category.name)}</td>
+                <td>${escapeHtml(category.before)}</td>
+                <td>${escapeHtml(category.after)}</td>
+                <td class="${changeClass}">${escapeHtml(formatChange(change))}</td>
+              </tr>
+            `;
+          }).join('')
+        : '';
+
+      const overallChange =
+        Number(comparison.overall.change) || 0;
+
+      return `
+        <section class="card comparison-card">
+          <p class="section-kicker">Your Brand Transformation</p>
+          <h2>${escapeHtml(comparison.summary || 'See what changed')}</h2>
+          <p>Before-and-after results using ${comparison.methodologyMatched ? 'the same scoring methodology.' : 'different scoring versions; review the comparison carefully.'}</p>
+
+          <div class="comparison-overall">
+            <div class="comparison-score">
+              <span>Before</span>
+              <strong>${escapeHtml(comparison.overall.before)}</strong>
+            </div>
+            <div class="comparison-arrow" aria-hidden="true">→</div>
+            <div class="comparison-score">
+              <span>After</span>
+              <strong>${escapeHtml(comparison.overall.after)}</strong>
+            </div>
+            <div class="comparison-arrow" aria-hidden="true">=</div>
+            <div class="comparison-score is-change">
+              <span>Change</span>
+              <strong>${escapeHtml(formatChange(overallChange))}</strong>
+            </div>
+          </div>
+
+          ${rows ? `
+            <table class="comparison-table">
+              <thead><tr><th>Category</th><th>Before</th><th>After</th><th>Change</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          ` : ''}
+
+          <div class="comparison-highlights">
+            <div class="comparison-highlight">
+              <span>Biggest improvement</span>
+              <strong>${escapeHtml(comparison.biggestImprovement?.name || 'No category change')} ${comparison.biggestImprovement ? `(${escapeHtml(formatChange(comparison.biggestImprovement.change))})` : ''}</strong>
+            </div>
+            <div class="comparison-highlight">
+              <span>Remaining opportunity</span>
+              <strong>${escapeHtml(comparison.remainingOpportunity?.name || 'Continue monitoring')} ${comparison.remainingOpportunity ? `(${escapeHtml(comparison.remainingOpportunity.after)}/100)` : ''}</strong>
+            </div>
+          </div>
+
+          <p class="comparison-note">${escapeHtml(comparison.disclaimer || '')}</p>
+        </section>
+      `;
+    }
+
+    function renderResultsPage(rawResult, business) {
+      latestResult =
+        rawResult;
+
+      latestBusiness =
+        business || latestBusiness || {};
+
+      const result =
+        normalizeResult(rawResult);
+
+      const resultsMain =
+        document.getElementById(
+          'results-main'
+        );
+
+      document.title =
+        `Brand Health: ${result.score}/100 | Milky Minds Creative`;
+
+      const diagnosticCards =
+        renderDiagnosticCards(result);
+
+      const insightCards = [
+        renderInsightCard(
+          'Biggest strength',
+          result.biggestStrength,
+          'Your strongest brand signal'
+        ),
+
+        renderInsightCard(
+          'Biggest opportunity',
+          result.biggestOpportunity,
+          'Your clearest improvement opportunity'
+        )
+      ]
+        .filter(Boolean)
+        .join('');
+
+      resultsMain.innerHTML = `
+
+        <section class="card results-intro">
+
+          <div class="results-score-side">
+            <div class="score-circle">
+              <div>
+                <span>
+                  ${escapeHtml(result.score)}
+                </span>
+                <small>/ 100</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="results-copy-side">
+
+            <p class="section-kicker">
+              Your Brand Health
+            </p>
+
+            <h1 class="results-verdict">
+              ${escapeHtml(result.level)}
+            </h1>
+
+            <p class="results-summary">
+              ${escapeHtml(result.summary)}
+            </p>
+
+          </div>
+
+        </section>
+
+        ${renderComparison(rawResult.comparison)}
+
+        ${diagnosticCards}
+
+        <div class="results-section-header">
+          <p class="eyebrow">
+            Brand Health breakdown
+          </p>
+
+          <h2>
+            Where your brand stands
+          </h2>
+        </div>
+
+        <section class="results-grid">
+
+          ${result.categories.map(cat => {
+            const score =
+              clampScore(cat.score);
+
+            return `
+              <article class="card category-card">
+
+                <p class="category-name">
+                  ${escapeHtml(cat.name)}
+                </p>
+
+                <p class="category-score">
+                  ${escapeHtml(score)}
+                  <small>/100</small>
+                </p>
+
+                <div
+                  class="bar-track"
+                  aria-hidden="true"
+                >
+                  <div
+                    class="bar-fill"
+                    style="width:${score}%"
+                  ></div>
+                </div>
+
+                <p class="category-note">
+                  ${escapeHtml(
+                    cat.summary ||
+                    cat.note ||
+                    ''
+                  )}
+                </p>
+
+              </article>
+            `;
+          }).join('')}
+
+        </section>
+
+        ${
+          insightCards
+            ? `<section class="insight-grid">${insightCards}</section>`
+            : ''
+        }
+
+        ${renderEvidence(result)}
+
+        ${
+          /*
+            Legacy V1 fallback:
+            If the backend has not been upgraded yet, preserve visibleIssues
+            so the replacement index still shows useful results.
+          */
+          !result.evidence.length &&
+          Array.isArray(rawResult.visibleIssues) &&
+          rawResult.visibleIssues.length
+            ? `
+              <section class="card evidence-card">
+                <p class="section-kicker">
+                  Priority opportunities
+                </p>
+
+                <h2 class="section-title" style="font-size:clamp(32px,3.4vw,46px);margin-bottom:0;">
+                  What may be holding the brand back
+                </h2>
+
+                <div class="evidence-list">
+                  ${rawResult.visibleIssues
+                    .slice(0, 4)
+                    .map(issue => `
+                      <div class="evidence-row">
+                        <strong>
+                          ${escapeHtml(issue.problem || issue.category)}
+                        </strong>
+
+                        <p>
+                          ${escapeHtml(issue.impact || '')}
+                        </p>
+                      </div>
+                    `)
+                    .join('')}
+                </div>
+              </section>
+            `
+            : ''
+        }
+
+        ${renderPriority(result)}
+
+        <div id="action-plan-results"></div>
+
+        <div class="restart-wrap">
+          ${rawResult.assessmentMeta?.reRateAccessToken ? `
+            <button
+              class="primary-btn"
+              id="rerate-btn"
+              type="button"
+            >
+              Re-Rate Your Brand
+            </button>
+          ` : ''}
+
+          <button
+            class="secondary-btn"
+            id="restart-btn"
+            type="button"
+          >
+            Analyze another brand
+          </button>
+        </div>
+      `;
+
+      showRateView(
+        'results'
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+
+      document
+        .getElementById(
+          'save-results-btn'
+        )
+        ?.addEventListener(
+          'click',
+          openLeadModal
+        );
+
+      document
+        .getElementById(
+          'generate-action-plan-btn'
+        )
+        ?.addEventListener(
+          'click',
+          handleActionPlanButtonClick
+        );
+
+      document
+        .getElementById(
+          'rerate-btn'
+        )
+        ?.addEventListener(
+          'click',
+          () => beginReRate({
+            assessmentId:
+              rawResult.assessmentMeta.assessmentId,
+            accessToken:
+              rawResult.assessmentMeta.reRateAccessToken,
+            createdAt:
+              rawResult.assessmentMeta.createdAt,
+            brandName:
+              business?.name || 'Your brand'
+          })
+        );
+
+      document
+        .getElementById(
+          'restart-btn'
+        )
+        ?.addEventListener(
+          'click',
+          () => restartBrandRater(false)
+        );
+
+      submitButton.disabled =
+        false;
+
+      submitButton.textContent =
+        'Analyze my brand →';
+    }
+
+    function handleActionPlanButtonClick() {
+      generateActionPlan();
+    }
+
+    async function generateActionPlan() {
+      const button =
+        document.getElementById(
+          'generate-action-plan-btn'
+        );
+
+      const container =
+        document.getElementById(
+          'action-plan-results'
+        );
+
+      if (
+        !container ||
+        !latestResult ||
+        !latestBusiness
+      ) {
+        return;
+      }
+
+      try {
+        if (button) {
+          button.disabled = true;
+          button.textContent =
+            'Building Demo Action Plan...';
+        }
+
+        container.innerHTML = `
+          <section class="card action-plan-loading">
+            <p class="section-kicker">Demo Action Plan</p>
+            <h2>Building the complete 90-day plan...</h2>
+            <p>
+              Demo mode is using the current Brand Rater assessment as the source of truth.
+              No checkout is required.
+            </p>
+          </section>
+        `;
+
+        container.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+
+        const response =
+          await fetch(
+            ACTION_PLAN_ENDPOINT,
+            {
+              method: 'POST',
+
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              body:
+                JSON.stringify({
+                  business:
+                    latestBusiness,
+
+                  assessment:
+                    latestResult
+                })
+            }
+          );
+
+        let actionPlan;
+
+        try {
+          actionPlan =
+            await response.json();
+        }
+        catch {
+          throw new Error(
+            `Demo Action Plan received an invalid response (${response.status}).`
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            actionPlan.error ||
+            'Something went wrong while generating the Demo Action Plan.'
+          );
+        }
+
+        sessionStorage.setItem(
+          'brandRaterDemoActionPlan',
+          JSON.stringify(
+            actionPlan
+          )
+        );
+
+        renderActionPlan(
+          actionPlan
+        );
+
+        if (button) {
+          button.disabled = true;
+          button.textContent =
+            'Demo Action Plan Generated';
+        }
+      }
+
+      catch (error) {
+        console.error(
+          'Demo Action Plan error:',
+          error
+        );
+
+        container.innerHTML = `
+          <section class="card action-plan-error">
+            <p class="section-kicker">Demo Action Plan</p>
+            <h2>We couldn’t build the Demo Action Plan.</h2>
+            <p>${escapeHtml(
+              error.message ||
+              'Please try again.'
+            )}</p>
+          </section>
+        `;
+
+        if (button) {
+          button.disabled = false;
+          button.textContent =
+            'Try Demo Action Plan Again';
+        }
+      }
+    }
+
+
+    function renderActionPlan(plan) {
+      const container =
+        document.getElementById(
+          'action-plan-results'
+        );
+
+      if (!container) {
+        return;
+      }
+
+      const quickWins =
+        Array.isArray(plan.quickWins)
+          ? plan.quickWins
+          : [];
+
+      const roadmap = plan.roadmap || {};
+
+      function renderPriorityBlock(label, item) {
+        if (!item) {
+          return '';
+        }
+
+        return `
+          <article class="card action-plan-priority">
+            <p class="section-kicker">${escapeHtml(label)}</p>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p>${escapeHtml(item.whyItMatters)}</p>
+
+            <div class="action-plan-callout">
+              <strong>What to do</strong>
+              <p>${escapeHtml(item.whatToDo)}</p>
+            </div>
+
+            <div class="action-plan-meta">
+              <span>Effort: <strong>${escapeHtml(item.effort)}</strong></span>
+              <span>Investment: <strong>${escapeHtml(item.investment)}</strong></span>
+              <span>Best owner: <strong>${escapeHtml(item.bestOwner)}</strong></span>
+            </div>
+
+            <p class="action-plan-impact">
+              <strong>Expected impact:</strong>
+              ${escapeHtml(item.expectedImpact)}
+            </p>
+
+            ${
+              item.evidence
+                ? `
+                  <div class="action-plan-evidence">
+                    <strong>Why we're recommending this</strong>
+                    <p>${escapeHtml(item.evidence)}</p>
+                  </div>
+                `
+                : ''
+            }
+          </article>
+        `;
+      }
+
+      function renderRoadmapPhase(label, phase) {
+        if (!phase) {
+          return '';
+        }
+
+        const actions =
+          Array.isArray(phase.actions)
+            ? phase.actions
+            : [];
+
+        return `
+          <article class="card roadmap-card">
+            <p class="section-kicker">${escapeHtml(label)}</p>
+            <h3>${escapeHtml(phase.focus)}</h3>
+            <ul>
+              ${actions.map(action => `
+                <li>${escapeHtml(action)}</li>
+              `).join('')}
+            </ul>
+            <p>
+              <strong>Success looks like:</strong>
+              ${escapeHtml(phase.successSignal)}
+            </p>
+          </article>
+        `;
+      }
+
+      container.innerHTML = `
+        <section class="action-plan-section">
+          <div class="results-section-header">
+            <p class="eyebrow">Demo Brand Action Plan</p>
+            <h2>Know what to fix next.</h2>
+          </div>
+
+          <section class="card action-plan-intro">
+            <p class="section-kicker">Executive summary</p>
+            <p class="action-plan-lead">${escapeHtml(plan.executiveSummary)}</p>
+          </section>
+
+          <section class="card action-plan-diagnosis">
+            <p class="section-kicker">Your diagnosis</p>
+            <h2>${escapeHtml(plan.diagnosis?.headline || 'Your brand diagnosis')}</h2>
+            <p>${escapeHtml(plan.diagnosis?.summary || '')}</p>
+            <p><strong>Why this matters now:</strong> ${escapeHtml(plan.diagnosis?.whyNow || '')}</p>
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">Priorities</p>
+            <h2>Put your effort here first.</h2>
+          </div>
+
+          <section class="action-plan-priority-grid">
+            ${renderPriorityBlock('Fix First', plan.fixFirst)}
+            ${renderPriorityBlock('Fix Next', plan.fixNext)}
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">Quick wins</p>
+            <h2>Three things you can improve this week.</h2>
+          </div>
+
+          <section class="quick-win-grid">
+            ${quickWins.map((item, index) => `
+              <article class="card quick-win-card">
+                <span class="step-number">0${index + 1}</span>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.action)}</p>
+                <p><strong>Why:</strong> ${escapeHtml(item.why)}</p>
+              </article>
+            `).join('')}
+          </section>
+
+          <section class="card dont-prioritize-card">
+            <p class="section-kicker">Don't prioritize</p>
+            <h2>${escapeHtml(plan.dontPrioritize?.title || '')}</h2>
+            <p>${escapeHtml(plan.dontPrioritize?.reason || '')}</p>
+            <p><strong>Revisit when:</strong> ${escapeHtml(plan.dontPrioritize?.revisitWhen || '')}</p>
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">Where to spend</p>
+            <h2>Put your next dollar where it matters.</h2>
+          </div>
+
+          <section class="card budget-card">
+            ${
+              plan.budgetGuidance?.recommendedPath
+                ? `
+                  <div class="budget-recommendation">
+                    <p class="section-kicker">Recommended path</p>
+                    <h3>${escapeHtml(plan.budgetGuidance.recommendedPath)}</h3>
+                    <p>${escapeHtml(plan.budgetGuidance?.recommendedReason || '')}</p>
+                  </div>
+                `
+                : ''
+            }
+
+            <div class="budget-next-dollar">
+              <strong>Where I'd put your next dollar</strong>
+              <p>${escapeHtml(plan.budgetGuidance?.nextDollar || '')}</p>
+            </div>
+
+            <div class="budget-grid">
+              <div class="${plan.budgetGuidance?.recommendedPath === 'DIY' ? 'is-recommended' : ''}">
+                ${plan.budgetGuidance?.recommendedPath === 'DIY' ? '<span class="budget-path-badge">Recommended</span>' : ''}
+                <strong>DIY</strong>
+                <p>${escapeHtml(plan.budgetGuidance?.diy || '')}</p>
+              </div>
+
+              <div class="${plan.budgetGuidance?.recommendedPath === 'Freelancer' ? 'is-recommended' : ''}">
+                ${plan.budgetGuidance?.recommendedPath === 'Freelancer' ? '<span class="budget-path-badge">Recommended</span>' : ''}
+                <strong>Freelancer</strong>
+                <p>${escapeHtml(plan.budgetGuidance?.freelancer || '')}</p>
+              </div>
+
+              <div class="${plan.budgetGuidance?.recommendedPath === 'Professional' ? 'is-recommended' : ''}">
+                ${plan.budgetGuidance?.recommendedPath === 'Professional' ? '<span class="budget-path-badge">Recommended</span>' : ''}
+                <strong>Professional</strong>
+                <p>${escapeHtml(plan.budgetGuidance?.professional || '')}</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="results-section-header">
+            <p class="eyebrow">90-day roadmap</p>
+            <h2>Improve the brand in the right order.</h2>
+          </div>
+
+          <section class="roadmap-grid">
+            ${renderRoadmapPhase('Days 1–30', roadmap.days1to30)}
+            ${renderRoadmapPhase('Days 31–60', roadmap.days31to60)}
+            ${renderRoadmapPhase('Days 61–90', roadmap.days61to90)}
+          </section>
+
+          <section class="card action-plan-close">
+  <p class="section-kicker">Final guidance</p>
+  <p class="action-plan-lead">${escapeHtml(plan.closingAdvice || '')}</p>
+</section>
+
+<section class="card action-plan-next-step">
+  <p class="section-kicker">Take the next step</p>
+  <h2>Ready to put your plan into action?</h2>
+
+  <p class="action-plan-lead">
+    Your Brand Action Plan shows what deserves your attention.
+    A Brand Clarity Session helps turn those priorities into a
+    focused strategy built around your business.
+  </p>
+
+  <div class="next-step-offer">
+    <div>
+      <p class="next-step-label">Brand Clarity Session</p>
+      <h3>$149 · 60-minute strategy session</h3>
+
+      <ul class="next-step-list">
+        <li>Review your highest-priority opportunities</li>
+        <li>Define what to tackle first</li>
+        <li>Clarify what you can DIY vs. where professional help makes sense</li>
+        <li>Leave with clear next steps for your brand</li>
+      </ul>
+    </div>
+
+    <a
+      class="primary-btn"
+      href="https://calendly.com/milkymindscreative/brand-clarity-session"
+      target="_blank"
+      rel="noopener"
+    >
+      Book a Brand Clarity Session →
+    </a>
+  </div>
+
+  <div class="implementation-cta">
+    <div>
+      <p class="next-step-label">Need help with implementation?</p>
+      <p>
+        Milky Minds Creative can help turn your recommendations into
+        real-world improvements—from brand systems and messaging to
+        websites and visual identity.
+      </p>
+    </div>
+
+    <a
+      class="secondary-btn"
+      href="https://www.milkymindscreative.com/contact"
+      target="_blank"
+      rel="noopener"
+    >
+      Work With Milky Minds →
+    </a>
+  </div>
+</section>
+      `;
+    }
+
+    function restartBrandRater(preserveReRate = false) {
+      stopRatePolling();
+      ratePollingStartedAt = 0;
+
+      sessionStorage.removeItem(
+        ACTIVE_RATE_JOB_KEY
+      );
+
+      document.title =
+        'Brand Enterprise | Rate Demo';
+
+      showRateView(
+        'intake'
+      );
+
+      uploadedFiles = [];
+      latestResult = null;
+      latestBusiness = null;
+      turnstileToken = '';
+      verifiedCheckoutSessionId = '';
+
+      if (!preserveReRate) {
+        activeReRateReference = null;
+      }
+
+      sessionStorage.removeItem(
+        'brandRaterVerifiedCheckoutSession'
+      );
+
+      sessionStorage.removeItem(
+        'brandRaterBusiness'
+      );
+
+      sessionStorage.removeItem(
+        'brandRaterAssessment'
+      );
+
+      form.reset();
+      fileInput.value = '';
+
+      renderPreviews();
+      setStep(1);
+
+      submitButton.disabled =
+        false;
+
+      submitButton.textContent =
+        activeReRateReference
+          ? 'Re-Rate my brand →'
+          : 'Analyze my brand →';
+
+      if (resumeRerateButton) {
+        resumeRerateButton.disabled =
+          Boolean(activeReRateReference);
+
+        resumeRerateButton.textContent =
+          activeReRateReference
+            ? 'Re-Rate mode active'
+            : 'Re-Rate this brand →';
+      }
+
+      refreshReRateBanner();
+
+      try {
+        if (window.turnstile) {
+          window.turnstile.reset();
+        }
+      }
+      catch {
+        // Safe no-op if Turnstile has not initialized yet.
+      }
+    }
+
+    /* =====================================================
+       SAVE RESULTS MODAL
+    ====================================================== */
+
+    function openLeadModal() {
+      leadModal.classList.add(
+        'is-open'
+      );
+
+      leadModal.setAttribute(
+        'aria-hidden',
+        'false'
+      );
+
+      saveSuccess.classList.remove(
+        'is-visible'
+      );
+
+      if (latestBusiness) {
+        const companyInput =
+          leadForm.querySelector(
+            '[name="company"]'
+          );
+
+        const websiteInput =
+          leadForm.querySelector(
+            '[name="website"]'
+          );
+
+        if (
+          companyInput &&
+          !companyInput.value
+        ) {
+          companyInput.value =
+            latestBusiness.name || '';
+        }
+
+        if (
+          websiteInput &&
+          !websiteInput.value
+        ) {
+          websiteInput.value =
+            latestBusiness.website || '';
+        }
+      }
+
+      const firstInput =
+        leadModal.querySelector(
+          'input:not(.bot-field)'
+        );
+
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }
+
+    function closeLeadModal() {
+      leadModal.classList.remove(
+        'is-open'
+      );
+
+      leadModal.setAttribute(
+        'aria-hidden',
+        'true'
+      );
+    }
+
+    closeLeadButton.addEventListener(
+      'click',
+      closeLeadModal
+    );
+
+    leadModal.addEventListener(
+      'click',
+      event => {
+        if (
+          event.target === leadModal
+        ) {
+          closeLeadModal();
+        }
+      }
+    );
+
+    document.addEventListener(
+      'keydown',
+      event => {
+        if (
+          event.key === 'Escape' &&
+          leadModal.classList.contains(
+            'is-open'
+          )
+        ) {
+          closeLeadModal();
+        }
+      }
+    );
+
+    /* =====================================================
+       NETLIFY LEAD CAPTURE
+    ====================================================== */
+
+    async function submitLeadForm(event) {
+      event.preventDefault();
+
+      if (!latestResult) {
+        return;
+      }
+
+      const leadButton =
+        document.getElementById(
+          'lead-submit-btn'
+        );
+
+      const leadData =
+        new FormData(leadForm);
+
+      if (
+        leadData.get('bot-field')
+      ) {
+        return;
+      }
+
+      const normalized =
+        normalizeResult(
+          latestResult
+        );
+
+      const business =
+        latestBusiness ||
+        JSON.parse(
+          sessionStorage.getItem(
+            'brandRaterBusiness'
+          ) || '{}'
+        );
+
+      const payload =
+        new URLSearchParams();
+
+      payload.append(
+        'form-name',
+        'brand-rater-leads'
+      );
+
+      payload.append(
+        'bot-field',
+        leadData.get('bot-field') || ''
+      );
+
+      payload.append(
+        'name',
+        leadData.get('name') || ''
+      );
+
+      payload.append(
+        'email',
+        leadData.get('email') || ''
+      );
+
+      payload.append(
+        'company',
+        leadData.get('company') ||
+        business.name ||
+        ''
+      );
+
+      payload.append(
+        'website',
+        leadData.get('website') ||
+        business.website ||
+        ''
+      );
+
+      payload.append(
+        'years_in_business',
+        business.yearsInBusiness || ''
+      );
+
+      payload.append(
+        'team_size',
+        business.teamSize || ''
+      );
+
+      payload.append(
+        'traction',
+        business.traction || ''
+      );
+
+      payload.append(
+        'business_description',
+        business.description || ''
+      );
+
+      payload.append(
+        'audience',
+        business.audience || ''
+      );
+
+      payload.append(
+        'brand_concern',
+        business.brandConcern || ''
+      );
+
+      payload.append(
+        'twelve_month_goal',
+        business.twelveMonthGoal || ''
+      );
+
+      payload.append(
+        'brand_health_score',
+        normalized.score ?? ''
+      );
+
+      payload.append(
+        'brand_health_level',
+        normalized.level ?? ''
+      );
+
+      payload.append(
+        'brand_pattern',
+        normalized.pattern?.name ?? ''
+      );
+
+      payload.append(
+        'brand_pattern_id',
+        normalized.pattern?.id ?? ''
+      );
+
+      payload.append(
+        'business_maturity_score',
+        normalized.gap?.businessMaturity ?? ''
+      );
+
+      payload.append(
+        'expected_brand_health',
+        normalized.gap?.expectedBrandHealth ?? ''
+      );
+
+      payload.append(
+        'brand_gap_score',
+        normalized.gap?.gap ?? ''
+      );
+
+      payload.append(
+        'brand_gap_level',
+        normalized.gap?.level ?? ''
+      );
+
+      payload.append(
+        'assessment_id',
+        latestResult?.assessmentMeta?.assessmentId || ''
+      );
+
+      payload.append(
+        'assessment_created_at',
+        latestResult?.assessmentMeta?.createdAt || ''
+      );
+
+      payload.append(
+        'baseline_saved',
+        latestResult?.assessmentMeta?.baselineSaved
+          ? 'yes'
+          : 'no'
+      );
+
+      payload.append(
+        'category_scores',
+        JSON.stringify(
+          normalized.categories || []
+        )
+      );
+
+      payload.append(
+        'top_priority',
+        JSON.stringify(
+          normalized.freeRecommendation || {}
+        )
+      );
+
+      payload.append(
+        'full_result_json',
+        JSON.stringify(
+          latestResult || {}
+        )
+      );
+
+      try {
+        leadButton.disabled =
+          true;
+
+        leadButton.textContent =
+          'Saving...';
+
+        const response =
+          await fetch(
+            '/',
+            {
+              method: 'POST',
+
+              headers: {
+                'Content-Type':
+                  'application/x-www-form-urlencoded;charset=UTF-8'
+              },
+
+              body:
+                payload.toString()
+            }
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            `Lead capture failed with status ${response.status}.`
+          );
+        }
+
+        saveSuccess.classList.add(
+          'is-visible'
+        );
+
+        leadButton.textContent =
+          'Saved ✓';
+
+        setTimeout(
+          closeLeadModal,
+          1200
+        );
+      }
+
+      catch (error) {
+        alert(
+          'Your assessment was generated, but the form did not save. Please try again.'
+        );
+
+        leadButton.disabled =
+          false;
+
+        leadButton.textContent =
+          'Save results →';
+      }
+    }
+
+    leadForm.addEventListener(
+      'submit',
+      submitLeadForm
+    );
+
+    /* =====================================================
+       STRIPE CHECKOUT RETURN
+    ====================================================== */
+
+    resumeActiveRateJob();
+  </script>
+
+</body>
+</html>
