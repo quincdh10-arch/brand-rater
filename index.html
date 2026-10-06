@@ -774,6 +774,176 @@
     }
 
     /* =========================================================
+       ASYNC RATE PROCESSING
+    ========================================================= */
+
+    #processing-view {
+      display: none;
+      padding: 64px 0 80px;
+    }
+
+    .processing-shell {
+      width: min(760px, calc(100% - 36px));
+      margin: 0 auto;
+    }
+
+    .processing-card {
+      padding: clamp(30px, 5vw, 54px);
+      border-radius: var(--radius-xl);
+    }
+
+    .processing-title {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+      font-weight: 800;
+    }
+
+    .processing-copy {
+      max-width: 640px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .processing-job-id {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+
+    .rate-progress {
+      margin-top: 34px;
+    }
+
+    .rate-progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(14, 30, 60, 0.09);
+    }
+
+    .rate-progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--milky-blue);
+      transition: width 320ms ease;
+    }
+
+    .rate-progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .rate-stage-list {
+      display: grid;
+      gap: 12px;
+      margin: 30px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .rate-stage-item {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 13px;
+      align-items: start;
+      padding: 15px 16px;
+      border: 1px solid rgba(14, 30, 60, 0.08);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.68);
+      opacity: 0.62;
+      transition:
+        opacity 180ms ease,
+        border-color 180ms ease,
+        background 180ms ease;
+    }
+
+    .rate-stage-item.is-active,
+    .rate-stage-item.is-complete {
+      opacity: 1;
+    }
+
+    .rate-stage-item.is-active {
+      border-color: rgba(30, 102, 165, 0.32);
+      background: rgba(30, 102, 165, 0.055);
+    }
+
+    .rate-stage-icon {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(30, 102, 165, 0.1);
+      color: var(--milky-blue);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .rate-stage-item.is-complete .rate-stage-icon {
+      background: var(--milky-blue);
+      color: white;
+    }
+
+    .rate-stage-item strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .rate-stage-item span:last-child {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .processing-note {
+      margin: 26px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .processing-error {
+      display: none;
+      margin: 24px 0 0;
+      padding: 14px 16px;
+      border: 1px solid rgba(180, 52, 52, 0.2);
+      border-radius: 14px;
+      background: rgba(180, 52, 52, 0.06);
+      color: #8d2525;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .processing-error.is-visible {
+      display: block;
+    }
+
+    .processing-actions {
+      display: none;
+      margin-top: 18px;
+    }
+
+    .processing-actions.is-visible {
+      display: flex;
+    }
+
+    /* =========================================================
        RESULTS
     ========================================================= */
 
@@ -2243,7 +2413,7 @@
 
                   <p class="upload-hint">
                     Logo, homepage, social, marketing, packaging, or other customer-facing brand examples.
-                    PNG, JPG, or WEBP · 5 MB max per image · 8 MB total.
+                    PNG, JPG, or WEBP · 4 MB max per image · up to 5 images.
                   </p>
                 </div>
 
@@ -2337,6 +2507,110 @@
             </p>
           </article>
 
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =======================================================
+       ASYNC RATE PROCESSING
+  ======================================================== -->
+
+  <div id="processing-view" aria-live="polite">
+    <main class="processing-shell">
+
+      <section class="card processing-card">
+
+        <p class="eyebrow">
+          Brand Health Assessment
+        </p>
+
+        <h1 class="processing-title" id="rate-processing-title">
+          Analyzing your brand…
+        </h1>
+
+        <p class="processing-copy" id="rate-processing-copy">
+          Brand Rater is preparing your evidence and building your Brand Health assessment.
+        </p>
+
+        <p class="processing-job-id" id="rate-processing-job-id"></p>
+
+        <div class="rate-progress">
+          <div class="rate-progress-track" aria-hidden="true">
+            <div class="rate-progress-fill" id="rate-progress-fill"></div>
+          </div>
+
+          <div class="rate-progress-meta">
+            <span id="rate-progress-label">Preparing assessment</span>
+            <span id="rate-progress-percent">5%</span>
+          </div>
+        </div>
+
+        <ul class="rate-stage-list" id="rate-stage-list">
+
+          <li class="rate-stage-item" data-rate-stage="creating-job">
+            <span class="rate-stage-icon">1</span>
+            <div>
+              <strong>Prepare your assessment</strong>
+              <span>Validate your business context and create a private Brand Health job.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="uploading-assets">
+            <span class="rate-stage-icon">2</span>
+            <div>
+              <strong>Upload brand evidence</strong>
+              <span>Securely prepare the customer-facing brand examples you submitted.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="analyzing-brand-evidence">
+            <span class="rate-stage-icon">3</span>
+            <div>
+              <strong>Analyze brand evidence</strong>
+              <span>Review clarity, credibility, consistency, distinctiveness, and visual execution.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="scoring-brand-health">
+            <span class="rate-stage-icon">4</span>
+            <div>
+              <strong>Score Brand Health</strong>
+              <span>Turn the evidence into the five Brand Health dimensions and overall score.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="identifying-brand-pattern">
+            <span class="rate-stage-icon">5</span>
+            <div>
+              <strong>Find the pattern and priority</strong>
+              <span>Identify the Brand Pattern, Brand Gap, and the opportunity that matters most.</span>
+            </div>
+          </li>
+
+          <li class="rate-stage-item" data-rate-stage="building-assessment">
+            <span class="rate-stage-icon">6</span>
+            <div>
+              <strong>Build your assessment</strong>
+              <span>Organize your results, recommendation, and Re-Rate baseline.</span>
+            </div>
+          </li>
+
+        </ul>
+
+        <p class="processing-note">
+          You can keep this tab open while the assessment runs. If the page refreshes,
+          Brand Rater will attempt to reconnect to the active assessment.
+        </p>
+
+        <p class="processing-error" id="rate-processing-error"></p>
+
+        <div class="processing-actions" id="rate-processing-actions">
+          <button class="secondary-btn" id="rate-start-over-btn" type="button">
+            Start over
+          </button>
         </div>
 
       </section>
@@ -2537,8 +2811,14 @@
   ======================================================== -->
 
   <script>
-    const ANALYZE_ENDPOINT =
-      '/.netlify/functions/analyze-brand';
+    const CREATE_RATE_JOB_ENDPOINT =
+      '/.netlify/functions/create-rate-job';
+
+    const UPLOAD_RATE_ASSET_ENDPOINT =
+      '/.netlify/functions/upload-rate-asset';
+
+    const RATE_STATUS_ENDPOINT =
+      '/.netlify/functions/rate-status';
 
     const ACTION_PLAN_ENDPOINT =
       '/.netlify/functions/generate-action-plan';
@@ -2591,6 +2871,42 @@
     const resumeRerateButton =
       document.getElementById('resume-rerate-btn');
 
+    const intakeView =
+      document.getElementById('intake-view');
+
+    const processingView =
+      document.getElementById('processing-view');
+
+    const resultsView =
+      document.getElementById('results-view');
+
+    const rateProcessingTitle =
+      document.getElementById('rate-processing-title');
+
+    const rateProcessingCopy =
+      document.getElementById('rate-processing-copy');
+
+    const rateProcessingJobId =
+      document.getElementById('rate-processing-job-id');
+
+    const rateProgressFill =
+      document.getElementById('rate-progress-fill');
+
+    const rateProgressLabel =
+      document.getElementById('rate-progress-label');
+
+    const rateProgressPercent =
+      document.getElementById('rate-progress-percent');
+
+    const rateProcessingError =
+      document.getElementById('rate-processing-error');
+
+    const rateProcessingActions =
+      document.getElementById('rate-processing-actions');
+
+    const rateStartOverButton =
+      document.getElementById('rate-start-over-btn');
+
     const RERATE_REFERENCE_KEY =
       'brand_rater_rerate_reference';
 
@@ -2606,13 +2922,25 @@
       ) || '';
 
     const MAX_FILE_SIZE =
-      5 * 1024 * 1024;
+      4 * 1024 * 1024;
 
     const MAX_TOTAL_SIZE =
-      4 * 1024 * 1024;
+      20 * 1024 * 1024;
 
     const LAST_SUBMISSION_KEY =
       'brand_rater_last_submission';
+
+    const ACTIVE_RATE_JOB_KEY =
+      'brand_rater_active_rate_job';
+
+    const RATE_POLL_INTERVAL_MS =
+      1800;
+
+    const RATE_POLL_TIMEOUT_MS =
+      15 * 60 * 1000;
+
+    let ratePollingTimer = null;
+    let ratePollingStartedAt = 0;
 
     function readReRateReference() {
       try {
@@ -2963,7 +3291,7 @@
       if (skippedNames.length > 0) {
         alert(
           `The following image${skippedNames.length > 1 ? 's exceed' : ' exceeds'} ` +
-          `the 5 MB per-file limit and ` +
+          `the 4 MB per-file limit and ` +
           `${skippedNames.length > 1 ? 'were' : 'was'} not added:\n\n` +
           `${skippedNames.join('\n')}\n\n` +
           `Please compress or resize before uploading.`
@@ -3115,6 +3443,717 @@
     );
 
     /* =====================================================
+       ASYNC RATE JOB
+    ====================================================== */
+
+    const RATE_STAGE_ORDER = [
+      'creating-job',
+      'uploading-assets',
+      'analyzing-brand-evidence',
+      'scoring-brand-health',
+      'identifying-brand-pattern',
+      'building-assessment'
+    ];
+
+    const RATE_STAGE_ALIASES = {
+      'awaiting-assets': 'creating-job',
+      'queued': 'uploading-assets',
+      'loading-assets': 'analyzing-brand-evidence',
+      'saving-assessment': 'building-assessment',
+      'assessment-ready': 'building-assessment',
+      'complete': 'building-assessment'
+    };
+
+    function stopRatePolling() {
+      if (ratePollingTimer) {
+        clearTimeout(ratePollingTimer);
+        ratePollingTimer = null;
+      }
+    }
+
+    function showRateView(viewName) {
+      if (intakeView) {
+        intakeView.style.display =
+          viewName === 'intake'
+            ? 'block'
+            : 'none';
+      }
+
+      if (processingView) {
+        processingView.style.display =
+          viewName === 'processing'
+            ? 'block'
+            : 'none';
+      }
+
+      if (resultsView) {
+        resultsView.style.display =
+          viewName === 'results'
+            ? 'block'
+            : 'none';
+      }
+    }
+
+    function normalizedRateStage(stage) {
+      return (
+        RATE_STAGE_ALIASES[stage] ||
+        stage ||
+        'creating-job'
+      );
+    }
+
+    function setRateProcessingStage(
+      stage,
+      progress = 0,
+      message = ''
+    ) {
+      const normalizedStage =
+        normalizedRateStage(stage);
+
+      const activeIndex =
+        Math.max(
+          0,
+          RATE_STAGE_ORDER.indexOf(
+            normalizedStage
+          )
+        );
+
+      const safeProgress =
+        Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              Number(progress) || 0
+            )
+          )
+        );
+
+      document
+        .querySelectorAll(
+          '[data-rate-stage]'
+        )
+        .forEach(
+          (item, index) => {
+            item.classList.toggle(
+              'is-complete',
+              index < activeIndex ||
+              safeProgress >= 100
+            );
+
+            item.classList.toggle(
+              'is-active',
+              index === activeIndex &&
+              safeProgress < 100
+            );
+
+            const icon =
+              item.querySelector(
+                '.rate-stage-icon'
+              );
+
+            if (
+              icon &&
+              item.classList.contains(
+                'is-complete'
+              )
+            ) {
+              icon.textContent = '✓';
+            }
+            else if (icon) {
+              icon.textContent =
+                String(index + 1);
+            }
+          }
+        );
+
+      if (rateProgressFill) {
+        rateProgressFill.style.width =
+          `${safeProgress}%`;
+      }
+
+      if (rateProgressPercent) {
+        rateProgressPercent.textContent =
+          `${safeProgress}%`;
+      }
+
+      if (rateProgressLabel) {
+        rateProgressLabel.textContent =
+          message ||
+          'Building your Brand Health assessment';
+      }
+    }
+
+    function beginRateProcessing(
+      jobId,
+      brandName = ''
+    ) {
+      showRateView('processing');
+
+      if (rateProcessingTitle) {
+        rateProcessingTitle.textContent =
+          brandName
+            ? `Analyzing ${brandName}…`
+            : 'Analyzing your brand…';
+      }
+
+      if (rateProcessingCopy) {
+        rateProcessingCopy.textContent =
+          'Brand Rater is reviewing your evidence, scoring Brand Health, and identifying the highest-priority opportunity.';
+      }
+
+      if (rateProcessingJobId) {
+        rateProcessingJobId.textContent =
+          jobId
+            ? `Assessment ID: ${jobId}`
+            : '';
+      }
+
+      if (rateProcessingError) {
+        rateProcessingError.textContent = '';
+        rateProcessingError.classList.remove(
+          'is-visible'
+        );
+      }
+
+      rateProcessingActions?.classList.remove(
+        'is-visible'
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    function showRateProcessingError(
+      message
+    ) {
+      if (rateProcessingError) {
+        rateProcessingError.textContent =
+          message ||
+          'Brand Rater could not complete this assessment. Please try again.';
+
+        rateProcessingError.classList.add(
+          'is-visible'
+        );
+      }
+
+      rateProcessingActions?.classList.add(
+        'is-visible'
+      );
+    }
+
+    async function readJsonResponse(
+      response,
+      fallbackMessage
+    ) {
+      let payload = null;
+
+      try {
+        payload =
+          await response.json();
+      }
+      catch {
+        throw new Error(
+          `${fallbackMessage} (${response.status}).`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          fallbackMessage
+        );
+      }
+
+      return payload;
+    }
+
+    async function createRateJob({
+      business,
+      assetCount
+    }) {
+      const response =
+        await fetch(
+          CREATE_RATE_JOB_ENDPOINT,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify({
+                business,
+                assetCount,
+                turnstileToken,
+                baselineAssessmentId:
+                  activeReRateReference?.assessmentId || '',
+                baselineAccessToken:
+                  activeReRateReference?.accessToken || ''
+              })
+          }
+        );
+
+      return readJsonResponse(
+        response,
+        'Brand Rater could not create the assessment job'
+      );
+    }
+
+    async function uploadRateAsset(
+      jobId,
+      file,
+      assetIndex
+    ) {
+      const image =
+        await fileToDataUrl(
+          file
+        );
+
+      const response =
+        await fetch(
+          UPLOAD_RATE_ASSET_ENDPOINT,
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify({
+                jobId,
+                assetIndex,
+                assetName:
+                  image.name,
+                mimeType:
+                  image.type,
+                dataUrl:
+                  image.dataUrl
+              })
+          }
+        );
+
+      let payload = null;
+
+      try {
+        payload =
+          await response.json();
+      }
+      catch {
+        throw new Error(
+          `Brand Rater received an invalid upload response (${response.status}).`
+        );
+      }
+
+      /*
+        A retried final upload may arrive after the worker has
+        already been queued. In that case the correct recovery
+        path is polling the existing job, not changing the inputs.
+      */
+      if (
+        response.status === 409 &&
+        payload?.recoverByPolling
+      ) {
+        return payload;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          'Brand Rater could not upload one of the brand assets.'
+        );
+      }
+
+      setRateProcessingStage(
+        payload.stage ||
+        'uploading-assets',
+        payload.progress ||
+        20,
+        payload.message ||
+        `Uploaded ${assetIndex + 1} of ${uploadedFiles.length} brand assets.`
+      );
+
+      return payload;
+    }
+
+    async function uploadRateAssets(
+      jobId
+    ) {
+      for (
+        let index = 0;
+        index < uploadedFiles.length;
+        index += 1
+      ) {
+        setRateProcessingStage(
+          'uploading-assets',
+          Math.round(
+            12 +
+            (
+              index /
+              Math.max(
+                1,
+                uploadedFiles.length
+              )
+            ) * 22
+          ),
+          `Uploading brand asset ${index + 1} of ${uploadedFiles.length}`
+        );
+
+        const payload =
+          await uploadRateAsset(
+            jobId,
+            uploadedFiles[index],
+            index
+          );
+
+        if (
+          payload?.recoverByPolling
+        ) {
+          break;
+        }
+      }
+    }
+
+    async function getRateStatus(
+      jobId
+    ) {
+      const endpoint =
+        new URL(
+          RATE_STATUS_ENDPOINT,
+          window.location.origin
+        );
+
+      endpoint.searchParams.set(
+        'jobId',
+        jobId
+      );
+
+      const response =
+        await fetch(
+          endpoint.toString(),
+          {
+            method: 'GET',
+            cache: 'no-store'
+          }
+        );
+
+      return readJsonResponse(
+        response,
+        'Brand Rater could not read the assessment status'
+      );
+    }
+
+    function saveCompletedRateResult(
+      result,
+      business
+    ) {
+      if (
+        result?.assessmentMeta?.assessmentId &&
+        result?.assessmentMeta?.reRateAccessToken
+      ) {
+        localStorage.setItem(
+          RERATE_REFERENCE_KEY,
+          JSON.stringify({
+            assessmentId:
+              result.assessmentMeta.assessmentId,
+
+            accessToken:
+              result.assessmentMeta.reRateAccessToken,
+
+            createdAt:
+              result.assessmentMeta.createdAt,
+
+            brandName:
+              business?.name ||
+              'Your brand'
+          })
+        );
+      }
+
+      sessionStorage.setItem(
+        'brandRaterResult',
+        JSON.stringify(
+          result
+        )
+      );
+
+      localStorage.setItem(
+        LAST_SUBMISSION_KEY,
+        Date.now()
+      );
+    }
+
+    async function pollRateStatus(
+      jobId,
+      business
+    ) {
+      stopRatePolling();
+
+      if (!ratePollingStartedAt) {
+        ratePollingStartedAt =
+          Date.now();
+      }
+
+      try {
+        const status =
+          await getRateStatus(
+            jobId
+          );
+
+        setRateProcessingStage(
+          status.stage ||
+          status.status,
+          status.progress,
+          status.message
+        );
+
+        if (
+          status.status ===
+            'complete'
+        ) {
+          stopRatePolling();
+          ratePollingStartedAt = 0;
+
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          if (!status.result) {
+            throw new Error(
+              'Brand Rater completed the job without returning an assessment.'
+            );
+          }
+
+          saveCompletedRateResult(
+            status.result,
+            business
+          );
+
+          renderResultsPage(
+            status.result,
+            business
+          );
+
+          return;
+        }
+
+        if (
+          status.status ===
+            'failed'
+        ) {
+          stopRatePolling();
+          ratePollingStartedAt = 0;
+
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          showRateProcessingError(
+            status.error ||
+            'Brand Rater could not complete this assessment. Please try again.'
+          );
+
+          return;
+        }
+
+        if (
+          Date.now() -
+          ratePollingStartedAt >
+          RATE_POLL_TIMEOUT_MS
+        ) {
+          stopRatePolling();
+
+          showRateProcessingError(
+            'This assessment is taking longer than expected. Your job may still be processing. Refresh the page to reconnect, or start over if the issue continues.'
+          );
+
+          return;
+        }
+
+        ratePollingTimer =
+          setTimeout(
+            () => pollRateStatus(
+              jobId,
+              business
+            ),
+            RATE_POLL_INTERVAL_MS
+          );
+      }
+      catch (error) {
+        if (
+          Date.now() -
+          ratePollingStartedAt >
+          RATE_POLL_TIMEOUT_MS
+        ) {
+          stopRatePolling();
+
+          showRateProcessingError(
+            error.message ||
+            'Brand Rater could not reconnect to the assessment.'
+          );
+
+          return;
+        }
+
+        ratePollingTimer =
+          setTimeout(
+            () => pollRateStatus(
+              jobId,
+              business
+            ),
+            RATE_POLL_INTERVAL_MS
+          );
+      }
+    }
+
+    async function resumeActiveRateJob() {
+      /*
+        Checkout return owns the page when this parameter is
+        present, so do not let an old Rate job override it.
+      */
+      if (
+        new URLSearchParams(
+          window.location.search
+        ).has(
+          'action_plan'
+        )
+      ) {
+        return;
+      }
+
+      let active = null;
+
+      try {
+        active =
+          JSON.parse(
+            sessionStorage.getItem(
+              ACTIVE_RATE_JOB_KEY
+            ) || 'null'
+          );
+      }
+      catch {
+        active = null;
+      }
+
+      if (!active?.jobId) {
+        return;
+      }
+
+      let business =
+        latestBusiness;
+
+      if (!business) {
+        try {
+          business =
+            JSON.parse(
+              sessionStorage.getItem(
+                'brandRaterBusiness'
+              ) || 'null'
+            );
+        }
+        catch {
+          business = null;
+        }
+      }
+
+      try {
+        const status =
+          await getRateStatus(
+            active.jobId
+          );
+
+        if (
+          status.status ===
+            'complete'
+        ) {
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          if (status.result) {
+            saveCompletedRateResult(
+              status.result,
+              business || {}
+            );
+
+            renderResultsPage(
+              status.result,
+              business || {}
+            );
+          }
+
+          return;
+        }
+
+        if (
+          status.status ===
+            'failed'
+        ) {
+          sessionStorage.removeItem(
+            ACTIVE_RATE_JOB_KEY
+          );
+
+          beginRateProcessing(
+            active.jobId,
+            active.brandName || ''
+          );
+
+          setRateProcessingStage(
+            status.stage,
+            status.progress,
+            status.message
+          );
+
+          showRateProcessingError(
+            status.error ||
+            'Brand Rater could not complete this assessment.'
+          );
+
+          return;
+        }
+
+        beginRateProcessing(
+          active.jobId,
+          active.brandName || ''
+        );
+
+        setRateProcessingStage(
+          status.stage,
+          status.progress,
+          status.message
+        );
+
+        ratePollingStartedAt =
+          Date.now();
+
+        pollRateStatus(
+          active.jobId,
+          business || {}
+        );
+      }
+      catch {
+        sessionStorage.removeItem(
+          ACTIVE_RATE_JOB_KEY
+        );
+      }
+    }
+
+    rateStartOverButton?.addEventListener(
+      'click',
+      () => restartBrandRater(
+        Boolean(
+          activeReRateReference
+        )
+      )
+    );
+
+    /* =====================================================
        MAIN SUBMISSION
     ====================================================== */
 
@@ -3123,14 +4162,21 @@
       async event => {
         event.preventDefault();
 
-        hideError('step-3-error');
+        hideError(
+          'step-3-error'
+        );
 
-        if (!validateStep(1) || !validateStep(2)) {
+        if (
+          !validateStep(1) ||
+          !validateStep(2)
+        ) {
           setStep(1);
           return;
         }
 
-        if (uploadedFiles.length === 0) {
+        if (
+          uploadedFiles.length === 0
+        ) {
           showError(
             'step-3-error',
             'Please upload at least one brand asset before running the assessment.'
@@ -3171,14 +4217,7 @@
             true;
 
           submitButton.textContent =
-            'Analyzing your brand...';
-
-          const images =
-            await Promise.all(
-              uploadedFiles.map(
-                fileToDataUrl
-              )
-            );
+            'Preparing assessment…';
 
           const business =
             getBusinessData();
@@ -3193,7 +4232,9 @@
 
           sessionStorage.setItem(
             'brandRaterBusiness',
-            JSON.stringify(business)
+            JSON.stringify(
+              business
+            )
           );
 
           sessionStorage.setItem(
@@ -3201,113 +4242,93 @@
             legacyContext
           );
 
-          const response =
-            await fetch(
-              ANALYZE_ENDPOINT,
-              {
-                method: 'POST',
+          beginRateProcessing(
+            '',
+            business.name
+          );
 
-                headers: {
-                  'Content-Type':
-                    'application/json'
-                },
+          setRateProcessingStage(
+            'creating-job',
+            5,
+            'Preparing your Brand Health assessment'
+          );
 
-                body:
-                  JSON.stringify({
-                    images,
-                    business,
-                    context:
-                      legacyContext,
-                    turnstileToken,
-                    baselineAssessmentId:
-                      activeReRateReference?.assessmentId || '',
-                    baselineAccessToken:
-                      activeReRateReference?.accessToken || ''
-                  })
-              }
-            );
+          const job =
+            await createRateJob({
+              business,
+              assetCount:
+                uploadedFiles.length
+            });
 
-          let result = null;
-
-          try {
-            result =
-              await response.json();
-          }
-          catch {
+          if (!job?.jobId) {
             throw new Error(
-              `Brand Rater received an invalid response (${response.status}).`
-            );
-          }
-
-          if (!response.ok) {
-            throw new Error(
-              result.error ||
-              'Something went wrong while analyzing your brand.'
-            );
-          }
-
-          if (
-            result.assessmentMeta?.assessmentId &&
-            result.assessmentMeta?.reRateAccessToken
-          ) {
-            localStorage.setItem(
-              RERATE_REFERENCE_KEY,
-              JSON.stringify({
-                assessmentId:
-                  result.assessmentMeta.assessmentId,
-                accessToken:
-                  result.assessmentMeta.reRateAccessToken,
-                createdAt:
-                  result.assessmentMeta.createdAt,
-                brandName:
-                  business.name || 'Your brand'
-              })
+              'Brand Rater created the assessment without a Job ID.'
             );
           }
 
           sessionStorage.setItem(
-            'brandRaterResult',
-            JSON.stringify(result)
+            ACTIVE_RATE_JOB_KEY,
+            JSON.stringify({
+              jobId:
+                job.jobId,
+
+              brandName:
+                business.name || '',
+
+              createdAt:
+                new Date()
+                  .toISOString()
+            })
           );
 
-          renderResultsPage(
-            result,
+          beginRateProcessing(
+            job.jobId,
+            business.name
+          );
+
+          setRateProcessingStage(
+            job.stage ||
+            'creating-job',
+            job.progress ||
+            5,
+            job.message ||
+            'Preparing your Brand Health assessment'
+          );
+
+          await uploadRateAssets(
+            job.jobId
+          );
+
+          ratePollingStartedAt =
+            Date.now();
+
+          pollRateStatus(
+            job.jobId,
             business
           );
-
-          localStorage.setItem(
-            LAST_SUBMISSION_KEY,
-            Date.now()
-          );
         }
-
         catch (error) {
-          const message =
-            error.message || '';
+          console.error(
+            'Brand Rater async setup error:',
+            error
+          );
 
-          if (
-            message.includes('413') ||
-            message.toLowerCase().includes('payload') ||
-            message.toLowerCase().includes('request entity too large')
-          ) {
-            showError(
-              'step-3-error',
-              'Your images are too large for processing. Please upload smaller images or fewer files and try again.'
-            );
-          }
-          else {
-            showError(
-              'step-3-error',
-              message ||
-              'Something went wrong. Please try again.'
-            );
-          }
+          showRateView(
+            'processing'
+          );
+
+          showRateProcessingError(
+            error.message ||
+            'Something went wrong while starting the assessment. Please try again.'
+          );
 
           submitButton.disabled =
             false;
 
           submitButton.textContent =
-            'Analyze my brand →';
+            activeReRateReference
+              ? 'Re-Rate my brand →'
+              : 'Analyze my brand →';
         }
       }
     );
@@ -3866,16 +4887,6 @@
       const result =
         normalizeResult(rawResult);
 
-      const intakeView =
-        document.getElementById(
-          'intake-view'
-        );
-
-      const resultsView =
-        document.getElementById(
-          'results-view'
-        );
-
       const resultsMain =
         document.getElementById(
           'results-main'
@@ -4065,11 +5076,9 @@
         </div>
       `;
 
-      intakeView.style.display =
-        'none';
-
-      resultsView.style.display =
-        'block';
+      showRateView(
+        'results'
+      );
 
       window.scrollTo({
         top: 0,
@@ -4297,31 +5306,17 @@
         restoreAssessmentAfterCheckout();
 
       if (!restored) {
-        const intakeView =
-          document.getElementById(
-            'intake-view'
-          );
-
-        const resultsView =
-          document.getElementById(
-            'results-view'
-          );
-
         const resultsMain =
           document.getElementById(
             'results-main'
           );
 
         if (
-          intakeView &&
-          resultsView &&
           resultsMain
         ) {
-          intakeView.style.display =
-            'none';
-
-          resultsView.style.display =
-            'block';
+          showRateView(
+            'results'
+          );
 
           resultsMain.innerHTML = `
             <section
@@ -4976,24 +5971,19 @@
     }
 
     function restartBrandRater(preserveReRate = false) {
-      const intakeView =
-        document.getElementById(
-          'intake-view'
-        );
+      stopRatePolling();
+      ratePollingStartedAt = 0;
 
-      const resultsView =
-        document.getElementById(
-          'results-view'
-        );
+      sessionStorage.removeItem(
+        ACTIVE_RATE_JOB_KEY
+      );
 
       document.title =
         'Brand Rater | Brand Health Assessment by Milky Minds Creative';
 
-      resultsView.style.display =
-        'none';
-
-      intakeView.style.display =
-        'block';
+      showRateView(
+        'intake'
+      );
 
       uploadedFiles = [];
       latestResult = null;
@@ -5403,6 +6393,7 @@
     ====================================================== */
 
     handleCheckoutReturn();
+    resumeActiveRateJob();
   </script>
 
 </body>
