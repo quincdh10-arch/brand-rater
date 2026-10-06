@@ -1385,6 +1385,62 @@
     .comparison-highlight strong { color:white; }
     .comparison-note { margin-top:18px !important; font-size:11px !important; color:rgba(249,250,251,.55) !important; }
 
+    .comparison-unchanged {
+      margin: 28px 0 0;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.07);
+    }
+
+    .comparison-unchanged-score {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .comparison-unchanged-score strong {
+      color: white;
+      font-size: clamp(36px, 5vw, 54px);
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+
+    .comparison-unchanged-score span {
+      color: rgba(249,250,251,.58);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .comparison-unchanged-copy {
+      margin: 0;
+      max-width: 760px;
+      color: rgba(249,250,251,.78);
+      line-height: 1.55;
+    }
+
+    .comparison-unchanged-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .comparison-unchanged-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      color: rgba(249,250,251,.72);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
     /* =========================================================
        MODAL
     ========================================================= */
@@ -4807,6 +4863,86 @@
         const number = Number(value) || 0;
         return `${number > 0 ? '+' : ''}${number}`;
       };
+
+      /*
+        Fingerprinted Re-Rate:
+        If the business context and uploaded evidence match the
+        saved baseline, process-rate reuses the baseline instead
+        of running another AI assessment.
+
+        Do not present that as a "transformation."
+      */
+      if (
+        comparison.noMaterialChange === true
+      ) {
+        const unchangedScore =
+          Number(
+            comparison.overall.after ??
+            comparison.overall.before ??
+            0
+          ) || 0;
+
+        return `
+          <section class="card comparison-card">
+            <p class="section-kicker">Your Re-Rate Check</p>
+
+            <h2>No material changes detected.</h2>
+
+            <p>
+              The business context and brand evidence submitted for this Re-Rate
+              match your saved baseline, so Brand Rater did not claim a new improvement.
+            </p>
+
+            <div class="comparison-unchanged">
+
+              <div class="comparison-unchanged-score">
+                <strong>${escapeHtml(unchangedScore)}</strong>
+                <span>/ 100 · Brand Health unchanged</span>
+              </div>
+
+              <p class="comparison-unchanged-copy">
+                ${escapeHtml(
+                  comparison.detail ||
+                  'Your submitted inputs match the previous assessment, so the existing Brand Health evaluation was reused instead of running a new AI analysis.'
+                )}
+              </p>
+
+              <div class="comparison-unchanged-meta">
+                <span>No new AI analysis needed</span>
+                <span>Same scoring methodology</span>
+                <span>Change: 0 points</span>
+              </div>
+
+            </div>
+
+            ${comparison.remainingOpportunity ? `
+              <div class="comparison-highlights">
+                <div class="comparison-highlight">
+                  <span>Brand Health</span>
+                  <strong>${escapeHtml(unchangedScore)}/100 · Unchanged</strong>
+                </div>
+
+                <div class="comparison-highlight">
+                  <span>Remaining opportunity</span>
+                  <strong>
+                    ${escapeHtml(comparison.remainingOpportunity.name || 'Continue improving')}
+                    ${comparison.remainingOpportunity.after !== undefined
+                      ? ` (${escapeHtml(comparison.remainingOpportunity.after)}/100)`
+                      : ''}
+                  </strong>
+                </div>
+              </div>
+            ` : ''}
+
+            <p class="comparison-note">
+              ${escapeHtml(
+                comparison.disclaimer ||
+                'No Brand Health change is claimed because the submitted inputs matched the saved baseline.'
+              )}
+            </p>
+          </section>
+        `;
+      }
 
       const rows = Array.isArray(comparison.categories)
         ? comparison.categories.map(category => {
