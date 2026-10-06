@@ -2,7 +2,7 @@
   Brand Rater Enterprise
   process-rate.mjs
   ------------------------------------------------------------
-  Production Rate async architecture v1.0
+  Production Rate async architecture v1.1
 
   Purpose:
   - Run the long Brand Health assessment in the background.
@@ -11,6 +11,8 @@
   - Reconstruct image data URLs for rate-engine.js.
   - Run the existing Brand Rater V2 methodology.
   - Preserve Re-Rate before/after comparison behavior.
+  - Fingerprint business inputs + uploaded assets for Re-Rate.
+  - Skip OpenAI when a Re-Rate submission is materially identical.
   - Save the completed assessment baseline.
   - Save progress and the final result back to the Rate job.
   - Remove temporary raw image assets after successful completion.
@@ -86,6 +88,9 @@ const MAX_PROCESSING_ATTEMPTS =
 */
 const PROCESSING_LOCK_MINUTES =
   18;
+
+const INPUT_FINGERPRINT_VERSION =
+  "rate-input-fingerprint-1.0.0";
 
 
 /* =========================================================
@@ -533,6 +538,17 @@ async function loadRateAsset({
     size:
       buffer.length,
 
+    contentHash:
+      createHash(
+        "sha256"
+      )
+        .update(
+          buffer
+        )
+        .digest(
+          "hex"
+        ),
+
     dataUrl:
       `data:${mimeType};base64,${buffer.toString("base64")}`,
   };
@@ -562,6 +578,363 @@ async function loadRateAssets({
       a.index -
       b.index
   );
+}
+
+
+/* =========================================================
+   INPUT FINGERPRINTING
+========================================================= */
+
+function hashValue(
+  value
+) {
+  return createHash(
+    "sha256"
+  )
+    .update(
+      String(
+        value ?? ""
+      )
+    )
+    .digest(
+      "hex"
+    );
+}
+
+
+function normalizeFingerprintText(
+  value
+) {
+  return String(
+    value ?? ""
+  )
+    .trim()
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .toLowerCase();
+}
+
+
+function buildCanonicalBusinessForFingerprint(
+  business
+) {
+  const source =
+    business &&
+    typeof business ===
+      "object"
+      ? business
+      : {};
+
+  /*
+    Use an explicit key order so the fingerprint stays stable.
+
+    Lowercasing and collapsing whitespace means cosmetic
+    capitalization/spacing changes do not trigger a new AI call.
+    Meaningful wording changes still produce a new fingerprint.
+  */
+  return {
+    name:
+      normalizeFingerprintText(
+        source.name
+      ),
+
+    website:
+      normalizeFingerprintText(
+        source.website
+      ),
+
+    description:
+      normalizeFingerprintText(
+        source.description
+      ),
+
+    audience:
+      normalizeFingerprintText(
+        source.audience
+      ),
+
+    yearsInBusiness:
+      normalizeFingerprintText(
+        source.yearsInBusiness
+      ),
+
+    teamSize:
+      normalizeFingerprintText(
+        source.teamSize
+      ),
+
+    traction:
+      normalizeFingerprintText(
+        source.traction
+      ),
+
+    brandConcern:
+      normalizeFingerprintText(
+        source.brandConcern
+      ),
+
+    twelveMonthGoal:
+      normalizeFingerprintText(
+        source.twelveMonthGoal
+      ),
+  };
+}
+
+
+function buildInputFingerprint({
+  business,
+  images,
+}) {
+  const canonicalBusiness =
+    buildCanonicalBusinessForFingerprint(
+      business
+    );
+
+  const businessHash =
+    hashValue(
+      JSON.stringify(
+        canonicalBusiness
+      )
+    );
+
+  /*
+    Asset order should not matter for identical evidence.
+    Hashes come from the actual uploaded binary bytes.
+  */
+  const assetHashes =
+    (
+      Array.isArray(
+        images
+      )
+        ? images
+            .map(
+              image =>
+                String(
+                  image?.contentHash ||
+                  ""
+                ).trim()
+            )
+            .filter(
+              Boolean
+            )
+        : []
+    )
+      .sort();
+
+  const combinedHash =
+    hashValue(
+      JSON.stringify({
+        fingerprintVersion:
+          INPUT_FINGERPRINT_VERSION,
+
+        scoringVersion:
+          SCORING_VERSION,
+
+        businessHash,
+
+        assetCount:
+          assetHashes.length,
+
+        assetHashes,
+      })
+    );
+
+  return {
+    version:
+      INPUT_FINGERPRINT_VERSION,
+
+    scoringVersion:
+      SCORING_VERSION,
+
+    businessHash,
+
+    assetCount:
+      assetHashes.length,
+
+    assetHashes,
+
+    combinedHash,
+  };
+}
+
+
+function fingerprintsMatch(
+  baselineFingerprint,
+  currentFingerprint
+) {
+  if (
+    !baselineFingerprint ||
+    !currentFingerprint
+  ) {
+    return false;
+  }
+
+  return (
+    baselineFingerprint.version ===
+      INPUT_FINGERPRINT_VERSION &&
+
+    currentFingerprint.version ===
+      INPUT_FINGERPRINT_VERSION &&
+
+    baselineFingerprint.scoringVersion ===
+      SCORING_VERSION &&
+
+    currentFingerprint.scoringVersion ===
+      SCORING_VERSION &&
+
+    typeof baselineFingerprint.combinedHash ===
+      "string" &&
+
+    baselineFingerprint.combinedHash ===
+      currentFingerprint.combinedHash
+  );
+}
+
+
+function cloneStoredAssessment(
+  baseline
+) {
+  if (
+    !baseline?.assessment ||
+    typeof baseline.assessment !==
+      "object"
+  ) {
+    return null;
+  }
+
+  return JSON.parse(
+    JSON.stringify(
+      baseline.assessment
+    )
+  );
+}
+
+
+function buildNoMaterialChangeComparison({
+  baseline,
+  currentResult,
+}) {
+  const beforeOverall =
+    Number(
+      baseline?.scores?.overall?.score ??
+      baseline?.assessment?.brandHealth?.score ??
+      currentResult?.brandHealth?.score ??
+      0
+    );
+
+  const categories =
+    Array.isArray(
+      currentResult?.categories
+    )
+      ? currentResult.categories.map(
+          category => {
+            const score =
+              Number(
+                category?.score ??
+                0
+              );
+
+            return {
+              id:
+                category?.id ||
+                "",
+
+              name:
+                category?.name ||
+                "Category",
+
+              before:
+                score,
+
+              after:
+                score,
+
+              change:
+                0,
+            };
+          }
+        )
+      : [];
+
+  const remainingOpportunity =
+    [
+      ...categories,
+    ]
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          a.after -
+          b.after
+      )[0] ||
+    null;
+
+  return {
+    noMaterialChange:
+      true,
+
+    analysisSkipped:
+      true,
+
+    detectionMethod:
+      "exact-input-fingerprint",
+
+    fingerprintVersion:
+      INPUT_FINGERPRINT_VERSION,
+
+    baselineAssessmentId:
+      baseline.assessmentId,
+
+    baselineCreatedAt:
+      baseline.createdAt,
+
+    currentCreatedAt:
+      currentResult
+        ?.assessmentMeta
+        ?.createdAt ||
+      null,
+
+    methodologyMatched:
+      baseline.scoringVersion ===
+      SCORING_VERSION,
+
+    baselineScoringVersion:
+      baseline.scoringVersion ||
+      "unknown",
+
+    currentScoringVersion:
+      SCORING_VERSION,
+
+    overall: {
+      before:
+        beforeOverall,
+
+      after:
+        beforeOverall,
+
+      change:
+        0,
+    },
+
+    categories,
+
+    biggestImprovement:
+      null,
+
+    remainingOpportunity,
+
+    summary:
+      "No material changes detected.",
+
+    detail:
+      "The submitted business context and brand evidence match the previous assessment, so Brand Rater reused the existing Brand Health evaluation instead of running a new AI analysis.",
+
+    disclaimer:
+      "No new Brand Health change is claimed because the submitted inputs matched the saved baseline.",
+  };
 }
 
 
@@ -1021,29 +1394,158 @@ export default async function handler(
       }
     }
 
-    const result =
-      await analyzeRate({
+    const currentFingerprint =
+      buildInputFingerprint({
         business:
           job.business,
 
         images:
           loadedImages,
+      });
 
-        onStage:
-          async ({
-            stage,
-            progress,
-            message,
-          }) => {
-            await updateProgress({
-              jobs,
-              jobId,
+    const identicalReRate =
+      Boolean(
+        originalBaseline &&
+        originalBaseline
+          .inputFingerprint &&
+        fingerprintsMatch(
+          originalBaseline
+            .inputFingerprint,
+          currentFingerprint
+        ) &&
+        originalBaseline
+          .assessment
+      );
+
+    let result;
+
+    if (
+      identicalReRate
+    ) {
+      await updateProgress({
+        jobs,
+        jobId,
+
+        stage:
+          "identifying-brand-pattern",
+
+        progress:
+          82,
+
+        message:
+          "No material changes detected. Reusing the saved Brand Health evaluation.",
+      });
+
+      result =
+        cloneStoredAssessment(
+          originalBaseline
+        );
+
+      if (!result) {
+        throw new Error(
+          "The matching Re-Rate baseline did not contain a reusable assessment."
+        );
+      }
+
+      /*
+        Remove any prior comparison and private browser-only
+        metadata before creating the new Re-Rate result.
+      */
+      delete result.comparison;
+
+      if (
+        result.assessmentMeta &&
+        typeof result.assessmentMeta ===
+          "object"
+      ) {
+        delete result
+          .assessmentMeta
+          .reRateAccessToken;
+      }
+
+      const reusedCreatedAt =
+        new Date()
+          .toISOString();
+
+      result.assessmentMeta = {
+        ...(
+          result.assessmentMeta ||
+          {}
+        ),
+
+        assessmentId:
+          null,
+
+        createdAt:
+          reusedCreatedAt,
+
+        scoringVersion:
+          SCORING_VERSION,
+
+        baselineSaved:
+          false,
+
+        analysisSkipped:
+          true,
+
+        inputMatch:
+          true,
+
+        inputFingerprintVersion:
+          INPUT_FINGERPRINT_VERSION,
+
+        analysisModel:
+          "baseline-reuse-no-change",
+      };
+
+      result.comparison =
+        buildNoMaterialChangeComparison({
+          baseline:
+            originalBaseline,
+
+          currentResult:
+            result,
+        });
+
+      await updateProgress({
+        jobs,
+        jobId,
+
+        stage:
+          "building-assessment",
+
+        progress:
+          94,
+
+        message:
+          "Building the unchanged Re-Rate assessment.",
+      });
+    }
+    else {
+      result =
+        await analyzeRate({
+          business:
+            job.business,
+
+          images:
+            loadedImages,
+
+          onStage:
+            async ({
               stage,
               progress,
               message,
-            });
-          },
-      });
+            }) => {
+              await updateProgress({
+                jobs,
+                jobId,
+                stage,
+                progress,
+                message,
+              });
+            },
+        });
+    }
 
     /*
       Preserve the original production baseline format.
@@ -1081,10 +1583,20 @@ export default async function handler(
 
       baselineSaved:
         false,
+
+      analysisSkipped:
+        identicalReRate,
+
+      inputMatch:
+        identicalReRate,
+
+      inputFingerprintVersion:
+        INPUT_FINGERPRINT_VERSION,
     };
 
     if (
-      originalBaseline
+      originalBaseline &&
+      !identicalReRate
     ) {
       result.comparison =
         buildAssessmentComparison(
@@ -1156,6 +1668,9 @@ export default async function handler(
 
       scoringVersion:
         SCORING_VERSION,
+
+      inputFingerprint:
+        currentFingerprint,
 
       accessTokenHash:
         hashAccessToken(
@@ -1312,6 +1827,12 @@ export default async function handler(
             baselineSaved
               ? completedAt
               : null,
+
+          analysisSkipped:
+            identicalReRate,
+
+          inputFingerprintVersion:
+            INPUT_FINGERPRINT_VERSION,
 
           completedAt,
 
