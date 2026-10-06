@@ -2,7 +2,7 @@
   Brand Rater Enterprise
   rate-engine.js
   ------------------------------------------------------------
-  Production Rate engine — async architecture v1.0
+  Production Rate engine — async architecture v1.1
 
   Reusable Brand Health analysis engine.
 
@@ -35,7 +35,7 @@ const SCORING_VERSION =
   "2.1.0";
 
 const RATE_ARCHITECTURE_VERSION =
-  "1.0.0";
+  "1.1.0";
 
 const MIN_IMAGES = 1;
 const MAX_IMAGES = 5;
@@ -51,6 +51,23 @@ const MAX_IMAGE_BYTES =
 const MAX_TOTAL_IMAGE_BYTES =
   MAX_IMAGES *
   MAX_IMAGE_BYTES;
+
+/*
+  Priority coherence guard.
+
+  Numerical Brand Health scoring is unchanged. This only keeps
+  the selected #1 Growth Opportunity aligned with the category
+  scores already shown to the user.
+
+  A category at 95+ should not normally be called the brand's
+  biggest problem when another assessed category is at least
+  8 points weaker.
+*/
+const PRIORITY_GUARD_CATEGORY_SCORE =
+  95;
+
+const PRIORITY_GUARD_MIN_SCORE_GAP =
+  8;
 
 
 /* =========================================================
@@ -2031,6 +2048,12 @@ function choosePriority(
       candidates.push({
         ...item,
 
+        categoryScore:
+          category.score,
+
+        categoryConfidence:
+          category.confidence,
+
         priorityScore:
           Number(
             priorityScore
@@ -2052,42 +2075,179 @@ function choosePriority(
       a.priorityScore
   );
 
-  return (
-    candidates[0] || {
-      categoryId:
-        "clarity",
+  const fallback = {
+    categoryId:
+      "clarity",
 
-      categoryName:
-        "Clarity",
+    categoryName:
+      "Clarity",
 
-      id:
-        "general",
+    categoryScore:
+      50,
 
-      name:
-        "Clarify the customer-facing brand",
+    categoryConfidence:
+      "insufficient",
 
-      assessed:
+    id:
+      "general",
+
+    name:
+      "Clarify the customer-facing brand",
+
+    assessed:
+      false,
+
+    score:
+      3,
+
+    confidence:
+      "low",
+
+    evidence:
+      "The assessment did not have enough evidence to identify a stronger priority.",
+
+    businessImpact:
+      "A clearer customer-facing brand makes later improvements easier to prioritize.",
+
+    priorityScore:
+      0,
+
+    businessRelevance:
+      0.5,
+
+    priorityGuard: {
+      applied:
         false,
 
-      score:
-        3,
+      reason:
+        "fallback",
+    },
+  };
 
-      confidence:
-        "low",
+  if (
+    !candidates.length
+  ) {
+    return fallback;
+  }
 
-      evidence:
-        "The assessment did not have enough evidence to identify a stronger priority.",
+  const originalPriority =
+    candidates[0];
 
-      businessImpact:
-        "A clearer customer-facing brand makes later improvements easier to prioritize.",
+  /*
+    Coherence guard:
 
-      priorityScore:
-        0,
+    If the mathematical priority formula selects a criterion
+    from a category that is already near-perfect, check whether
+    another assessed category is materially weaker.
 
-      businessRelevance:
-        0.5,
+    This does NOT alter any score. It only changes which existing
+    assessed criterion is presented as the #1 Growth Opportunity.
+  */
+  if (
+    Number(
+      originalPriority
+        .categoryScore
+    ) >=
+      PRIORITY_GUARD_CATEGORY_SCORE
+  ) {
+    const originalCategoryScore =
+      Number(
+        originalPriority
+          .categoryScore
+      );
+
+    const materiallyWeakerCategoryIds =
+      new Set(
+        categories
+          .filter(
+            category =>
+              category &&
+              category.assessedWeight > 0 &&
+              category.id !==
+                originalPriority
+                  .categoryId &&
+              originalCategoryScore -
+                Number(
+                  category.score
+                ) >=
+                PRIORITY_GUARD_MIN_SCORE_GAP
+          )
+          .map(
+            category =>
+              category.id
+          )
+      );
+
+    if (
+      materiallyWeakerCategoryIds
+        .size
+    ) {
+      const guardedPriority =
+        candidates.find(
+          candidate =>
+            materiallyWeakerCategoryIds
+              .has(
+                candidate.categoryId
+              )
+        );
+
+      if (
+        guardedPriority
+      ) {
+        return {
+          ...guardedPriority,
+
+          priorityGuard: {
+            applied:
+              true,
+
+            reason:
+              "near-perfect-category",
+
+            originalCategoryId:
+              originalPriority
+                .categoryId,
+
+            originalCategoryName:
+              originalPriority
+                .categoryName,
+
+            originalCategoryScore,
+
+            originalCriterionId:
+              originalPriority.id,
+
+            selectedCategoryId:
+              guardedPriority
+                .categoryId,
+
+            selectedCategoryName:
+              guardedPriority
+                .categoryName,
+
+            selectedCategoryScore:
+              guardedPriority
+                .categoryScore,
+
+            minimumScoreGap:
+              PRIORITY_GUARD_MIN_SCORE_GAP,
+          },
+        };
+      }
     }
-  );
+  }
+
+  return {
+    ...originalPriority,
+
+    priorityGuard: {
+      applied:
+        false,
+
+      reason:
+        "original-priority-retained",
+    },
+  };
 }
 
 /* One free growth priority; the paid plan keeps the full sequence. */
@@ -3662,6 +3822,25 @@ function buildGrowthOpportunity({
     businessPriorityScore,
 
     scoringScale: 5,
+
+    prioritySelection: {
+      guardApplied:
+        priority
+          .priorityGuard
+          ?.applied ===
+          true,
+
+      guardReason:
+        priority
+          .priorityGuard
+          ?.reason ||
+        null,
+
+      categoryScore:
+        Number(
+          priority.categoryScore
+        ) || null,
+    },
 
     factors: {
       customerImpact,
